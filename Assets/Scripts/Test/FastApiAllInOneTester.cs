@@ -8,9 +8,9 @@ using UnityEngine.Networking;
 public class FastApiAllInOneTester : MonoBehaviour
 {
     // === 서버/구글 설정 입력 ===
-    public string BaseUrl = "http://localhost:8000"; // 또는 WSL IP
+    public string BaseUrl = "http://127.0.0.1:8000";
     public string GoogleClientId = ""; // GCP 콘솔의 Web client ID. 서버 .env와 동일해야 함
-    public string ServerRedirectUri = "http://localhost:8000/v1/auth/google/callback"; // 서버가 콜백 받는 주소
+    public string ServerRedirectUri = "http://127.0.0.1:8000/v1/auth/google/callback"; // 서버가 콜백 받는 주소
 
     // === 런타임 상태 ===
     string codeVerifier;
