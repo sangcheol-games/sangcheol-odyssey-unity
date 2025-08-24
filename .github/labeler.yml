@@ -1,0 +1,90 @@
+# Unity (클라이언트)
+unity:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**"
+          - "ProjectSettings/**"
+          - "Packages/**"
+          - "**/*.cs"
+          - "**/*.asmdef"
+          - "**/*.unity"
+          - "**/*.prefab"
+          - "**/*.mat"
+          - "**/*.shader"
+          - "**/*.cginc"
+          - "**/*.anim"
+          - "**/*.controller"
+          - "Assets/**/Editor/**"
+          - "Assets/AddressableAssetsData/**"
+          - "**/*.meta"
+
+# FastAPI (백엔드 API)
+fastapi:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "app/**"
+          - "backend/**"
+          - "server/**"
+          - "src/**/*.py"
+          - "services/**"
+          - "routers/**"
+          - "api/**"
+          - "schemas/**"
+          - "models/**"
+          - "**/main.py"
+          - "**/asgi.py"
+          - "**/wsgi.py"
+          - "**/requirements*.txt"
+          - "**/pyproject.toml"
+          - "**/uvicorn*.ini"
+          - "**/gunicorn*.conf*"
+
+# 데이터베이스 / 마이그레이션
+db:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "prisma/**"
+          - "migrations/**"
+          - "alembic/**"
+          - "**/*.sql"
+
+# 테스트
+test:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+          - "**/*test*.py"
+          - "Assets/**/Tests/**"
+          - "Assets/**/EditorTests/**"
+          - "Assets/**/PlayModeTests/**"
+          - "Assets/**/EditModeTests/**"
+          - "**/*.spec.*"
+          - "**/*.e2e.*"
+
+# 인프라/배포
+infra:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "deploy/**"
+          - "infra/**"
+          - "ops/**"
+          - "helm/**"
+          - "k8s/**"
+          - "terraform/**"
+          - "**/Dockerfile*"
+          - "**/docker-compose*.yml"
+          - ".docker/**"
+
+# CI
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+
+# 문서
+docs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"
+          - "**/*.mdx"

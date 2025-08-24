@@ -1,0 +1,50 @@
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  label_by_prefix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const ref = pr.head.ref;
+            const m = ref.match(/^(feature|fix|hotfix|refactor|chore|test|docs)\//);
+            if (!m) { core.info(`No known prefix in "${ref}"`); return; }
+            const label = m[1];
+
+            const palette = {
+              feature:  { color: '2E8B57', description: '신규 기능' },
+              fix:      { color: 'E74C3C', description: '버그 수정' },
+              hotfix:   { color: 'C0392B', description: '긴급 수정' },
+              refactor: { color: '9B59B6', description: '리팩토링' },
+              chore:    { color: '95A5A6', description: '설정/빌드/의존성' },
+              test:     { color: '3498DB', description: '테스트' },
+              docs:     { color: 'F1C40F', description: '문서' }
+            };
+
+            async function ensureLabel(name) {
+              try {
+                await github.rest.issues.getLabel({ owner: context.repo.owner, repo: context.repo.repo, name });
+              } catch {
+                const meta = palette[name] || { color: 'BFDADC', description: '' };
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  name, color: meta.color, description: meta.description
+                });
+              }
+            }
+
+            await ensureLabel(label);
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: pr.number, labels: [label]
+            });
+            core.info(`Added label "${label}" to PR #${pr.number}`);
