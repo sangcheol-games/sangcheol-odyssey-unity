@@ -1,0 +1,17 @@
+{
+  "name": "SCOdyssey.Net",
+  "rootNamespace": "SCOdyssey.Net",
+  "references": [
+    "SCOdyssey.Core",
+    "SCOdyssey.Domain"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

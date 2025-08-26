@@ -53,7 +53,7 @@ namespace SCOdyssey.Core.Logging
         }
     }
 
-    public sealed class Logger : IDisposable
+    public sealed class CoreLogger : IDisposable
     {
         private readonly List<ILogSink> _sinks = new();
         private readonly ConcurrentQueue<LogEvent> _queue = new();
@@ -65,7 +65,7 @@ namespace SCOdyssey.Core.Logging
         public bool UseAsyncDispatch { get; set; } = true;
         public int FlushIntervalMs { get; set; } = 100;
 
-        public Logger()
+        public CoreLogger()
         {
             _unityCtx = SynchronizationContext.Current;
             _flushTimer = new Timer(_ => Flush(), null, FlushIntervalMs, FlushIntervalMs);

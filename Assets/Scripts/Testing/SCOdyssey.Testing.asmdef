@@ -1,0 +1,21 @@
+{
+  "name": "SCOdyssey.Testing",
+  "rootNamespace": "SCOdyssey.Testing",
+  "references": [
+    "SCOdyssey.Core",
+    "SCOdyssey.Domain",
+    "SCOdyssey.Net"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -17,7 +17,7 @@ namespace SCOdyssey.Net
         private readonly ServerTimeSkew _skew;
         private readonly CoreLogger _log;
 
-        private string _baseUrl = "http://127.0.0.1:8000";
+        private string _baseUrl = "http://localhost:8000";
         private int _timeoutMs = 15000;
         private int _maxBackoffMs = 8000;
 
