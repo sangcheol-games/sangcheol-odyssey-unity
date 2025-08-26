@@ -1,3 +1,5 @@
+using System;
+
 namespace SCOdyssey.Domain.Dto
 {
     [Serializable]
