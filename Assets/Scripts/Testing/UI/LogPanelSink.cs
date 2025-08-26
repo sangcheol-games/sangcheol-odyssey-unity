@@ -1,4 +1,3 @@
-// Assets/Scripts/Testing/UI/LogPanelSink.cs
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
