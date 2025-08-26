@@ -5,15 +5,21 @@ namespace SCOdyssey.Net
 {
     public interface IApiClient
     {
-        Task<AuthTokens> LoginWithIdToken(string idToken);
-        Task<AuthTokens> Refresh(string refreshToken);
-        Task<UserMe>     GetMe(string accessToken = null);
-        Task<UserMe>     SetNickname(string nickname);
-        Task<LinkOut>    LinkIdentity(string provider, string sub, object claims=null);
-        Task<UnlinkOut>  UnlinkIdentity(string provider);
+        // session based login
+        Task<AuthUrlResponse> SessionInit(string codeVerifier);
+        Task<AuthTokens> SessionPoll(string sessionId);
+        Task Logout();
 
-        Task<GameSession> CreateSession(SessionStartReq req);
-        Task Heartbeat(string sessionId, long ms);
-        Task SubmitResult(SessionResultReq req);
+        // token
+        Task<AuthTokens> Refresh(string refreshToken);
+
+        // general API
+        Task<string> Ping();
+
+        // user API
+        Task<UserMe> GetMe(string accessToken = null);
+        Task<UserMe> SetNickname(string nickname);
+        Task<LinkOut> LinkIdentity(string provider, string sub, object claims = null);
+        Task<UnlinkOut> UnlinkIdentity(string provider);
     }
 }
