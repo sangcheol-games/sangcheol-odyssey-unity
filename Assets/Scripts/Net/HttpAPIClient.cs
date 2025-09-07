@@ -17,9 +17,9 @@ namespace SCOdyssey.Net
         private readonly ServerTimeSkew _skew;
         private readonly CoreLogger _log;
 
-        private string _baseUrl = "http://localhost:8000";
+        private string _baseUrl = "http://localhost:5000";
         private int _timeoutMs = 15000;
-        private int _maxBackoffMs = 8000;
+        private int _maxBackoffMs = 5000;
 
         public HttpApiClient(TokenStore token, ServerTimeSkew skew, CoreLogger log)
         {
