@@ -93,4 +93,7 @@ crashlytics-build.properties
 .history
 .ionide
 
+.dev
+.patch
+
 # End of https://www.toptal.com/developers/gitignore/api/unity,visualstudiocode

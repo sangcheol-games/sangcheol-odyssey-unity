@@ -1,0 +1,25 @@
+- { name: "type:feature",  color: "0e8a16", description: "New feature" }
+- { name: "type:fix",      color: "b60205", description: "Bug fix" }
+- { name: "type:refactor", color: "fbca04", description: "Refactoring" }
+- { name: "type:chore",    color: "dddddd", description: "Chore / infra" }
+- { name: "type:docs",     color: "c5def5", description: "Docs / README" }
+- { name: "type:test",     color: "8dd3c7", description: "Tests" }
+- { name: "type:ci",       color: "1d76db", description: "CI/CD pipeline" }
+
+- { name: "area:core",   color: "6f42c1", description: "Core infra (Logger, Clock, ServiceLocator)" }
+- { name: "area:boot",   color: "6a737d", description: "Boot/Installers/Orchestrator" }
+- { name: "area:net",    color: "0052cc", description: "Networking/Auth/Token" }
+- { name: "area:domain", color: "17a2b8", description: "Domain entities/services" }
+- { name: "area:ui",     color: "e36209", description: "UI/MonoBehaviours" }
+- { name: "area:testing",     color: "f9a825", description: "Testing" }
+
+- { name: "unity:code",         color: "0366d6", description: "C# / asmdef" }
+- { name: "unity:scenes",       color: "0e8a16", description: "*.unity" }
+- { name: "unity:prefabs",      color: "5319e7", description: "prefab/anim/controller" }
+- { name: "unity:shaders",      color: "fbca04", description: "shader/cginc/mat" }
+- { name: "unity:art",          color: "f66a0a", description: "textures/models" }
+- { name: "unity:audio",        color: "ff9da7", description: "audio assets" }
+- { name: "unity:editor",       color: "c2e0c6", description: "Assets/**/Editor/**" }
+- { name: "unity:addressables", color: "bfdadc", description: "Addressables" }
+- { name: "unity:project",      color: "bfe5bf", description: "ProjectSettings / Packages" }
+- { name: "unity:meta",         color: "f9d0c4", description: "*.meta files" }

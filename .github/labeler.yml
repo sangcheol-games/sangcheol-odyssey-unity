@@ -88,3 +88,96 @@ docs:
           - "docs/**"
           - "**/*.md"
           - "**/*.mdx"
+
+unity:code:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/*.cs"
+          - "**/*.asmdef"
+
+unity:scenes:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.unity"
+
+unity:prefabs:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.prefab"
+          - "**/*.controller"
+          - "**/*.anim"
+
+unity:shaders:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.shader"
+          - "**/*.cginc"
+          - "**/*.mat"
+
+unity:art:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.png"
+          - "**/*.jpg"
+          - "**/*.jpeg"
+          - "**/*.tga"
+          - "**/*.psd"
+          - "**/*.fbx"
+
+unity:audio:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.wav"
+          - "**/*.mp3"
+          - "**/*.ogg"
+
+unity:editor:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/Editor/**"
+
+unity:addressables:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/AddressableAssetsData/**"
+
+unity:project:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "ProjectSettings/**"
+          - "Packages/**"
+
+unity:meta:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.meta"
+
+area:core:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/Core/**"
+
+area:boot:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/Boot/**"
+
+area:net:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/Net/**"
+
+area:domain:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/Domain/**"
+
+area:ui:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/UI/**"
+
+area:testing:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Assets/**/Testing/**"
