@@ -58,7 +58,7 @@ namespace SCOdyssey.App
                 name = typeof(T).Name;
             }
             // UI 생성 후 스택에 넣기
-            GameObject go = ResourceLoader.Instantiate($"UI/{name}");
+            GameObject go = ResourceLoader.PrefabInstantiate($"UI/{name}");
             T ui = go.GetComponent<T>();
             uiStack.Push(ui);
 
