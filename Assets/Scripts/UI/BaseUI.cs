@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace SCOdyssey.UI
@@ -62,29 +63,15 @@ namespace SCOdyssey.UI
             Bind<Button>(type);
         }
 
-        protected void BindEvent(GameObject go, Action action, UIEvent type)
+        protected void BindEvent(GameObject go, EventTriggerType type, Action action)
         {
             UIEventHandler evt = go.GetOrAddComponent<UIEventHandler>();
 
-            switch (type)
-            {
-                case UIEvent.Clicked:
-                    evt.OnClickedHandler -= action;
-                    evt.OnClickedHandler += action;
-                    break;
-                case UIEvent.Pressed:
-                    evt.OnPressedHandler -= action;
-                    evt.OnPressedHandler += action;
-                    break;
-                case UIEvent.PointerDown:
-                    evt.OnPointerDownHandler -= action;
-                    evt.OnPointerDownHandler += action;
-                    break;
-                case UIEvent.PointerUp:
-                    evt.OnPointerUpHandler -= action;
-                    evt.OnPointerUpHandler += action;
-                    break;
-            }
+            EventTrigger.Entry entry = new EventTrigger.Entry();
+            entry.eventID = type;
+
+            entry.callback.AddListener((eventdata) => action.Invoke());
+            evt.triggers.Add(entry);
         }
 
         // 캐싱 딕셔너리에서 T타입의 인덱스에 해당하는 값을 반환
