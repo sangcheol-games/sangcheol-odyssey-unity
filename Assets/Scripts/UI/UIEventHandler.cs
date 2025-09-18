@@ -15,6 +15,8 @@ namespace SCOdyssey.UI
             //if (isPressed)  OnPressedHandler?.Invoke();
         }
 
+        // TODO: InputAction을 통해 키보드 입력 핸들링 구현
+
         /*
         // 마우스 버튼or터치스크린이 내려가는 순간 호출
         public void OnPointerDown(PointerEventData eventData)
