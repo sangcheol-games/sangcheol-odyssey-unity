@@ -10,14 +10,6 @@ namespace SCOdyssey.UI
 {
     public class BaseUI : MonoBehaviour
     {
-        public enum UIEvent
-        {
-            Clicked,
-            Pressed,    
-            PointerDown,
-            PointerUp
-        }
-
         // UI 캐싱 딕셔너리
         private Dictionary<Type, UnityEngine.Object[]> objDic = new Dictionary<Type, UnityEngine.Object[]>();
 
