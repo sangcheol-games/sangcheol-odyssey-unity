@@ -24,7 +24,7 @@ namespace SCOdyssey.App
         }
         public void Init()
         {
-
+            ShowUI<MainUI>();
         }
         public void SetCanvas(GameObject go, bool sort = true)
         {
