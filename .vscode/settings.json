@@ -66,5 +66,5 @@
     "explorer.fileNesting.patterns": {
         "*.sln": "*.csproj"
     },
-    "dotnet.defaultSolution": "sangcheol-odyssey-unity.sln"
+    "dotnet.defaultSolution": "sangcheol-odyssey-unity.slnx"
 }
