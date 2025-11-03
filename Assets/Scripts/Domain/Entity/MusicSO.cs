@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Sirenix.OdinInspector;
+using Sirenix.Serialization;
 using UnityEngine;
 using UnityEngine.Video;
 using static SCOdyssey.Domain.Service.Constants;
@@ -6,7 +8,7 @@ using static SCOdyssey.Domain.Service.Constants;
 namespace SCOdyssey.Domain.Entity
 {
     [CreateAssetMenu(menuName = "MusicData/MusicSO", fileName ="MusicSO_")]
-    public class MusicSO : ScriptableObject
+    public class MusicSO : SerializedScriptableObject
     {
         public int id;
 
@@ -23,7 +25,7 @@ namespace SCOdyssey.Domain.Entity
 
         [Header("Resource Info")]
 
-        public string chartFile;
+        public TextAsset chartFile;
         public AudioClip musicFile;
         public VideoClip videoFile;
         public Sprite albumArt;
