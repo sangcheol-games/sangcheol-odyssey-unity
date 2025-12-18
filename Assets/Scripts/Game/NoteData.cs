@@ -1,3 +1,4 @@
+using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
@@ -7,5 +8,16 @@ namespace SCOdyssey.Game
         public int index;           // 채보 순서
         public float time;          // 판정 시간
         public NoteType noteType;   // 노트 타입
+        public int laneIndex;     // 라인 번호
+        
+        public NoteData(int index, float time, NoteType noteType, int laneIndex)
+        {
+            this.index = index;
+            this.time = time;
+            this.noteType = noteType;
+            this.laneIndex = laneIndex;
+
+            //Debug.Log($"Note Created - Index: {index}, Time: {time}, Type: {noteType}, Lane: {laneIndex}");
+        }
     }
 }
