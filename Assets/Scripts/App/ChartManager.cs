@@ -66,6 +66,7 @@ namespace SCOdyssey.Game
 
             PrepareNextBar();
             StartCurrentBar();
+            GameManager.Instance.StartMusic(barDuration);
         }
 
         public void SyncTime(float time)
@@ -90,7 +91,7 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            int nextBar = currentBarNumber + 1;
+            int nextBar = currentBarNumber;
             //Debug.Log("Preparing Bar " + nextBar);
 
             while (true)    // 다음 마디에 해당하는 모든 LaneData를 remaingChart => nextBarLanes로 이동

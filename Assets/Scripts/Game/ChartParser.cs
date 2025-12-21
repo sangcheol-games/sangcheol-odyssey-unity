@@ -44,8 +44,8 @@ namespace SCOdyssey.Game
                     string noteSequence = parts[2];
                     int beat = noteSequence.Length;
 
-                    // 마디 시작 시간 계산: (마디번호 - 1) * 마디당 시간
-                    float laneStartTime = (barNumber - 1) * duration;
+                    // 마디 시작 시간 계산: 마디번호 * 마디당 시간
+                    float laneStartTime = barNumber * duration;
 
                     // LaneData 생성
                     LaneData laneData = new LaneData(barNumber, laneStartTime, beat, isLTR, lane);
