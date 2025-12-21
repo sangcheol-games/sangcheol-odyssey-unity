@@ -23,8 +23,7 @@ namespace SCOdyssey.Game
         public GameObject timelinePrefab; // 판정선 프리팹
         private Queue<GameObject> timelinePool = new Queue<GameObject>();
         public RectTransform[] timelineTransforms = new RectTransform[2];   // 판정선의 상하 위치 좌표
-        private TimelineController currentTimeline;   //현재 스크롤 중인 마디 판정선
-        private TimelineController nextTimeline; // 다음 마디 준비용 판정선
+        private Dictionary<int, TimelineController> activeTimelines = new Dictionary<int, TimelineController>();
 
 
 
@@ -123,28 +122,27 @@ namespace SCOdyssey.Game
 
             currentBarLanes = new List<LaneData>(nextBarLanes);
 
-            HashSet<int> activeGroups = new HashSet<int>();
+            HashSet<int> currentGroups = new HashSet<int>();
             Dictionary<int, bool> groupDirection = new Dictionary<int, bool>();
 
             foreach (var laneData in currentBarLanes)
             {
                 int groupID = GetTrackGroupID(laneData.line - 1);
-                if (!activeGroups.Contains(groupID))
+                if (!currentGroups.Contains(groupID))
                 {
-                    activeGroups.Add(groupID);
+                    currentGroups.Add(groupID);
                     groupDirection[groupID] = laneData.isLTR;
                 }
 
             }
             
-            foreach (int groupID in activeGroups)
+            foreach (int groupID in currentGroups)
             {
                 SpawnTimelines(startTime, groupID, groupDirection[groupID]);
             }
 
 
             SpawnNotes(currentBarLanes, startTime);
-
             currentBarNumber++;
             PrepareNextBar();
 
@@ -158,14 +156,25 @@ namespace SCOdyssey.Game
 
         private void SpawnTimelines(float startTime, int groupID, bool isLTR)
         {
-            TimelineController timeline = GetTimelineFromPool();
-            timeline.transform.SetParent(timelineParent, false);
+            TimelineController timeline = null;
 
-            timeline.transform.position = timelineTransforms[groupID].position;
+            if (activeTimelines.TryGetValue(groupID, out TimelineController existingTimeline))
+            {
+                timeline = existingTimeline;
+                activeTimelines.Remove(groupID);
+            }
+            else
+            {
+                timeline = GetTimelineFromPool();
+                timeline.transform.SetParent(timelineParent, false);
+                timeline.transform.position = timelineTransforms[groupID].position;
+            }
 
             float startX, endX;
             GetTimelinePositions(isLTR, out startX, out endX);
             timeline.Init(startTime, barDuration, startX, endX, (timeline) => { ReturnTimelineToPool(timeline.gameObject); });
+
+            activeTimelines[groupID] = timeline;
         }
 
         private void GetTimelinePositions(bool isLTR, out float startX, out float endX)
