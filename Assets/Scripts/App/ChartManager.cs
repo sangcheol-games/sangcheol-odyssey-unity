@@ -123,60 +123,49 @@ namespace SCOdyssey.Game
 
             currentBarLanes = new List<LaneData>(nextBarLanes);
 
-            SetupTimeline(startTime);
+            HashSet<int> activeGroups = new HashSet<int>();
+            Dictionary<int, bool> groupDirection = new Dictionary<int, bool>();
+
+            foreach (var laneData in currentBarLanes)
+            {
+                int groupID = GetTrackGroupID(laneData.line - 1);
+                if (!activeGroups.Contains(groupID))
+                {
+                    activeGroups.Add(groupID);
+                    groupDirection[groupID] = laneData.isLTR;
+                }
+
+            }
+            
+            foreach (int groupID in activeGroups)
+            {
+                SpawnTimelines(startTime, groupID, groupDirection[groupID]);
+            }
+
+
             SpawnNotes(currentBarLanes, startTime);
 
             currentBarNumber++;
             PrepareNextBar();
 
         }
-
-        
-
-        #region Timeline
-        private void SetupTimeline(float startTime)
+        private int GetTrackGroupID(int laneIndex)
         {
-            if (nextTimeline != null)
-            {
-                currentTimeline = nextTimeline;
-                nextTimeline = null;
-            }
-            else
-            {
-                currentTimeline = GetTimelineFromPool();
-
-                currentTimeline.transform.SetParent(timelineParent, false);
-                currentTimeline.transform.position = timelineTransforms[currentBarLanes[0].GetTimelineStartPosition()].position;
-
-                float startX, endX;
-                GetTimelinePositions(currentBarLanes[0].isLTR, out startX, out endX);
-
-                currentTimeline.Init(startTime, barDuration, startX, endX, (timeline) => { ReturnTimelineToPool(timeline.gameObject); });
-            }
-
-            PrepareNextTimeline(startTime + barDuration);
-
-            // TODO: 한 마디에서 상하 레인 동시 진행시의 처리작업 필요
+            return laneIndex <= 1 ? 0 : 1;
         }
 
-        private void PrepareNextTimeline(float startTime)
+        #region Timeline
+
+        private void SpawnTimelines(float startTime, int groupID, bool isLTR)
         {
-            if (remainingChart.Count <= 0)
-            {
-                nextTimeline = null;
-                return;
-            }
+            TimelineController timeline = GetTimelineFromPool();
+            timeline.transform.SetParent(timelineParent, false);
 
-            LaneData nextLane = remainingChart.Peek();
-            nextTimeline = GetTimelineFromPool();
-
-            nextTimeline.transform.SetParent(timelineParent, false);
-            nextTimeline.transform.position = timelineTransforms[nextLane.GetTimelineStartPosition()].position;
+            timeline.transform.position = timelineTransforms[groupID].position;
 
             float startX, endX;
-            GetTimelinePositions(nextLane.isLTR, out startX, out endX);
-            nextTimeline.Init(startTime, barDuration, startX, endX, (timeline) => { ReturnTimelineToPool(timeline.gameObject); });
-
+            GetTimelinePositions(isLTR, out startX, out endX);
+            timeline.Init(startTime, barDuration, startX, endX, (timeline) => { ReturnTimelineToPool(timeline.gameObject); });
         }
 
         private void GetTimelinePositions(bool isLTR, out float startX, out float endX)
@@ -192,7 +181,7 @@ namespace SCOdyssey.Game
                 endX = leftEndpoint.anchoredPosition.x;
             }
         }
-        
+
         #endregion
 
 
