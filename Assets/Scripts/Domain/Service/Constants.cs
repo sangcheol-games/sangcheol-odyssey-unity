@@ -25,6 +25,13 @@ namespace SCOdyssey.Domain.Service
             Extreme
         }
 
+        public enum NoteState
+        {
+            Hidden,
+            Ghost,
+            Active
+        }
+
         public enum NoteType
         {
             None,

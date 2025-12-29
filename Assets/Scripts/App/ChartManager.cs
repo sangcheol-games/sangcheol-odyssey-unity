@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SCOdyssey.App;
 using UnityEngine;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
@@ -45,6 +46,7 @@ namespace SCOdyssey.Game
         private float barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
         private Queue<NoteController>[] activeNotes = new Queue<NoteController>[4]; // 각 레인별 활성화된 노트 큐
+        private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
 
 
 
@@ -62,7 +64,11 @@ namespace SCOdyssey.Game
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
             currentBarEndTime = 0f + barDuration;
 
-            for (int i = 0; i < 4; i++) activeNotes[i] = new Queue<NoteController>();
+            for (int i = 0; i < 4; i++)
+            {
+                activeNotes[i] = new Queue<NoteController>();
+                ghostNotes[i] = new Queue<NoteController>();
+            }
 
             PrepareNextBar();
             StartCurrentBar();
@@ -107,8 +113,7 @@ namespace SCOdyssey.Game
                 PreloadTimelines();
             }
 
-
-            // TODO 다음 마디를 반투명하게 씬에 시각화
+            SpawnNextNotes();
         }
 
         private void StartCurrentBar()
@@ -163,11 +168,11 @@ namespace SCOdyssey.Game
 
             foreach (int id in groupsToRemove) activeTimelines.Remove(id);  // 반복문 종료 후 제거
 
+            ActivateGhostNotes();
             ActivateTimelines();
 
             currentBarLanes = new List<LaneData>(nextBarLanes);
 
-            SpawnNotes(currentBarLanes, startTime);
             currentBarNumber++;
             PrepareNextBar();
 
@@ -265,29 +270,37 @@ namespace SCOdyssey.Game
 
 
 
-        private void SpawnNotes(List<LaneData> lanesToSpawn, float startTime)
+        private void SpawnNextNotes()
         {
-            foreach (var lane in lanesToSpawn)
+            foreach (var lane in nextBarLanes)
             {
                 float laneWidth = rightEndpoint.anchoredPosition.x - leftEndpoint.anchoredPosition.x;
-                //Debug.Log($"Lane {lane.line} Width: {laneWidth}");
                 float noteInterval = laneWidth / lane.beat;
-                //Debug.Log($"Note Interval: {noteInterval}");
 
                 // 레인 y좌표 기준점 획득
                 RectTransform laneRT = laneTransforms[lane.line - 1];
                 // 노트 배치 시작점 x좌표 위치
                 float laneStartX = lane.isLTR ? leftEndpoint.anchoredPosition.x : rightEndpoint.anchoredPosition.x;
-                //Debug.Log($"Lane {lane.line} Start X: {laneStartX}");
+
+                int groupID = GetTrackGroupID(lane.line - 1);
+
+                TimelineController currentTimeline = null;
+                bool isConflict = false;    // 현재 마디와 다음마디가 동일 그룹으 사용할 경우
+                bool currentIsLTR = true;
+
+                if (activeTimelines != null && activeTimelines.TryGetValue(groupID, out TimelineController timeline))
+                {
+                    isConflict = true;
+                    currentTimeline = timeline;
+                    currentIsLTR = currentTimeline.isLTR;
+                }
 
                 foreach (var noteData in lane.Notes)
                 {
                     GameObject note = GetNoteFromPool();
-                    //if(note == null) Debug.LogError("노트 풀에서 오브젝트를 가져오지 못했습니다.");
-                    NoteController noteController = note.GetComponent<NoteController>();
-                    //if(noteController == null) Debug.LogError("노트 오브젝트에서 컴포넌트를 가져오지 못했습니다.");
-
                     note.transform.SetParent(noteParent, false);
+
+                    NoteController noteController = note.GetComponent<NoteController>();
 
                     Vector2 spawnPos = new Vector2(
                         laneStartX + noteInterval * noteData.index * (lane.isLTR ? 1 : -1),
@@ -301,7 +314,33 @@ namespace SCOdyssey.Game
                         (missedNote) => { RegisterMiss(missedNote);/* TODO: Miss 처리 로직 */ }
                     );
 
-                    activeNotes[lane.line - 1].Enqueue(noteController);
+                    if (isConflict && currentTimeline != null)
+                    {
+                        // 같은 레인 충돌: 숨겨진 상태로 생성하고 판정선 감시 붙임
+                        noteController.TrackTimeline(currentTimeline);
+                    }
+                    else
+                    {
+                        // 충돌 없음: 바로 반투명 노출
+                        noteController.SetState(NoteState.Ghost);
+                    }
+
+                    ghostNotes[lane.line - 1].Enqueue(noteController);
+                }
+            }
+        }
+
+        private void ActivateGhostNotes()
+        {
+            if (ghostNotes == null) return;
+            for (int i = 0; i < 4; i++)
+            {
+                while (ghostNotes[i].Count > 0)
+                {
+                    NoteController note = ghostNotes[i].Dequeue();
+                    note.SetState(NoteState.Active); 
+                    
+                    activeNotes[i].Enqueue(note);
                 }
             }
         }

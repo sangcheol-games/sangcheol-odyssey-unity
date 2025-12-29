@@ -9,7 +9,7 @@ namespace SCOdyssey.Game
     [RequireComponent(typeof(RectTransform))]
     public class TimelineController : MonoBehaviour
     {
-        private RectTransform rectTransform;
+        public RectTransform rectTransform;
         private CanvasGroup canvasGroup;
 
         private float startTime;      // 마디 시작 시간 (판정선 출발 시간)
