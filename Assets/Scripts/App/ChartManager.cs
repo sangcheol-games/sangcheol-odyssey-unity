@@ -24,6 +24,7 @@ namespace SCOdyssey.Game
         private Queue<GameObject> timelinePool = new Queue<GameObject>();
         public RectTransform[] timelineTransforms = new RectTransform[2];   // 판정선의 상하 위치 좌표
         private Dictionary<int, TimelineController> activeTimelines = new Dictionary<int, TimelineController>();
+        private Dictionary<int, TimelineController> preloadedTimelines = new Dictionary<int, TimelineController>();
 
 
 
@@ -42,7 +43,6 @@ namespace SCOdyssey.Game
         private int currentBarNumber = 0;
         private float currentBarEndTime = 0f; // 현재 마디의 종료 시간
         private float barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
-
 
         private Queue<NoteController>[] activeNotes = new Queue<NoteController>[4]; // 각 레인별 활성화된 노트 큐
 
@@ -92,9 +92,8 @@ namespace SCOdyssey.Game
             }
 
             int nextBar = currentBarNumber;
-            //Debug.Log("Preparing Bar " + nextBar);
 
-            while (true)    // 다음 마디에 해당하는 모든 LaneData를 remaingChart => nextBarLanes로 이동
+            while (remainingChart.Count > 0)    // 다음 마디에 해당하는 모든 LaneData를 remaingChart => nextBarLanes로 이동
             {
                 LaneData nextLane = remainingChart.Peek();
                 if (nextLane.bar > nextBar) break;
@@ -103,7 +102,11 @@ namespace SCOdyssey.Game
                 remainingChart.Dequeue();
             }
 
-            //Debug.Log($"Prepared Bar {nextBar} with {nextBarLanes.Count} lanes.");
+            if (nextBarLanes.Count > 0)
+            {
+                PreloadTimelines();
+            }
+
 
             // TODO 다음 마디를 반투명하게 씬에 시각화
         }
@@ -112,7 +115,6 @@ namespace SCOdyssey.Game
         {
             float startTime = currentBarNumber * barDuration;
             currentBarEndTime = startTime + barDuration;
-            //Debug.Log($"Starting Bar {currentBarNumber + 1} at time {currentTime}, ends at {currentBarEndTime}");
 
             if (nextBarLanes.Count == 0)
             {
@@ -121,27 +123,49 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            currentBarLanes = new List<LaneData>(nextBarLanes);
+            HashSet<int> nextGroups = new HashSet<int>();
+            Dictionary<int, bool> nextGroupDirection = new Dictionary<int, bool>();
 
-            HashSet<int> currentGroups = new HashSet<int>();
-            Dictionary<int, bool> groupDirection = new Dictionary<int, bool>();
-
-            foreach (var laneData in currentBarLanes)
+            foreach (var lane in nextBarLanes)
             {
-                int groupID = GetTrackGroupID(laneData.line - 1);
-                if (!currentGroups.Contains(groupID))
+                int groupID = GetTrackGroupID(lane.line - 1);
+                nextGroups.Add(groupID);
+                nextGroupDirection[groupID] = lane.isLTR;
+            }
+
+            List<int> groupsToRemove = new List<int>(); // 제거할 그룹 ID 목록
+
+            foreach (var kvp in activeTimelines)
+            {
+                int groupID = kvp.Key;
+                TimelineController timeline = kvp.Value;
+
+                if (nextGroups.Contains(groupID) && timeline.isLTR != nextGroupDirection[groupID])
                 {
-                    currentGroups.Add(groupID);
-                    groupDirection[groupID] = laneData.isLTR;
+                    // 재활용
+                    bool isLTR = nextGroupDirection[groupID];
+                    float startX, endX;
+                    GetTimelinePositions(isLTR, out startX, out endX);
+
+                    timeline.Init(
+                        startTime,
+                        barDuration,
+                        startX,
+                        endX,
+                        (timeline) => { ReturnTimelineToPool(timeline.gameObject); }
+                    );
                 }
-
-            }
-            
-            foreach (int groupID in currentGroups)
-            {
-                SpawnTimelines(startTime, groupID, groupDirection[groupID]);
+                else
+                {
+                    groupsToRemove.Add(groupID);    // 여기서 바로 제거하면 컬렉션 변경 오류 발생
+                }
             }
 
+            foreach (int id in groupsToRemove) activeTimelines.Remove(id);  // 반복문 종료 후 제거
+
+            ActivateTimelines();
+
+            currentBarLanes = new List<LaneData>(nextBarLanes);
 
             SpawnNotes(currentBarLanes, startTime);
             currentBarNumber++;
@@ -155,27 +179,71 @@ namespace SCOdyssey.Game
 
         #region Timeline
 
-        private void SpawnTimelines(float startTime, int groupID, bool isLTR)
+        private void PreloadTimelines()
         {
-            TimelineController timeline = null;
+            HashSet<int> nextGroups = new HashSet<int>();
+            Dictionary<int, bool> nextGroupDirection = new Dictionary<int, bool>();
 
-            if (activeTimelines.TryGetValue(groupID, out TimelineController existingTimeline))
+            foreach (var laneData in nextBarLanes)
             {
-                timeline = existingTimeline;
-                activeTimelines.Remove(groupID);
+                int groupID = GetTrackGroupID(laneData.line - 1);
+                if (!nextGroups.Contains(groupID))
+                {
+                    nextGroups.Add(groupID);
+                    nextGroupDirection[groupID] = laneData.isLTR;
+                }
             }
-            else
+
+            float nextStartTime = currentBarNumber * barDuration;
+
+            foreach (int groupID in nextGroups)
             {
-                timeline = GetTimelineFromPool();
+                if (activeTimelines.ContainsKey(groupID))   // 재사용의 경우
+                {
+                    if (activeTimelines[groupID].isLTR != nextGroupDirection[groupID]) continue; 
+                }
+                if (preloadedTimelines.ContainsKey(groupID)) continue;  // 중복 방지
+
+                // 새 판정선 생성
+                TimelineController timeline = GetTimelineFromPool();
                 timeline.transform.SetParent(timelineParent, false);
                 timeline.transform.position = timelineTransforms[groupID].position;
+
+                bool isLTR = nextGroupDirection[groupID];
+                float startX, endX;
+                GetTimelinePositions(isLTR, out startX, out endX);
+
+                timeline.Init(
+                    nextStartTime,
+                    barDuration,
+                    startX,
+                    endX,
+                    (timeline) => { ReturnTimelineToPool(timeline.gameObject); }
+                );
+
+                preloadedTimelines.Add(groupID, timeline);
             }
 
-            float startX, endX;
-            GetTimelinePositions(isLTR, out startX, out endX);
-            timeline.Init(startTime, barDuration, startX, endX, (timeline) => { ReturnTimelineToPool(timeline.gameObject); });
+        }
 
-            activeTimelines[groupID] = timeline;
+        private void ActivateTimelines()
+        {
+            foreach (var kvp in preloadedTimelines)
+            {
+                int groupID = kvp.Key;
+                TimelineController timeline = kvp.Value;
+                
+                if (!activeTimelines.ContainsKey(groupID))
+                {
+                    activeTimelines.Add(groupID, timeline);
+                }
+                else
+                {
+                    Debug.LogWarning("Timeline 승격 중복 발생: 그룹 " + groupID);
+                    ReturnTimelineToPool(timeline.gameObject);
+                }
+            }
+            preloadedTimelines.Clear();
         }
 
         private void GetTimelinePositions(bool isLTR, out float startX, out float endX)

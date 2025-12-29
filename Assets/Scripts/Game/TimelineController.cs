@@ -17,6 +17,8 @@ namespace SCOdyssey.Game
         private float startX;         // 출발 X 좌표 (UI 앵커 기준)
         private float endX;           // 도착 X 좌표
 
+        public bool isLTR;            // 왼쪽에서 오른쪽으로 이동하는지 여부
+
         private Action<TimelineController> onReturn;
 
         private float screenBoundX; // 화면 경계 X 좌표
@@ -38,6 +40,11 @@ namespace SCOdyssey.Game
             this.startX = startX;
             this.endX = endX;
             this.onReturn = returnCallback;
+
+            if (startX < endX)
+                isLTR = true;
+            else
+                isLTR = false;
 
             rectTransform.anchoredPosition = new Vector2(startX, rectTransform.anchoredPosition.y);
 
