@@ -5,7 +5,7 @@ using SCOdyssey.Core;
 
 namespace SCOdyssey.App
 {
-    public class UIManager
+    public class UIManager : IUIManager
     {
         private int order = -20;    // sorting order에 사용할 변수
         private Stack<BaseUI> uiStack = new Stack<BaseUI>();
@@ -26,7 +26,7 @@ namespace SCOdyssey.App
         {
             ShowUI<MainUI>();
         }
-        public void SetCanvas(GameObject go, bool sort = true)
+        private void SetCanvas(GameObject go, bool sort = true)
         {
             Canvas canvas = go.GetComponent<Canvas>();
             canvas.overrideSorting = true;
@@ -61,6 +61,7 @@ namespace SCOdyssey.App
             GameObject go = ResourceLoader.PrefabInstantiate($"UI/{name}");
             T ui = go.GetComponent<T>();
             uiStack.Push(ui);
+            SetCanvas(go);
 
             // 부모 설정
             if (parent != null)
@@ -76,7 +77,7 @@ namespace SCOdyssey.App
         }
 
         // UI 스택에서 T타입의 UI를 return
-        public T FindUI<T>() where T : BaseUI
+        private T FindUI<T>() where T : BaseUI
         {
             foreach (var item in uiStack)
             {
@@ -89,7 +90,7 @@ namespace SCOdyssey.App
         }
 
         // UI스택의 가장 위에 있는 UI return
-        public T PeekUI<T>() where T : BaseUI
+        private T PeekUI<T>() where T : BaseUI
         {
             // 스택이 비어있으면 null return
             if (uiStack.Count == 0)

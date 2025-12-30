@@ -2,6 +2,7 @@ using UnityEngine;
 using SCOdyssey.App;
 using SCOdyssey.UI;
 using UnityEngine.EventSystems;
+using SCOdyssey.Core;
 
 namespace SCOdyssey
 {
@@ -27,8 +28,6 @@ namespace SCOdyssey
 
         private void Init()
         {
-            Managers.UI.SetCanvas(gameObject);
-
             BindButton(typeof(Buttons));
             BindImage(typeof(Images));
 
@@ -51,6 +50,7 @@ namespace SCOdyssey
         private void OnClickLounge()
         {
             Debug.Log("OnClickLounge");
+            ServiceLocator.Get<IUIManager>().CloseUI(this);
             GetImage((int)Images.Profile).color = Color.red;
         }
         private void OnClickSetting()
