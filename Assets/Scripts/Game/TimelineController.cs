@@ -12,6 +12,9 @@ namespace SCOdyssey.Game
         public RectTransform rectTransform;
         private CanvasGroup canvasGroup;
 
+        [SerializeField]
+        private GameObject characterImage;
+
         private float startTime;      // 마디 시작 시간 (판정선 출발 시간)
         private float duration;       // 마디 길이 (이동에 걸리는 시간)
         private float startX;         // 출발 X 좌표 (UI 앵커 기준)
@@ -42,9 +45,16 @@ namespace SCOdyssey.Game
             this.onReturn = returnCallback;
 
             if (startX < endX)
+            {
                 isLTR = true;
+                characterImage.transform.rotation = Quaternion.Euler(0, 0, 0);
+            }
             else
+            {
                 isLTR = false;
+                characterImage.transform.rotation = Quaternion.Euler(0, 180, 0);
+            }
+
 
             rectTransform.anchoredPosition = new Vector2(startX, rectTransform.anchoredPosition.y);
 

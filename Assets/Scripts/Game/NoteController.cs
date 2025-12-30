@@ -53,7 +53,7 @@ namespace SCOdyssey.Game
                     c.a = 0f;
                     break;
                 case NoteState.Ghost:
-                    c.a = 0.4f;
+                    c.a = 0.05f;
                     break;
                 case NoteState.Active:
                     c.a = 1f;
@@ -86,11 +86,11 @@ namespace SCOdyssey.Game
 
                 if (trackingTimeline.isLTR)
                 {
-                    if (timelineX > noteX + 20f) isPased = true;    // 여유 공간 임시값 20f. 캐릭터 스프라이트 적용 후 조정 필요 
+                    if (timelineX > noteX + 150f) isPased = true;    // 여유 공간 임시값 20f. 캐릭터 스프라이트 적용 후 조정 필요 
                 }
                 else
                 {
-                    if (timelineX < noteX - 20f) isPased = true;
+                    if (timelineX < noteX - 150f) isPased = true;
                 }
 
                 if (isPased)
