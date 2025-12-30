@@ -78,12 +78,28 @@ namespace SCOdyssey.Game
         public void SyncTime(float time)
         {
             this.currentTime = time;
-            
-            if (remainingChart.Count > 0 && currentTime >= currentBarEndTime)
+
+            if (remainingChart.Count >= 0 && currentTime >= currentBarEndTime)
             {
-                //Debug.Log("currentTime:" + currentTime);
                 StartCurrentBar();
+                CheckGameClear();
             }
+
+        }
+        
+        private void CheckGameClear()
+        {
+            if (remainingChart.Count > 0) return;
+            if (nextBarLanes.Count > 0) return;
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (activeNotes[i].Count > 0) return;
+                if (ghostNotes[i].Count > 0) return;
+            }
+
+            Debug.Log("Game Cleared.");
+            GameManager.Instance.OnGameFinished();
         }
 
 
@@ -91,11 +107,6 @@ namespace SCOdyssey.Game
         private void PrepareNextBar()
         {
             nextBarLanes.Clear();
-            if (remainingChart.Count == 0)
-            {
-                Debug.Log("End of Chart.");
-                return;
-            }
 
             int nextBar = currentBarNumber;
 
@@ -111,9 +122,9 @@ namespace SCOdyssey.Game
             if (nextBarLanes.Count > 0)
             {
                 PreloadTimelines();
+                SpawnNextNotes();
             }
 
-            SpawnNextNotes();
         }
 
         private void StartCurrentBar()
@@ -123,8 +134,7 @@ namespace SCOdyssey.Game
 
             if (nextBarLanes.Count == 0)
             {
-                // TODO: 게임 종료 처리
-                Debug.Log("Game Cleared.");
+                Debug.Log("End of Chart Reached.");
                 return;
             }
 
