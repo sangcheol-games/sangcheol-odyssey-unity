@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using SCOdyssey.App;
+using SCOdyssey.Core;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -8,10 +10,47 @@ using UnityEngine.UI;
 
 namespace SCOdyssey.UI
 {
-    public class BaseUI : MonoBehaviour
+    public abstract class BaseUI : MonoBehaviour
     {
         // UI 캐싱 딕셔너리
         private Dictionary<Type, UnityEngine.Object[]> objDic = new Dictionary<Type, UnityEngine.Object[]>();
+
+        protected IInputManager inputManager;
+
+        protected virtual void Awake()
+        {
+            if (!ServiceLocator.TryGet(out inputManager))
+            {
+                Debug.LogError("InputManager is missing!");
+            }
+        }
+
+        protected virtual void OnEnable()
+        {
+            if (inputManager != null)
+            {
+                inputManager.SwitchToUI();
+
+                inputManager.OnSelect += HandleSelect;
+                inputManager.OnSubmit += HandleSubmit;
+                inputManager.OnCancel += HandleCancel;
+            }
+        }
+
+        protected virtual void OnDisable()
+        {
+            if (inputManager != null)
+            {
+                inputManager.OnSelect -= HandleSelect;
+                inputManager.OnSubmit -= HandleSubmit;
+                inputManager.OnCancel -= HandleCancel;
+            }
+        }
+
+        protected abstract void HandleSelect(Vector2 direction);
+        protected abstract void HandleSubmit();
+        protected abstract void HandleCancel();
+
 
         // 바인딩 할 오브젝트의 이름을 Enum타입으로 받아와 딕셔너리에 저장
         protected void Bind<T>(Type type) where T : UnityEngine.Object
