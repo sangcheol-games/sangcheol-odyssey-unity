@@ -25,9 +25,12 @@ namespace SCOdyssey.App
 
         private void InitServices()
         {
+            var inputManager = new InputManager();
+            inputManager.Enable();
+            ServiceLocator.TryRegister<IInputManager>(inputManager);
+
             var uiManager = new UIManager();
             uiManager.Init();
-
             ServiceLocator.TryRegister<IUIManager>(uiManager);
 
             Application.targetFrameRate = 60;   // 앱 프레임 60으로 고정

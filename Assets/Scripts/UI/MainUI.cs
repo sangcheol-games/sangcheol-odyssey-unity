@@ -57,5 +57,20 @@ namespace SCOdyssey
         {
             Debug.Log("OnClickSetting");
         }
+
+        protected override void HandleSelect(Vector2 direction)
+        {
+            Debug.Log("HandleSelect in MainUI");
+        }
+
+        protected override void HandleSubmit()
+        {
+            Debug.Log("HandleSubmit in MainUI");
+        }
+
+        protected override void HandleCancel()
+        {
+            Debug.Log("HandleCancel in MainUI");
+        }
     }
 }
