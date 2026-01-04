@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using NUnit.Framework;
 using SCOdyssey.App;
+using SCOdyssey.Core;
 using UnityEngine;
 
 namespace SCOdyssey.Game
@@ -71,7 +72,7 @@ namespace SCOdyssey.Game
 
         private void UpdatePosition()
         {
-            float currentTime = GameManager.Instance.GetCurrentTime();
+            float currentTime = ServiceLocator.Get<IGameManager>().GetCurrentTime();
             float elapsedTime = currentTime - startTime;
             float progress = elapsedTime / duration;
 

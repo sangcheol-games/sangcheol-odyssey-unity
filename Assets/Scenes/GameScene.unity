@@ -1458,8 +1458,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f3c1f3912e09724e9d5705481cbe502, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  audioSource: {fileID: 1155553906}
   chartManager: {fileID: 222975566}
-  musicSource: {fileID: 1155553906}
+  globalStartTime: 0
+  <IsGameRunning>k__BackingField: 0
+  score: 0
+  combo: 0
 --- !u!1 &2012656663
 GameObject:
   m_ObjectHideFlags: 0

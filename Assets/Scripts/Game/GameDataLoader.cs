@@ -1,5 +1,6 @@
 using System.Collections;
 using SCOdyssey.App;
+using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
@@ -52,7 +53,7 @@ namespace SCOdyssey.Game
                 yield break;
             }
 
-            GameManager.Instance.SetChartData(parsedData);
+            ServiceLocator.Get<IGameManager>().SetChartData(parsedData);
 
             yield return null;
         }

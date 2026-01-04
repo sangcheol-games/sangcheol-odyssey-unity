@@ -12,7 +12,6 @@ namespace SCOdyssey.Game
         public NoteData noteData { get; private set; }
 
         private Action<NoteController> onReturn;
-        private Action<NoteController> onMissed;
 
         public Image noteImage;
         private bool isJudged = false;
@@ -26,11 +25,10 @@ namespace SCOdyssey.Game
             if (noteImage == null) noteImage = GetComponent<Image>();
         }
 
-        public void Init(NoteData noteData, Vector2 position, Action<NoteController> returnCallback, Action<NoteController> missCallback)
+        public void Init(NoteData noteData, Vector2 position, Action<NoteController> returnCallback)
         {
             this.noteData = noteData;
             this.onReturn = returnCallback;
-            this.onMissed = missCallback;
 
             rectTransform.anchoredPosition = position;
             isJudged = false;
@@ -73,7 +71,7 @@ namespace SCOdyssey.Game
             SetState(NoteState.Hidden);
         }
 
-        void FixedUpdate()
+        void Update()
         {
             if (isJudged) return;
 
@@ -101,25 +99,22 @@ namespace SCOdyssey.Game
 
             }
 
-            if (currentState == NoteState.Active)
-            {
-                float currentTime = GameManager.Instance.GetCurrentTime();
-                float timeRemaining = noteData.time - currentTime;
+        }
 
-                // TODO: 판정로직
+        public void OnMiss()
+        {
+            if (isJudged) return;
+            isJudged = true;
 
-                if (timeRemaining < -JUDGE_UHM) // Miss 판정
-                {
-                    HandleMiss();
-                }
-            }
-
+            DeleteNote();
         }
         
-        private void HandleMiss()
+        public void OnHit()
         {
+            if (isJudged) return;
             isJudged = true;
-            onMissed?.Invoke(this);
+
+            DeleteNote();
         }
         
         public void DeleteNote()

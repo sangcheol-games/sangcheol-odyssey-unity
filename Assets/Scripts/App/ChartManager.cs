@@ -7,6 +7,8 @@ namespace SCOdyssey.Game
 {
     public class ChartManager : MonoBehaviour
     {
+        private IGameManager gameManager;
+
         public RectTransform noteParent;
         public RectTransform timelineParent;
         public Transform objectPoolParent;
@@ -55,8 +57,9 @@ namespace SCOdyssey.Game
             //chartData = GameManager.chartData;
         }
 
-        public void Init(ChartData chartData)
+        public void Init(ChartData chartData, IGameManager gameManager)
         {
+            this.gameManager = gameManager;
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
 
@@ -72,7 +75,8 @@ namespace SCOdyssey.Game
 
             PrepareNextBar();
             StartCurrentBar();
-            GameManager.Instance.StartMusic(barDuration);
+
+            gameManager.StartMusic(barDuration);
         }
 
         public void SyncTime(float time)
@@ -83,6 +87,11 @@ namespace SCOdyssey.Game
             {
                 StartCurrentBar();
                 CheckGameClear();
+            }
+
+            for (int i = 0; i < 4; i++) 
+            {
+                CheckMissedNotes(i, currentTime);
             }
 
         }
@@ -99,7 +108,7 @@ namespace SCOdyssey.Game
             }
 
             Debug.Log("Game Cleared.");
-            GameManager.Instance.OnGameFinished();
+            gameManager.OnGameFinished();
         }
 
 
@@ -320,8 +329,7 @@ namespace SCOdyssey.Game
                     noteController.Init(
                         noteData,
                         spawnPos,
-                        (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); },
-                        (missedNote) => { RegisterMiss(missedNote);/* TODO: Miss 처리 로직 */ }
+                        (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
                     );
 
                     if (isConflict && currentTimeline != null)
@@ -359,29 +367,55 @@ namespace SCOdyssey.Game
         #region Judgement
         public void TryJudgeInput(int laneIndex)
         {
-            var queue = activeNotes[laneIndex - 1];
+            int listIndex = laneIndex - 1;  // 인덱스 보정
+
+            var queue = activeNotes[listIndex];
             if (queue.Count == 0) return;
 
-            NoteController note = queue.Peek();
-            float timeDiff = Mathf.Abs(note.noteData.time - GameManager.Instance.GetCurrentTime());
+            NoteController targetNote = queue.Peek();
 
-            if (timeDiff <= 0.3f) // 임시 판정 범위 0.3초
+            float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+
+            if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
             {
-                queue.Dequeue();
-                GameManager.Instance.OnNoteJudged(timeDiff);
-                note.DeleteNote();
+                Debug.Log("판정 범위 밖 입력");
+                return;
             }
+
+            JudgeType result = JudgeType.Perfect;
+
+            if (timeDiff <= JUDGE_PERFECT) result = JudgeType.Perfect;
+            else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
+            else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
+            else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
+            else if (timeDiff <= JUDGE_UHM) result = JudgeType.Uhm;
+
+            ApplyJudgment(targetNote, listIndex, result);
+
         }
 
-        public void RegisterMiss(NoteController note)
-        {
-            GameManager.Instance.OnNoteMissed();
-            note.DeleteNote();
 
-            var queue = activeNotes[note.noteData.laneIndex - 1];
-            if (queue.Count > 0 && queue.Peek() == note)
+        private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
+        {
+            activeNotes[listIndex].Dequeue();
+            targetNote.OnHit();
+
+            gameManager.OnNoteJudged(type);
+
+        }
+        
+        private void CheckMissedNotes(int listIndex, float currentTime)
+        {
+            if (activeNotes[listIndex].Count == 0) return;
+
+            NoteController targetNote = activeNotes[listIndex].Peek();
+
+            if (currentTime > targetNote.noteData.time + JUDGE_UHM)
             {
-                queue.Dequeue();
+                activeNotes[listIndex].Dequeue();
+                targetNote.OnMiss();
+
+                gameManager.OnNoteMissed();
             }
         }
 

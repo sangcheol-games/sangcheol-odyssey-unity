@@ -1,4 +1,5 @@
 using SCOdyssey.App;
+using SCOdyssey.Core;
 using SCOdyssey.Game;
 using UnityEngine;
 
@@ -11,7 +12,14 @@ public class GameSceneTester : MonoBehaviour
 
     void Start()
     {
-        if (GameManager.Instance == null)
+        IGameManager gameManager = null;
+        if (!ServiceLocator.TryGet<IGameManager>(out gameManager))
+        {
+            Debug.LogError("IGameManager가 등록되지 않았습니다!");
+            return;
+        }
+        
+        if (gameManager == null)
         {
             Debug.LogError("GameManager가 씬에 없습니다!");
             return;
@@ -21,14 +29,14 @@ public class GameSceneTester : MonoBehaviour
 
         if (testMusic != null)
         {
-            GameManager.Instance.musicSource.clip = testMusic;
+            gameManager.SetAudioClip(testMusic);
         }
 
         if (testChartFile != null)
         {
             ChartData data = ChartParser.Parse(testChartFile.text, testBpm);
             
-            GameManager.Instance.SetChartData(data);
+            gameManager.SetChartData(data);
             
         }
         else

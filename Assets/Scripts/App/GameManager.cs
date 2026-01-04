@@ -1,71 +1,101 @@
+using SCOdyssey.Core;
 using SCOdyssey.Game;
 using UnityEngine;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
 {
-    public class GameManager : MonoBehaviour
+    public class GameManager : MonoBehaviour, IGameManager
     {
-        public static GameManager Instance { get; private set; }
-        private void Awake()
-        {
-            if (Instance == null) Instance = this;
-            else Destroy(gameObject);
-        }
-
         [Header("참조")]
+        public AudioSource audioSource;
+        public void SetAudioClip(AudioClip audioClip)     // 테스트용 임시필드. MusicManager 구현 후 제거 예정
+        {
+            this.audioSource.clip = audioClip;
+        }
         public ChartManager chartManager;
-        public AudioSource musicSource;
         public ChartData chartData;
 
 
         [Header("게임 상태")]
         private float globalStartTime;
-        private bool isGameRunning = false;
+        public bool IsGameRunning { get; private set; } = false;
 
         [Header("점수 및 콤보")]
         private float score = 0;
         private int combo = 0;
 
 
+        private void Awake()
+        {
+            ServiceLocator.TryRegister<IGameManager>(this);
+        }
+
         private void Start()
         {
+            var inputManager = new InputManager();
+            inputManager.Enable();
+            ServiceLocator.TryRegister<IInputManager>(inputManager);
+
+            inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
+            inputManager.OnLanePressed += HandleLaneInput;
+
+            // 여기가 실제 코드. 위가 테스트 코드
+            /*
+            if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
+            {
+                inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
+                inputManager.OnLanePressed += HandleLaneInput;
+            }
+            */
+
+
             // TODO : chart Load
             StartGame();
         }
 
-        public void StartGame()
+        private void OnDestroy()
         {
-            if (chartManager == null || musicSource == null || chartData == null)
+            ServiceLocator.Remove<IGameManager>();
+
+            if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
+            {
+                inputManager.OnLanePressed -= HandleLaneInput;
+                inputManager.SwitchToUI(); 
+            }
+        }
+
+        private void StartGame()
+        {
+            if (chartManager == null || audioSource == null || chartData == null)
             {
                 Debug.LogError("GameManager 초기화 실패!");
                 return;
             }
 
-            globalStartTime = (float)AudioSettings.dspTime;
-            isGameRunning = true;
+            chartManager.Init(chartData, this);
 
-            chartManager.Init(chartData);
+            globalStartTime = (float)AudioSettings.dspTime;
+            IsGameRunning = true;
         }
         
         public void StartMusic(float delayTime)
         {
-            musicSource.PlayDelayed(delayTime);
+            audioSource.PlayDelayed(delayTime);
         }
 
         public float GetCurrentTime()
         {
-            if (!isGameRunning) return 0f;
+            if (!IsGameRunning) return 0f;
             return (float)(AudioSettings.dspTime - globalStartTime);
         }
 
 
-        private void FixedUpdate()
+        private void Update()
         {
-            if (!isGameRunning) return;
+            if (!IsGameRunning) return;
 
             chartManager.SyncTime(GetCurrentTime());
-            // TODO: HandleInput with new Input System
-            HandleInput();
 
         }
 
@@ -76,23 +106,22 @@ namespace SCOdyssey.App
             // chartManager.Initialize(data); 
         }
 
-        private void HandleInput()
+        private void HandleLaneInput(int laneIndex)
         {
-            // TODO: Input System으로 변경 필요
-            if (Input.GetKeyDown(KeyCode.Q)) chartManager.TryJudgeInput(1);
-            if (Input.GetKeyDown(KeyCode.A)) chartManager.TryJudgeInput(2);
-            if (Input.GetKeyDown(KeyCode.K)) chartManager.TryJudgeInput(3);
-            if (Input.GetKeyDown(KeyCode.M)) chartManager.TryJudgeInput(4);
+            if (!IsGameRunning) return;
+
+            chartManager.TryJudgeInput(laneIndex);
+
         }
 
 
-        public void OnNoteJudged(float timeDifference)
+        public void OnNoteJudged(JudgeType judgeType)
         {
             combo++;
+
             // TODO: 점수 계산 로직 개선
-            if (timeDifference < 0.05f) score += 100;
-            else if (timeDifference < 0.1f) score += 50;
-            else score += 10;
+            float addScore = (judgeType == JudgeType.Perfect) ? 100 : 50;
+            score += addScore;
 
             Debug.Log($"Hit! Score: {score}, Combo: {combo}");
         }
@@ -105,7 +134,7 @@ namespace SCOdyssey.App
 
         public void OnGameFinished()
         {
-            isGameRunning = false;
+            IsGameRunning = false;
             Debug.Log($"Game Over. Final Score: {score}");
         }
 
