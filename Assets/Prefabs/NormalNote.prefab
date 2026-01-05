@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &8256045479979714944
+--- !u!1 &3709894694565103827
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,24 +8,24 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 6849496630619992555}
-  - component: {fileID: 6827788107099658826}
-  - component: {fileID: 1732691108729954849}
-  - component: {fileID: 4777027436612008715}
+  - component: {fileID: 7036525872568164362}
+  - component: {fileID: 3271643899618168293}
+  - component: {fileID: 2573271357511399910}
+  - component: {fileID: 7197527008378443410}
   m_Layer: 5
-  m_Name: Note
+  m_Name: NormalNote
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!224 &6849496630619992555
+--- !u!224 &7036525872568164362
 RectTransform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8256045479979714944}
+  m_GameObject: {fileID: 3709894694565103827}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 0.15, y: 0.15, z: 0.15}
@@ -38,21 +38,21 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 965, y: 1375}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &6827788107099658826
+--- !u!222 &3271643899618168293
 CanvasRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8256045479979714944}
+  m_GameObject: {fileID: 3709894694565103827}
   m_CullTransparentMesh: 1
---- !u!114 &1732691108729954849
+--- !u!114 &2573271357511399910
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8256045479979714944}
+  m_GameObject: {fileID: 3709894694565103827}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
@@ -76,17 +76,16 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &4777027436612008715
+--- !u!114 &7197527008378443410
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8256045479979714944}
+  m_GameObject: {fileID: 3709894694565103827}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b744769030f79c14d85d88ae7d54fef5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5aedcd9710ca3c94db01b88fbd4807ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  noteImage: {fileID: 0}
-  currentState: 0
+  noteImage: {fileID: 2573271357511399910}

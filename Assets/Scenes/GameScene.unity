@@ -275,7 +275,7 @@ MonoBehaviour:
   noteParent: {fileID: 32057178}
   timelineParent: {fileID: 1970010354}
   objectPoolParent: {fileID: 332942914}
-  notePrefab: {fileID: 8256045479979714944, guid: 75f94e9fce134004b8176209dd4fd04d, type: 3}
+  notePrefab: {fileID: 3709894694565103827, guid: cbce78fe17a25cf4e96b9100f757c0d8, type: 3}
   timelinePrefab: {fileID: 974329378437653435, guid: 12698f78ad5a8d74b84658c173321e46, type: 3}
   timelineTransforms:
   - {fileID: 831752951}
@@ -1460,10 +1460,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   audioSource: {fileID: 1155553906}
   chartManager: {fileID: 222975566}
-  globalStartTime: 0
-  <IsGameRunning>k__BackingField: 0
-  score: 0
-  combo: 0
 --- !u!1 &2012656663
 GameObject:
   m_ObjectHideFlags: 0

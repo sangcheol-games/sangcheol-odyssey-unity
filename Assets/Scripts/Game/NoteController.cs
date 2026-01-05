@@ -1,43 +1,38 @@
 using System;
-using SCOdyssey.App;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
-    [RequireComponent(typeof(RectTransform))]
-    public class NoteController : MonoBehaviour
+    public abstract class NoteController : MonoBehaviour
     {
         public NoteData noteData { get; private set; }
-
-        private Action<NoteController> onReturn;
+        protected Action<NoteController> onReturn;
 
         public Image noteImage;
-        private bool isJudged = false;
-        public NoteState currentState;
+        protected bool isJudged = false;
+        private NoteState currentState;
         private TimelineController trackingTimeline;
-        private RectTransform rectTransform;
+        protected RectTransform rectTransform;
 
-        void Awake()
+        protected virtual void Awake()
         {
             rectTransform = GetComponent<RectTransform>();
             if (noteImage == null) noteImage = GetComponent<Image>();
         }
 
-        public void Init(NoteData noteData, Vector2 position, Action<NoteController> returnCallback)
+        public virtual void Init(NoteData noteData, Vector2 position, Action<NoteController> returnCallback)
         {
             this.noteData = noteData;
             this.onReturn = returnCallback;
-
-            rectTransform.anchoredPosition = position;
-            isJudged = false;
+            this.rectTransform.anchoredPosition = position;
+            this.isJudged = false;
 
             trackingTimeline = null;
 
-            SetVisual(noteData.noteType);
+            SetVisual();
             gameObject.SetActive(true);
-
         }
 
         public void SetState(NoteState state)
@@ -60,10 +55,7 @@ namespace SCOdyssey.Game
             noteImage.color = c;
         }
 
-        private void SetVisual(NoteType noteType)
-        {
-            // TODO: 노트 타입과 스킨에 따라 Sprite 설정
-        }
+        protected abstract void SetVisual();
 
         public void TrackTimeline(TimelineController timeline)
         {
@@ -101,30 +93,23 @@ namespace SCOdyssey.Game
 
         }
 
-        public void OnMiss()
+        public virtual void OnMiss()
         {
             if (isJudged) return;
-            isJudged = true;
-
             DeleteNote();
         }
-        
-        public void OnHit()
+
+        public virtual void OnHit()
         {
             if (isJudged) return;
-            isJudged = true;
-
             DeleteNote();
         }
-        
+
         public void DeleteNote()
         {
             isJudged = true;
             gameObject.SetActive(false);
             onReturn?.Invoke(this);
         }
-
     }
-
 }
-
