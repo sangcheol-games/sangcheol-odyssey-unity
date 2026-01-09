@@ -39,6 +39,7 @@ namespace SCOdyssey.App
 
             inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
             inputManager.OnLanePressed += HandleLaneInput;
+            inputManager.OnLaneReleased += HandleLaneRelease;
 
             // 여기가 실제 코드. 위가 테스트 코드
             /*
@@ -46,6 +47,7 @@ namespace SCOdyssey.App
             {
                 inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
                 inputManager.OnLanePressed += HandleLaneInput;
+                inputManager.OnLaneReleased += HandleLaneRelease;
             }
             */
 
@@ -109,9 +111,14 @@ namespace SCOdyssey.App
         private void HandleLaneInput(int laneIndex)
         {
             if (!IsGameRunning) return;
-
             chartManager.TryJudgeInput(laneIndex);
+        }
 
+        private void HandleLaneRelease(int laneIndex)
+        {
+            if (!IsGameRunning) return;
+            Debug.Log($"Lane {laneIndex} Released");
+            chartManager.TryJudgeRelease(laneIndex);
         }
 
 

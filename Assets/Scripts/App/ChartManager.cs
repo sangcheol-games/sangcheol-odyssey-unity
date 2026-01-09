@@ -50,6 +50,8 @@ namespace SCOdyssey.Game
         private Queue<NoteController>[] activeNotes = new Queue<NoteController>[4]; // 각 레인별 활성화된 노트 큐
         private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
 
+        private bool[] isLaneHolding = {false, false, false, false}; // 각 레인별 롱노트 홀딩 상태 추적
+
 
 
         void Awake()
@@ -92,6 +94,7 @@ namespace SCOdyssey.Game
             for (int i = 0; i < 4; i++) 
             {
                 CheckMissedNotes(i, currentTime);
+                if (isLaneHolding[i]) CheckHoldingBody(i);
             }
 
         }
@@ -189,6 +192,7 @@ namespace SCOdyssey.Game
 
             ActivateGhostNotes();
             ActivateTimelines();
+            
 
             currentBarLanes = new List<LaneData>(nextBarLanes);
 
@@ -368,6 +372,7 @@ namespace SCOdyssey.Game
         public void TryJudgeInput(int laneIndex)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
+            isLaneHolding[listIndex] = true;
 
             var queue = activeNotes[listIndex];
             if (queue.Count == 0) return;
@@ -392,6 +397,57 @@ namespace SCOdyssey.Game
 
             ApplyJudgment(targetNote, listIndex, result);
 
+        }
+
+        private void CheckHoldingBody(int listIndex)
+        {
+            var queue = activeNotes[listIndex];
+            if (queue.Count == 0) return;
+
+            Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
+
+            NoteController targetNote = queue.Peek();
+            if (targetNote.noteData.noteType != NoteType.Holding) return;
+
+            float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+
+            if (timeDiff < JUDGE_PERFECT)
+            {
+                targetNote.OnHit();
+            }
+
+        }
+
+
+        public void TryJudgeRelease(int laneIndex)
+        {
+            int listIndex = laneIndex - 1;
+            isLaneHolding[listIndex] = false;
+
+            var queue = activeNotes[listIndex];
+            if (queue.Count == 0) return;
+
+            NoteController targetNote = queue.Peek();
+            if (targetNote.noteData.noteType != NoteType.HoldEnd) return; // 홀딩 중인 노트가 없으면 무시
+
+            float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+
+
+            if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
+            {
+                Debug.Log("판정 범위 밖 입력");
+                return;
+            }
+
+            JudgeType result = JudgeType.Perfect;
+
+            if (timeDiff <= JUDGE_PERFECT) result = JudgeType.Perfect;
+            else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
+            else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
+            else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
+            else if (timeDiff <= JUDGE_UHM) result = JudgeType.Uhm;
+
+            ApplyJudgment(targetNote, listIndex, result);
         }
 
 
