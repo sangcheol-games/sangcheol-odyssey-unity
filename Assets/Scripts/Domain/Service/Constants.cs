@@ -34,9 +34,11 @@ namespace SCOdyssey.Domain.Service
 
         public enum NoteType
         {
-            None,
-            Normal,
-            Hold,
+            None = 0,
+            Normal = 1,
+            HoldStart = 2,
+            Holding = 3,
+            HoldEnd = 4
 
         }
 

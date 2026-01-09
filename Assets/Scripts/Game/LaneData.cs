@@ -48,7 +48,9 @@ namespace SCOdyssey.Game
             switch (num)
             {
                 case 1: return NoteType.Normal;
-                case 2: return NoteType.Hold;
+                case 2: return NoteType.HoldStart;
+                case 3: return NoteType.Holding;
+                case 4: return NoteType.HoldEnd;
                 default: return NoteType.None;
             }
         }

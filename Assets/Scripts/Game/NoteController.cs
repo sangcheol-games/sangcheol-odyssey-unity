@@ -72,18 +72,18 @@ namespace SCOdyssey.Game
                 float noteX = rectTransform.anchoredPosition.x;
                 float timelineX = trackingTimeline.rectTransform.anchoredPosition.x;
 
-                bool isPased = false;
+                bool isPassed = false;
 
                 if (trackingTimeline.isLTR)
                 {
-                    if (timelineX > noteX + 150f) isPased = true;    // 여유 공간 임시값 20f. 캐릭터 스프라이트 적용 후 조정 필요 
+                    if (timelineX > noteX + 150f) isPassed = true;    // 여유 공간 임시값 20f. 캐릭터 스프라이트 적용 후 조정 필요 
                 }
                 else
                 {
-                    if (timelineX < noteX - 150f) isPased = true;
+                    if (timelineX < noteX - 150f) isPassed = true;
                 }
 
-                if (isPased)
+                if (isPassed)
                 {
                     SetState(NoteState.Ghost); // 판정선이 지나갔으니 고스트로 전환
                     trackingTimeline = null; // 더 이상 감시 안 함
