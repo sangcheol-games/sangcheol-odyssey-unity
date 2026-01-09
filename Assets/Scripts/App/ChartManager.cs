@@ -323,7 +323,9 @@ namespace SCOdyssey.Game
                     GameObject note = GetNoteFromPool();
                     note.transform.SetParent(noteParent, false);
 
-                    NoteController noteController = note.GetComponent<NoteController>();
+                    NoteAdapter noteAdapter = note.GetComponent<NoteAdapter>();
+
+                    NoteController noteController = noteAdapter.ActivateAndGet(noteData.noteType);
 
                     Vector2 spawnPos = new Vector2(
                         laneStartX + noteInterval * noteData.index * (lane.isLTR ? 1 : -1),

@@ -10,7 +10,7 @@ namespace SCOdyssey.Game
         public NoteData noteData { get; private set; }
         protected Action<NoteController> onReturn;
 
-        public Image noteImage;
+        private Image noteImage;
         protected bool isJudged = false;
         private NoteState currentState;
         private TimelineController trackingTimeline;
