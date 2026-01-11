@@ -6,7 +6,7 @@ namespace SCOdyssey.Game
     {
         protected override void SetVisual()
         {
-            // TODO
+            holdImage.enabled = false;
         }
     }
 }

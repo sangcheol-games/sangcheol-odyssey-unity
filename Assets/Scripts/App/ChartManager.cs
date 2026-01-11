@@ -115,7 +115,7 @@ namespace SCOdyssey.Game
         }
 
 
-
+        #region Bar
         private void PrepareNextBar()
         {
             nextBarLanes.Clear();
@@ -190,8 +190,8 @@ namespace SCOdyssey.Game
 
             foreach (int id in groupsToRemove) activeTimelines.Remove(id);  // 반복문 종료 후 제거
 
-            ActivateGhostNotes();
             ActivateTimelines();
+            ActivateGhostNotes();
             
 
             currentBarLanes = new List<LaneData>(nextBarLanes);
@@ -204,6 +204,8 @@ namespace SCOdyssey.Game
         {
             return laneIndex <= 1 ? 0 : 1;
         }
+
+        #endregion
 
         #region Timeline
 
@@ -228,7 +230,7 @@ namespace SCOdyssey.Game
             {
                 if (activeTimelines.ContainsKey(groupID))   // 재사용의 경우
                 {
-                    if (activeTimelines[groupID].isLTR != nextGroupDirection[groupID]) continue; 
+                    if (activeTimelines[groupID].isLTR != nextGroupDirection[groupID]) continue;
                 }
                 if (preloadedTimelines.ContainsKey(groupID)) continue;  // 중복 방지
 
@@ -292,7 +294,7 @@ namespace SCOdyssey.Game
 
 
 
-
+        #region Note
         private void SpawnNextNotes()
         {
             foreach (var lane in nextBarLanes)
@@ -335,6 +337,8 @@ namespace SCOdyssey.Game
                     noteController.Init(
                         noteData,
                         spawnPos,
+                        lane.isLTR,
+                        noteInterval,
                         (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
                     );
 
@@ -342,6 +346,7 @@ namespace SCOdyssey.Game
                     {
                         // 같은 레인 충돌: 숨겨진 상태로 생성하고 판정선 감시 붙임
                         noteController.TrackTimeline(currentTimeline);
+                        noteController.SetState(NoteState.Hidden);
                     }
                     else
                     {
@@ -362,12 +367,23 @@ namespace SCOdyssey.Game
                 while (ghostNotes[i].Count > 0)
                 {
                     NoteController note = ghostNotes[i].Dequeue();
-                    note.SetState(NoteState.Active); 
-                    
+                    note.SetState(NoteState.Active);
+
+                    if (note.noteData.noteType == NoteType.Holding || note.noteData.noteType == NoteType.HoldEnd)
+                    {
+                        int groupID = GetTrackGroupID(i);
+                        if (activeTimelines.ContainsKey(groupID))
+                        {
+                            note.TrackTimeline(activeTimelines[groupID]);
+                        }
+                    }
+
                     activeNotes[i].Enqueue(note);
                 }
             }
         }
+        
+        #endregion
 
 
         #region Judgement
@@ -380,6 +396,7 @@ namespace SCOdyssey.Game
             if (queue.Count == 0) return;
 
             NoteController targetNote = queue.Peek();
+            if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
 
             float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
@@ -406,7 +423,7 @@ namespace SCOdyssey.Game
             var queue = activeNotes[listIndex];
             if (queue.Count == 0) return;
 
-            Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
+            //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
 
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Holding) return;
@@ -416,6 +433,7 @@ namespace SCOdyssey.Game
             if (timeDiff < JUDGE_PERFECT)
             {
                 targetNote.OnHit();
+                ApplyJudgment(targetNote, listIndex, JudgeType.Perfect);
             }
 
         }
@@ -455,6 +473,7 @@ namespace SCOdyssey.Game
 
         private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
         {
+            Debug.Log($"Note Judged: {type}");
             activeNotes[listIndex].Dequeue();
             targetNote.OnHit();
 

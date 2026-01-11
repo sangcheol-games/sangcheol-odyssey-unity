@@ -117,7 +117,7 @@ namespace SCOdyssey.App
         private void HandleLaneRelease(int laneIndex)
         {
             if (!IsGameRunning) return;
-            Debug.Log($"Lane {laneIndex} Released");
+            //Debug.Log($"Lane {laneIndex} Released");
             chartManager.TryJudgeRelease(laneIndex);
         }
 

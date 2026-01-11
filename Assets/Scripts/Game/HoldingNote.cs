@@ -1,4 +1,5 @@
 using UnityEngine;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
@@ -6,7 +7,20 @@ namespace SCOdyssey.Game
     {
         protected override void SetVisual()
         {
-            // TODO
+            noteImage.enabled = false;
+
+            holdImage.fillAmount = 1f;
+        }
+
+        protected override void Update()
+        {
+            base.Update();
+
+            if (currentState == NoteState.Active && trackingTimeline != null)
+            {
+                UpdateHoldFill();
+            }
+
         }
     }
 }
