@@ -106,7 +106,6 @@ namespace SCOdyssey.Game
             {
                 SetState(NoteState.Ghost); // 판정선이 지나갔으니 고스트로 전환
                 trackingTimeline = null; // 더 이상 감시 안 함
-                Debug.Log("노트 고스트 상태로 전환");
             }
         }
 
@@ -128,11 +127,11 @@ namespace SCOdyssey.Game
                     passedDistance = holdEndX + holdWidth - timelineX;
             }
 
+            passedDistance = Mathf.Clamp(passedDistance, 0f, holdWidth);
+
             float fillRatio = 1f - (passedDistance / holdWidth);
 
-            Debug.Log($"fillRatio: {fillRatio}");
-            
-            holdImage.fillAmount = Mathf.Clamp01(fillRatio);
+            holdImage.fillAmount = fillRatio;
         }
 
         public virtual void OnMiss()
