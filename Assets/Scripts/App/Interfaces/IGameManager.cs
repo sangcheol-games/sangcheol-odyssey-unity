@@ -9,10 +9,10 @@ namespace SCOdyssey.App
     {
         void SetAudioClip(AudioClip audioClip);    // 테스트용 임시필드. MusicManager 구현 후 제거 예정
 
-        float GetCurrentTime();
+        double GetCurrentTime();
         bool IsGameRunning { get; }
 
-        void StartMusic(float delay);
+        void StartMusic(double delay);
 
         void SetChartData(ChartData chartData);
 

@@ -8,14 +8,14 @@ namespace SCOdyssey.Game
     public class LaneData
     {
         public int bar;     // 몇 번째 마디인지
-        public float time;  // 노트가 출현해야하는 시간. BPM과 마디에 기반해 계산
+        public double time;  // 노트가 출현해야하는 시간. BPM과 마디에 기반해 계산
         public int beat;    // 몇 비트인지
         public bool isLTR;   // 레인의 진행방향(채보파일에서 채널에 대응). Left To Right라면 true
         public int line;    // 몇 번째 라인인지
 
         public Queue<NoteData> Notes;
 
-        public LaneData(int bar, float time, int beat, bool isLTR, int line)
+        public LaneData(int bar, double time, int beat, bool isLTR, int line)
         {
             this.bar = bar;
             this.time = time;
@@ -25,9 +25,9 @@ namespace SCOdyssey.Game
             Notes = new Queue<NoteData>();
         }
 
-        public void ConvertSequenceToNotes(string noteSequence, float duration)
+        public void ConvertSequenceToNotes(string noteSequence, double duration)
         {
-            float stepTime = duration / beat; // 한 노트당 지속 시간
+            double stepTime = duration / beat; // 한 노트당 지속 시간
 
             if (!isLTR) noteSequence = new string(noteSequence.Reverse().ToArray());
 
@@ -37,7 +37,7 @@ namespace SCOdyssey.Game
                 NoteType noteType = GetNoteType(int.Parse(noteChar.ToString()));
                 if (noteType == NoteType.None) continue;
 
-                float noteTime = time + (i * stepTime);
+                double noteTime = time + (i * stepTime);
                 Notes.Enqueue(new NoteData(i, noteTime, noteType, line));
             }
 

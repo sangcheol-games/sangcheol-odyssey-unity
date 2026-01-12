@@ -18,7 +18,7 @@ namespace SCOdyssey.App
 
 
         [Header("게임 상태")]
-        private float globalStartTime;
+        private double globalStartTime;
         public bool IsGameRunning { get; private set; } = false;
 
         [Header("점수 및 콤보")]
@@ -77,19 +77,19 @@ namespace SCOdyssey.App
 
             chartManager.Init(chartData, this);
 
-            globalStartTime = (float)AudioSettings.dspTime;
+            globalStartTime = AudioSettings.dspTime;
             IsGameRunning = true;
         }
         
-        public void StartMusic(float delayTime)
+        public void StartMusic(double delayTime)
         {
-            audioSource.PlayDelayed(delayTime);
+            audioSource.PlayDelayed((float)delayTime);
         }
 
-        public float GetCurrentTime()
+        public double GetCurrentTime()
         {
             if (!IsGameRunning) return 0f;
-            return (float)(AudioSettings.dspTime - globalStartTime);
+            return AudioSettings.dspTime - globalStartTime;
         }
 
 

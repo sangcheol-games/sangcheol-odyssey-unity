@@ -16,8 +16,8 @@ namespace SCOdyssey.Game
         [SerializeField]
         private GameObject characterImage;
 
-        private float startTime;      // 마디 시작 시간 (판정선 출발 시간)
-        private float duration;       // 마디 길이 (이동에 걸리는 시간)
+        private double startTime;      // 마디 시작 시간 (판정선 출발 시간)
+        private double duration;       // 마디 길이 (이동에 걸리는 시간)
         private float startX;         // 출발 X 좌표 (UI 앵커 기준)
         private float endX;           // 도착 X 좌표
 
@@ -37,7 +37,7 @@ namespace SCOdyssey.Game
 
         }
 
-        public void Init(float startTime, float duration, float startX, float endX, Action<TimelineController> returnCallback)
+        public void Init(double startTime, double duration, float startX, float endX, Action<TimelineController> returnCallback)
         {
             this.startTime = startTime;
             this.duration = duration;
@@ -72,9 +72,9 @@ namespace SCOdyssey.Game
 
         private void UpdatePosition()
         {
-            float currentTime = ServiceLocator.Get<IGameManager>().GetCurrentTime();
-            float elapsedTime = currentTime - startTime;
-            float progress = elapsedTime / duration;
+            double currentTime = ServiceLocator.Get<IGameManager>().GetCurrentTime();
+            double elapsedTime = currentTime - startTime;
+            float progress = (float)(elapsedTime / duration);
 
             // 보간 이동
             float currentX = Mathf.LerpUnclamped(startX, endX, progress);

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace SCOdyssey.Game
         public RectTransform timelineParent;
         public Transform objectPoolParent;
 
-        private float currentTime;
+        private double currentTime;
 
 
 
@@ -44,8 +45,8 @@ namespace SCOdyssey.Game
         private Queue<LaneData> nextBarLanes = new Queue<LaneData>();   // 다음 스크롤을 준비 중인 마디의 LaneData 리스트
 
         private int currentBarNumber = 0;
-        private float currentBarEndTime = 0f; // 현재 마디의 종료 시간
-        private float barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
+        private double currentBarEndTime = 0f; // 현재 마디의 종료 시간
+        private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
         private Queue<NoteController>[] activeNotes = new Queue<NoteController>[4]; // 각 레인별 활성화된 노트 큐
         private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
@@ -81,7 +82,7 @@ namespace SCOdyssey.Game
             gameManager.StartMusic(barDuration);
         }
 
-        public void SyncTime(float time)
+        public void SyncTime(double time)
         {
             this.currentTime = time;
 
@@ -141,7 +142,7 @@ namespace SCOdyssey.Game
 
         private void StartCurrentBar()
         {
-            float startTime = currentBarNumber * barDuration;
+            double startTime = currentBarNumber * barDuration;
             currentBarEndTime = startTime + barDuration;
 
             if (nextBarLanes.Count == 0)
@@ -224,7 +225,7 @@ namespace SCOdyssey.Game
                 }
             }
 
-            float nextStartTime = currentBarNumber * barDuration;
+            double nextStartTime = currentBarNumber * barDuration;
 
             foreach (int groupID in nextGroups)
             {
@@ -398,7 +399,7 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
 
-            float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
             if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
             {
@@ -428,7 +429,7 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Holding) return;
 
-            float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
             if (timeDiff < JUDGE_PERFECT)
             {
@@ -450,7 +451,7 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.HoldEnd) return; // 홀딩 중인 노트가 없으면 무시
 
-            float timeDiff = Mathf.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
 
             if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
@@ -481,7 +482,7 @@ namespace SCOdyssey.Game
 
         }
         
-        private void CheckMissedNotes(int listIndex, float currentTime)
+        private void CheckMissedNotes(int listIndex, double currentTime)
         {
             if (activeNotes[listIndex].Count == 0) return;
 

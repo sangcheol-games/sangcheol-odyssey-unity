@@ -16,7 +16,7 @@ namespace SCOdyssey.Game
             string[] lines = chartText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
-            float duration = (60f / bpm) * 4f;  // TODO: 박자표(4/4)가 아닐때 가변적으로 처리 필요
+            double duration = (60f / bpm) * 4f;  // TODO: 박자표(4/4)가 아닐때 가변적으로 처리 필요
 
             foreach (string line in lines)
             {
@@ -45,7 +45,7 @@ namespace SCOdyssey.Game
                     int beat = noteSequence.Length;
 
                     // 마디 시작 시간 계산: 마디번호 * 마디당 시간
-                    float laneStartTime = barNumber * duration;
+                    double laneStartTime = barNumber * duration;
 
                     // LaneData 생성
                     LaneData laneData = new LaneData(barNumber, laneStartTime, beat, isLTR, lane);
