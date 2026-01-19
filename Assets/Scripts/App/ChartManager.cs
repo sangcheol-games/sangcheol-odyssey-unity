@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
+using TMPro;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -51,7 +52,12 @@ namespace SCOdyssey.Game
         private Queue<NoteController>[] activeNotes = new Queue<NoteController>[4]; // 각 레인별 활성화된 노트 큐
         private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
 
-        private bool[] isLaneHolding = {false, false, false, false}; // 각 레인별 롱노트 홀딩 상태 추적
+        private bool[] isLaneHolding = { false, false, false, false }; // 각 레인별 롱노트 홀딩 상태 추적
+        
+        public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[4];
+
+        private double[] countdownTargetTimes = new double[4];
+        private bool[] isCountdownActive = new bool[4];
 
 
 
@@ -74,6 +80,10 @@ namespace SCOdyssey.Game
             {
                 activeNotes[i] = new Queue<NoteController>();
                 ghostNotes[i] = new Queue<NoteController>();
+
+                countdownTexts[i].gameObject.SetActive(false);
+                isCountdownActive[i] = false;
+                countdownTexts[i].text = "";
             }
 
             PrepareNextBar();
@@ -92,11 +102,13 @@ namespace SCOdyssey.Game
                 CheckGameClear();
             }
 
-            for (int i = 0; i < 4; i++) 
+            for (int i = 0; i < 4; i++)
             {
                 CheckMissedNotes(i, currentTime);
                 if (isLaneHolding[i]) CheckHoldingBody(i);
             }
+            
+            UpdateCountdowns();
 
         }
         
@@ -208,6 +220,58 @@ namespace SCOdyssey.Game
 
         #endregion
 
+
+        private void UpdateCountdowns()
+        {
+            double beatDuration = barDuration / 4.0d; 
+
+            for (int i = 0; i < 4; i++)
+            {
+                if (!isCountdownActive[i]) continue;
+
+                double timeDiff = countdownTargetTimes[i] - currentTime;
+
+                if (timeDiff <= 0)
+                {
+                    countdownTexts[i].gameObject.SetActive(false);
+                    isCountdownActive[i] = false;
+                    continue;
+                }
+
+                double remainingBeats = timeDiff / beatDuration;
+
+                if (remainingBeats <= 3.01d) 
+                {
+                    int displayNum = (int)Math.Ceiling(remainingBeats);     // 올림 처리
+
+                    if (displayNum > 0 && displayNum <= 3)
+                    {
+                        countdownTexts[i].text = displayNum.ToString();
+                    }
+                }
+                else
+                {
+                    countdownTexts[i].text = "";
+                }
+
+            }
+        }
+        
+        private void ActivateCountdown(int index, double targetTime)
+        {
+            if (isCountdownActive[index] && Math.Abs(countdownTargetTimes[index] - targetTime) < 0.01d) return;
+
+            countdownTexts[index].gameObject.SetActive(true);
+            countdownTexts[index].text = "";
+
+            countdownTargetTimes[index] = targetTime;
+            isCountdownActive[index] = true;
+        }
+
+
+
+
+
         #region Timeline
 
         private void PreloadTimelines()
@@ -229,30 +293,36 @@ namespace SCOdyssey.Game
 
             foreach (int groupID in nextGroups)
             {
+                bool isReused = false;
                 if (activeTimelines.ContainsKey(groupID))   // 재사용의 경우
                 {
-                    if (activeTimelines[groupID].isLTR != nextGroupDirection[groupID]) continue;
+                    if (activeTimelines[groupID].isLTR != nextGroupDirection[groupID])
+                        isReused = true;
                 }
-                if (preloadedTimelines.ContainsKey(groupID)) continue;  // 중복 방지
 
-                // 새 판정선 생성
-                TimelineController timeline = GetTimelineFromPool();
-                timeline.transform.SetParent(timelineParent, false);
-                timeline.transform.position = timelineTransforms[groupID].position;
+                if (!isReused)  // 새 판정선 생성
+                {
+                    TimelineController timeline = GetTimelineFromPool();
+                    timeline.transform.SetParent(timelineParent, false);
+                    timeline.transform.position = timelineTransforms[groupID].position;
 
-                bool isLTR = nextGroupDirection[groupID];
-                float startX, endX;
-                GetTimelinePositions(isLTR, out startX, out endX);
+                    bool isLTR = nextGroupDirection[groupID];
+                    float startX, endX;
+                    GetTimelinePositions(isLTR, out startX, out endX);
 
-                timeline.Init(
-                    nextStartTime,
-                    barDuration,
-                    startX,
-                    endX,
-                    (timeline) => { ReturnTimelineToPool(timeline.gameObject); }
-                );
+                    timeline.Init(
+                        nextStartTime,
+                        barDuration,
+                        startX,
+                        endX,
+                        (timeline) => { ReturnTimelineToPool(timeline.gameObject); }
+                    );
 
-                preloadedTimelines.Add(groupID, timeline);
+                    preloadedTimelines.Add(groupID, timeline);
+                }
+
+                int uiIndex = (groupID * 2) + (nextGroupDirection[groupID] ? 0 : 1);
+                ActivateCountdown(uiIndex, nextStartTime);
             }
 
         }
