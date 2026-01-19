@@ -1,6 +1,8 @@
 using SCOdyssey.Core;
 using SCOdyssey.Game;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
@@ -13,6 +15,7 @@ namespace SCOdyssey.App
         {
             this.audioSource.clip = audioClip;
         }
+        public ScoreManager scoreManager;
         public ChartManager chartManager;
         public ChartData chartData;
 
@@ -21,9 +24,11 @@ namespace SCOdyssey.App
         private double globalStartTime;
         public bool IsGameRunning { get; private set; } = false;
 
-        [Header("점수 및 콤보")]
-        private float score = 0;
-        private int combo = 0;
+        [Header("UI")]
+        public TextMeshProUGUI scoreText;
+        public TextMeshProUGUI comboText;
+        public TextMeshProUGUI gaugeText;
+        public Image gaugeBar; // fillAmount로 게이지 바 표현 시
 
 
         private void Awake()
@@ -51,6 +56,10 @@ namespace SCOdyssey.App
             }
             */
 
+        scoreManager.OnScoreChanged += UpdateScore;
+        scoreManager.OnComboChanged += UpdateCombo;
+        scoreManager.OnGaugeChanged += UpdateGauge;
+
 
             // TODO : chart Load
             StartGame();
@@ -76,6 +85,7 @@ namespace SCOdyssey.App
             }
 
             chartManager.Init(chartData, this);
+            scoreManager.Init(100); // TODO: chartData에서 노트 개수 받아오기
 
             globalStartTime = AudioSettings.dspTime;
             IsGameRunning = true;
@@ -124,25 +134,58 @@ namespace SCOdyssey.App
 
         public void OnNoteJudged(JudgeType judgeType)
         {
-            combo++;
-
-            // TODO: 점수 계산 로직 개선
-            float addScore = (judgeType == JudgeType.Perfect) ? 100 : 50;
-            score += addScore;
-
-            Debug.Log($"Hit! Score: {score}, Combo: {combo}");
+            scoreManager.ProcessJudge(judgeType);
         }
 
         public void OnNoteMissed()
         {
-            combo = 0;
-            //Debug.Log("Miss! Combo Reset");
+            scoreManager.ProcessJudge(JudgeType.Uhm);
         }
+
+
+
+        public void UpdateScore(int score)
+        {
+            scoreText.text = score.ToString("D7");  // 7자리 숫자로 포맷 (0000000)
+        }
+
+        public void UpdateCombo(int combo)
+        {
+            if (combo > 0)
+            {
+                comboText.text = combo.ToString();
+                comboText.gameObject.SetActive(true);
+            }
+            else
+            {
+                comboText.gameObject.SetActive(false);
+            }
+        }
+
+        public void UpdateGauge(float percentage)
+        {
+            // 소수점 2자리까지 표시 (100.0%)
+            gaugeText.text = $"{percentage:F2}%";
+            
+            if (gaugeBar != null)
+            {
+                gaugeBar.fillAmount = percentage / 100f;
+            }
+            
+            // 색상 변경 로직 (선택사항)
+            if (percentage >= 100f) gaugeText.color = Color.cyan; // Perfect/Master 유지 중
+            else gaugeText.color = Color.white;
+        }
+
+
 
         public void OnGameFinished()
         {
             IsGameRunning = false;
-            Debug.Log($"Game Over. Final Score: {score}");
+            int finalScore = scoreManager.GetFinalScore();
+
+            Debug.Log($"Game Over. Final Score: {finalScore}");
+            // TODO:결과창 호출 로직
         }
 
 
