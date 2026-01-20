@@ -23,6 +23,10 @@ namespace SCOdyssey.Game
         public GameObject notePrefab;
         private Queue<GameObject> notePool = new Queue<GameObject>();
 
+        [Header("이펙트 풀링")]
+        public GameObject effectPrefab;
+        private Queue<GameObject> effectPool = new Queue<GameObject>();
+
 
         [Header("판정선")]
         public GameObject timelinePrefab; // 판정선 프리팹
@@ -550,6 +554,10 @@ namespace SCOdyssey.Game
 
             gameManager.OnNoteJudged(type);
 
+            GameObject effect = GetEffectFromPool();
+            effect.GetComponent<EffectController>().Setup(type,
+                targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
+
         }
         
         private void CheckMissedNotes(int listIndex, double currentTime)
@@ -564,6 +572,10 @@ namespace SCOdyssey.Game
                 targetNote.OnMiss();
 
                 gameManager.OnNoteMissed();
+
+                GameObject effect = GetEffectFromPool();
+                effect.GetComponent<EffectController>().Setup(JudgeType.Uhm,
+                    targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
             }
         }
 
@@ -602,6 +614,15 @@ namespace SCOdyssey.Game
         }
 
         public void ReturnNoteToPool(GameObject go) => ReturnToPool(notePool, go);
+
+
+        private GameObject GetEffectFromPool()
+        {
+            GameObject go = GetFromPool(effectPool, effectPrefab);
+            return go;
+        }
+
+        public void ReturnEffectToPool(GameObject go) => ReturnToPool(effectPool, go);
 
 
         
