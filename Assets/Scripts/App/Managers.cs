@@ -33,6 +33,9 @@ namespace SCOdyssey.App
             uiManager.Init();
             ServiceLocator.TryRegister<IUIManager>(uiManager);
 
+            var musicManager = new MusicManager();
+            ServiceLocator.TryRegister<IMusicManager>(musicManager);
+
             Application.targetFrameRate = 60;   // 앱 프레임 60으로 고정
         }
 
