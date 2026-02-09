@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using SCOdyssey.Domain.Entity;
 using UnityEngine;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
 {
@@ -9,6 +10,7 @@ namespace SCOdyssey.App
     {
         private List<MusicSO> musicList;
         private MusicSO currentMusic;
+        private Difficulty currentDifficulty;
 
         public MusicManager()
         {
@@ -46,13 +48,27 @@ namespace SCOdyssey.App
             }
 
             currentMusic = music;
-            Debug.Log($"[MusicManager] Selected Music: {music.title[Domain.Service.Constants.Language.KR]}");
+            Debug.Log($"[MusicManager] Selected Music: {music.name}");
+        }
+
+        /// <summary>
+        /// 난이도를 선택합니다.
+        /// </summary>
+        public void SelectDifficulty(Difficulty difficulty)
+        {
+            currentDifficulty = difficulty;
+            Debug.Log($"[MusicManager] Selected Difficulty: {difficulty}");
         }
 
         /// <summary>
         /// 현재 선택된 음악을 반환합니다.
         /// </summary>
         public MusicSO GetCurrentMusic() => currentMusic;
+
+        /// <summary>
+        /// 현재 선택된 난이도를 반환합니다.
+        /// </summary>
+        public Difficulty GetCurrentDifficulty() => currentDifficulty;
 
         /// <summary>
         /// 선택된 음악을 초기화합니다.

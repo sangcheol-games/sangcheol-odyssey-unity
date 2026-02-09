@@ -29,7 +29,7 @@ namespace SCOdyssey.Game
                 Debug.LogError("[GameDataLoader] No selected music!");
                 yield break;
             }
-            Debug.Log($"[GameDataLoader] Loading Music: {music.title[Language.JP]}");
+            Debug.Log($"[GameDataLoader] Loading Music: {music.name}");
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
@@ -53,9 +53,12 @@ namespace SCOdyssey.Game
 
         private IEnumerator LoadChart(MusicSO music)
         {
-            if (music.chartFile == null)
+            var musicManager = ServiceLocator.Get<IMusicManager>();
+            Difficulty difficulty = musicManager.GetCurrentDifficulty();
+
+            if (!music.chartFile.TryGetValue(difficulty, out TextAsset chart) || chart == null)
             {
-                Debug.LogError("Null Exception: Chart file missing");
+                Debug.LogError($"[GameDataLoader] Chart file missing for difficulty: {difficulty}");
                 yield break;
             }
 
@@ -70,7 +73,7 @@ namespace SCOdyssey.Game
                 yield break;
             }
 
-            string chartText = music.chartFile.text;
+            string chartText = chart.text;
             int bpm = music.bpm;
 
             Debug.Log("Parsing Chart Data...");

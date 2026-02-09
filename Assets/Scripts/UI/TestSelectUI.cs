@@ -84,6 +84,7 @@ namespace SCOdyssey.UI
             if (ServiceLocator.TryGet<IMusicManager>(out var musicManager))
             {
                 musicManager.SelectMusic(testMusicSO);
+                musicManager.SelectDifficulty(currentDifficulty);
                 SceneManager.LoadScene("GameScene");
             }
             else

@@ -25,7 +25,7 @@ namespace SCOdyssey.Domain.Entity
 
         [Header("Resource Info")]
 
-        public TextAsset chartFile;
+        public Dictionary<Difficulty, TextAsset> chartFile;
         public AudioClip musicFile;
         public VideoClip videoFile;
         public Sprite albumArt;
