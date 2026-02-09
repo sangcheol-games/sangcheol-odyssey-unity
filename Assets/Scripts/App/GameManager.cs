@@ -11,7 +11,7 @@ namespace SCOdyssey.App
     {
         [Header("참조")]
         public AudioSource audioSource;
-        public void SetAudioClip(AudioClip audioClip)     // 테스트용 임시필드. MusicManager 구현 후 제거 예정
+        public void SetAudioClip(AudioClip audioClip)     // GameDataLoader에서 MusicSO의 musicFile을 전달받아 설정
         {
             this.audioSource.clip = audioClip;
         }
@@ -38,31 +38,21 @@ namespace SCOdyssey.App
 
         private void Start()
         {
-            var inputManager = new InputManager();
-            inputManager.Enable();
-            ServiceLocator.TryRegister<IInputManager>(inputManager);
-
-            inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
-            inputManager.OnLanePressed += HandleLaneInput;
-            inputManager.OnLaneReleased += HandleLaneRelease;
-
-            // 여기가 실제 코드. 위가 테스트 코드
-            /*
+            // InputManager는 Managers에서 이미 생성 및 등록됨
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
             {
                 inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
                 inputManager.OnLanePressed += HandleLaneInput;
                 inputManager.OnLaneReleased += HandleLaneRelease;
             }
-            */
+            else
+            {
+                Debug.LogError("[GameManager] IInputManager not found in ServiceLocator!");
+            }
 
-        scoreManager.OnScoreChanged += UpdateScore;
-        scoreManager.OnComboChanged += UpdateCombo;
-        scoreManager.OnGaugeChanged += UpdateGauge;
-
-
-            // TODO : chart Load
-            StartGame();
+            scoreManager.OnScoreChanged += UpdateScore;
+            scoreManager.OnComboChanged += UpdateCombo;
+            scoreManager.OnGaugeChanged += UpdateGauge;
         }
 
         private void OnDestroy()
@@ -72,11 +62,11 @@ namespace SCOdyssey.App
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
             {
                 inputManager.OnLanePressed -= HandleLaneInput;
-                inputManager.SwitchToUI(); 
+                inputManager.SwitchToUI();
             }
         }
 
-        private void StartGame()
+        public void StartGame()
         {
             if (chartManager == null || audioSource == null || chartData == null)
             {
@@ -90,7 +80,7 @@ namespace SCOdyssey.App
             globalStartTime = AudioSettings.dspTime;
             IsGameRunning = true;
         }
-        
+
         public void StartMusic(double delayTime)
         {
             audioSource.PlayDelayed((float)delayTime);
@@ -115,7 +105,7 @@ namespace SCOdyssey.App
         {
             this.chartData = data;
             // ChartManager 초기화를 여기서 하는게 나을지도?
-            // chartManager.Initialize(data); 
+            // chartManager.Initialize(data);
         }
 
         private void HandleLaneInput(int laneIndex)
@@ -166,12 +156,12 @@ namespace SCOdyssey.App
         {
             // 소수점 2자리까지 표시 (100.0%)
             gaugeText.text = $"{percentage:F2}%";
-            
+
             if (gaugeBar != null)
             {
                 gaugeBar.fillAmount = percentage / 100f;
             }
-            
+
             // 색상 변경 로직 (선택사항)
             if (percentage >= 100f) gaugeText.color = Color.cyan; // Perfect/Master 유지 중
             else gaugeText.color = Color.white;
@@ -187,6 +177,9 @@ namespace SCOdyssey.App
             Debug.Log($"Game Over. Final Score: {finalScore}");
             // TODO:결과창 호출 로직
         }
+
+        // 캐시된 ChartData 반환 (다시하기용)
+        public ChartData GetCachedChartData() => chartData;
 
 
 

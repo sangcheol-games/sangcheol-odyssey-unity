@@ -7,14 +7,16 @@ namespace SCOdyssey.App
 {
     public interface IGameManager
     {
-        void SetAudioClip(AudioClip audioClip);    // 테스트용 임시필드. MusicManager 구현 후 제거 예정
+        void SetAudioClip(AudioClip audioClip);    // GameDataLoader에서 MusicSO의 musicFile을 전달받아 설정
 
+        void StartGame();
         double GetCurrentTime();
         bool IsGameRunning { get; }
 
         void StartMusic(double delay);
 
         void SetChartData(ChartData chartData);
+        ChartData GetCachedChartData();  // 캐시된 차트 데이터 반환 (다시하기용)
 
         void OnNoteJudged(JudgeType judgeType);
         void OnNoteMissed();
