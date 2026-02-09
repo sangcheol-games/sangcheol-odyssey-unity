@@ -1,8 +1,10 @@
 using System.Collections;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
+using SCOdyssey.UI;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -246,10 +248,9 @@ namespace SCOdyssey.App
             ShowResultScreen();
         }
 
-        // TODO: ResultUI 결과 화면 표시 (UI 브랜치에서 구현)
+        // 결과 화면 표시
         private void ShowResultScreen()
         {
-            /*
             if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
             {
                 uiManager.ShowUI<ResultUI>().Init(
@@ -260,7 +261,6 @@ namespace SCOdyssey.App
                     scoreManager.GetGaugePercent()
                 );
             }
-            */
         }
 
         // 캐시된 ChartData 반환 (다시하기용)
