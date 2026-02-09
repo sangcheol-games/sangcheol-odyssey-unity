@@ -118,6 +118,9 @@ namespace SCOdyssey.Game
         
         private void CheckGameClear()
         {
+            // 게임이 이미 종료되었으면 중복 호출 방지
+            if (!gameManager.IsGameRunning) return;
+
             if (remainingChart.Count > 0) return;
             if (nextBarLanes.Count > 0) return;
 
@@ -126,6 +129,9 @@ namespace SCOdyssey.Game
                 if (activeNotes[i].Count > 0) return;
                 if (ghostNotes[i].Count > 0) return;
             }
+
+            // 음악이 아직 재생 중이면 대기
+            if (gameManager.IsAudioPlaying) return;
 
             Debug.Log("Game Cleared.");
             gameManager.OnGameFinished();

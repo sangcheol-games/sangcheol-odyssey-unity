@@ -95,6 +95,8 @@ namespace SCOdyssey.App
             exScore += (type == JudgeType.Perfect) ? scorePerNote * 0.2f : 0f;
             theoreticalScore += scorePerNote * 1.0f;
 
+            // 2. 판정 카운트 기록 (BUG FIX)
+            judgeCounts[type]++;
 
             // 3. 콤보 처리
             if (comboBreak)
@@ -146,6 +148,45 @@ namespace SCOdyssey.App
             }
 
             return (int)finalScore;
+        }
+
+        // 최대 콤보 수 반환
+        public int GetMaxCombo() => maxCombo;
+
+        // 판정 타입별 개수 반환 (복사본)
+        public Dictionary<JudgeType, int> GetJudgeCounts()
+            => new Dictionary<JudgeType, int>(judgeCounts);
+
+        // 현재 게이지 퍼센트 반환 (0~100)
+        public float GetGaugePercent()
+        {
+            if (theoreticalScore <= 0) return 100f;
+            return (currentScore / theoreticalScore) * 100f;
+        }
+
+        // 클리어 등급 판정 (Fail/Clear/FullCombo/OverMillion/AllPerfect)
+        public ClearRank GetClearRank()
+        {
+            int finalScore = GetFinalScore();
+
+            // Fail: 점수 < 700,000 (게이지 < 70%)
+            if (finalScore < 700000)
+                return ClearRank.Fail;
+
+            // All Perfect: Perfect 판정만 존재
+            if (judgeCounts[JudgeType.Perfect] == totalNoteCount)
+                return ClearRank.AllPerfect;
+
+            // Over Million: Perfect + Master = Total
+            if (judgeCounts[JudgeType.Perfect] + judgeCounts[JudgeType.Master] == totalNoteCount)
+                return ClearRank.OverMillion;
+
+            // Full Combo: Miss 없음 (Uhm = 0)
+            if (judgeCounts[JudgeType.Uhm] + judgeCounts[JudgeType.Kind] == 0)
+                return ClearRank.FullCombo;
+
+            // Clear: 기본
+            return ClearRank.Clear;
         }
     }
 }

@@ -12,6 +12,7 @@ namespace SCOdyssey.App
         void StartGame();
         double GetCurrentTime();
         bool IsGameRunning { get; }
+        bool IsAudioPlaying { get; }  // 오디오 재생 중인지 확인
 
         void StartMusic(double delay);
 

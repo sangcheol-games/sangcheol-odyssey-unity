@@ -50,5 +50,14 @@ namespace SCOdyssey.Domain.Service
             Kind,
             Uhm
         }
+
+        public enum ClearRank
+        {
+            Fail,           // 점수 < 700,000 (게이지 < 70%)
+            Clear,          // 클리어 (기본)
+            FullCombo,      // Uhm (miss) = 0
+            OverMillion,    // Perfect + Master = Total
+            AllPerfect      // Perfect = Total
+        }
     }
 }
