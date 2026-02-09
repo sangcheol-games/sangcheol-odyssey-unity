@@ -31,17 +31,14 @@ namespace SCOdyssey
             BindButton(typeof(Buttons));
             BindImage(typeof(Images));
 
+            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerClick, OnClickAdventure);
             BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
-
-
-            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerEnter, OnClickAdventure);
-
-
         }
 
         private void OnClickAdventure()
         {
             Debug.Log("OnClickAdventure");
+            ServiceLocator.Get<IUIManager>().ShowUI<TestSelectUI>();
         }
         private void OnClickOnline()
         {
