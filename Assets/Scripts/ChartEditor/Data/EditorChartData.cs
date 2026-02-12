@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.ChartEditor.Data
 {
@@ -9,7 +10,13 @@ namespace SCOdyssey.ChartEditor.Data
     /// </summary>
     public class EditorChartData
     {
+        // 헤더 메타데이터
+        public string title = "";
+        public string artist = "";
+        public Difficulty difficulty = Difficulty.Normal;
+        public int level = 1;
         public int bpm = 120;
+
         public AudioClip audioClip;     // 음원 파일
         public string filePath;         // 현재 저장 경로 (null = 미저장)
 
@@ -72,6 +79,10 @@ namespace SCOdyssey.ChartEditor.Data
         public void Clear()
         {
             bars.Clear();
+            title = "";
+            artist = "";
+            difficulty = Difficulty.Normal;
+            level = 1;
             bpm = 120;
             audioClip = null;
             filePath = null;

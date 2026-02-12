@@ -22,6 +22,14 @@ namespace SCOdyssey.ChartEditor.Data
         {
             StringBuilder sb = new StringBuilder();
 
+            // 헤더 필드
+            sb.AppendLine($"#TITLE {data.title}");
+            sb.AppendLine($"#ARTIST {data.artist}");
+            sb.AppendLine($"#DIFFICULTY {data.difficulty}");
+            sb.AppendLine($"#LEVEL {data.level}");
+            sb.AppendLine($"#BPM {data.bpm}");
+            sb.AppendLine();
+
             // 마디 번호 순으로 정렬
             var sortedBars = data.GetAllBars()
                 .OrderBy(kvp => kvp.Key)
@@ -62,66 +70,131 @@ namespace SCOdyssey.ChartEditor.Data
         #region 채보 텍스트 → EditorChartData (불러오기)
 
         /// <summary>
-        /// 채보 텍스트를 EditorChartData로 변환
+        /// 채보 텍스트를 EditorChartData로 변환 (헤더에서 BPM 읽음)
+        /// </summary>
+        public static EditorChartData FromChartText(string chartText)
+        {
+            return FromChartText(chartText, -1);
+        }
+
+        /// <summary>
+        /// 채보 텍스트를 EditorChartData로 변환 (bpm 지정 시 헤더 BPM 무시)
         /// </summary>
         public static EditorChartData FromChartText(string chartText, int bpm)
         {
             EditorChartData data = new EditorChartData();
-            data.bpm = bpm;
+            if (bpm > 0) data.bpm = bpm;
 
             string[] lines = chartText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (string line in lines)
             {
-                if (!line.StartsWith("#") || !line.EndsWith(";")) continue;
+                if (!line.StartsWith("#")) continue;
 
-                try
+                // 데이터 라인: 콜론(:) 포함 + 세미콜론(;) 끝
+                if (line.Contains(':') && line.EndsWith(";"))
                 {
-                    string content = line.TrimStart('#').TrimEnd(';');
-                    string[] parts = content.Split(':');
-
-                    if (parts.Length < 3) continue;
-
-                    int barNumber = int.Parse(parts[0]);
-
-                    string channelLaneStr = parts[1];
-                    int channel = channelLaneStr[0] - '0';
-                    int laneNumber = channelLaneStr[1] - '0';
-
-                    bool isLTR = (channel == 0);
-                    string noteSequence = parts[2];
-                    int beat = noteSequence.Length;
-
-                    // 마디 데이터 가져오기 (없으면 생성)
-                    EditorBarData bar = data.GetOrCreateBar(barNumber);
-
-                    // 해당 마디의 비트를 가장 큰 값으로 갱신
-                    if (beat > bar.beat)
-                    {
-                        bar.SetBeat(beat);
-                    }
-
-                    // 방향 설정
-                    int groupIndex = (laneNumber <= 2) ? 0 : 1;
-                    if (groupIndex == 0)
-                        bar.upperGroupLTR = isLTR;
-                    else
-                        bar.lowerGroupLTR = isLTR;
-
-                    // 시퀀스 저장 (화면 순서 그대로 — Reverse 불필요)
-                    int laneIdx = laneNumber - 1;
-                    for (int i = 0; i < beat && i < bar.laneSequences[laneIdx].Length; i++)
-                    {
-                        bar.laneSequences[laneIdx][i] = noteSequence[i];
-                    }
+                    ParseDataLine(data, line);
                 }
-                catch (Exception e)
+                else
                 {
-                    Debug.LogError($"[EditorChartConverter] Parse error at line: {line}\n{e.Message}");
+                    // 헤더 라인: #KEY value
+                    ParseHeaderLine(data, line);
                 }
             }
 
+            // bpm 파라미터가 지정된 경우 헤더 값을 덮어씀
+            if (bpm > 0) data.bpm = bpm;
+
             return data;
+        }
+
+        /// <summary>
+        /// 헤더 라인 파싱 (#KEY value)
+        /// </summary>
+        private static void ParseHeaderLine(EditorChartData data, string line)
+        {
+            // "#KEY value" → key="KEY", value="value"
+            string content = line.TrimStart('#').Trim();
+            int spaceIndex = content.IndexOf(' ');
+
+            if (spaceIndex < 0) return; // 값 없는 헤더는 무시
+
+            string key = content.Substring(0, spaceIndex).ToUpper();
+            string value = content.Substring(spaceIndex + 1).Trim();
+
+            switch (key)
+            {
+                case "TITLE":
+                    data.title = value;
+                    break;
+                case "ARTIST":
+                    data.artist = value;
+                    break;
+                case "DIFFICULTY":
+                    if (Enum.TryParse<Difficulty>(value, true, out var diff))
+                        data.difficulty = diff;
+                    break;
+                case "LEVEL":
+                    if (int.TryParse(value, out int lvl))
+                        data.level = lvl;
+                    break;
+                case "BPM":
+                    if (int.TryParse(value, out int parsedBpm))
+                        data.bpm = parsedBpm;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 데이터 라인 파싱 (#barNumber:channelLane:sequence;)
+        /// </summary>
+        private static void ParseDataLine(EditorChartData data, string line)
+        {
+            try
+            {
+                string content = line.TrimStart('#').TrimEnd(';');
+                string[] parts = content.Split(':');
+
+                if (parts.Length < 3) return;
+
+                int barNumber = int.Parse(parts[0]);
+
+                string channelLaneStr = parts[1];
+                int channel = channelLaneStr[0] - '0';
+                int laneNumber = channelLaneStr[1] - '0';
+
+                bool isLTR = (channel == 0);
+                string noteSequence = parts[2];
+                int beat = noteSequence.Length;
+
+                // 마디 데이터 가져오기 (없으면 생성)
+                EditorBarData bar = data.GetOrCreateBar(barNumber);
+
+                // 해당 마디의 비트를 가장 큰 값으로 갱신
+                if (beat > bar.beat)
+                {
+                    bar.SetBeat(beat);
+                }
+
+                // 방향 설정
+                int groupIndex = (laneNumber <= 2) ? 0 : 1;
+                if (groupIndex == 0)
+                    bar.upperGroupLTR = isLTR;
+                else
+                    bar.lowerGroupLTR = isLTR;
+
+                // 시퀀스 저장 (화면 순서 그대로 — Reverse 불필요)
+                int laneIdx = laneNumber - 1;
+                for (int i = 0; i < beat && i < bar.laneSequences[laneIdx].Length; i++)
+                {
+                    bar.laneSequences[laneIdx][i] = noteSequence[i];
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[EditorChartConverter] Parse error at line: {line}\n{e.Message}");
+            }
         }
 
         #endregion

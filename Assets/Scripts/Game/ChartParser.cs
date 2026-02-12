@@ -20,7 +20,8 @@ namespace SCOdyssey.Game
 
             foreach (string line in lines)
             {
-                if (!line.StartsWith("#") || !line.EndsWith(";")) continue;
+                // 데이터 라인만 처리 (헤더 라인 "#KEY value"는 스킵)
+                if (!line.StartsWith("#") || !line.Contains(':') || !line.EndsWith(";")) continue;
 
                 try
                 {

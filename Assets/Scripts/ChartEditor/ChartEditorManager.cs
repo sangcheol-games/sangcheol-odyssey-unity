@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using SCOdyssey.ChartEditor.Analysis;
 using SCOdyssey.ChartEditor.Data;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -278,6 +280,71 @@ namespace SCOdyssey.ChartEditor
                 if (directionTextsRight[groupIdx] != null)
                     directionTextsRight[groupIdx].gameObject.SetActive(showRight);
             }
+        }
+
+        #endregion
+
+        #region 자동 채보 생성
+
+        /// <summary>
+        /// 난이도별 자동 채보 생성 프리셋
+        /// </summary>
+        private static (float sensitivity, int beatResolution) GetGeneratePreset(Difficulty difficulty)
+        {
+            return difficulty switch
+            {
+                Difficulty.Easy    => (2.5f, 4),
+                Difficulty.Normal  => (1.5f, 8),
+                Difficulty.Hard    => (1.0f, 8),
+                Difficulty.Extreme => (0.7f, 16),
+                _ => (1.5f, 8)
+            };
+        }
+
+        /// <summary>
+        /// 음원 분석 → 난이도별 자동 채보 생성
+        /// </summary>
+        public void GenerateChart(Difficulty difficulty)
+        {
+            if (ChartData.audioClip == null)
+            {
+                ShowWarning("음원 파일을 먼저 불러와주세요.");
+                return;
+            }
+
+            var (sensitivity, beatResolution) = GetGeneratePreset(difficulty);
+
+            // 기존 채보 초기화 (헤더 메타데이터, audioClip, filePath 유지)
+            string title = ChartData.title;
+            string artist = ChartData.artist;
+            int level = ChartData.level;
+            int bpm = ChartData.bpm;
+            AudioClip clip = ChartData.audioClip;
+            string path = ChartData.filePath;
+
+            ChartData.Clear();
+            ChartData.title = title;
+            ChartData.artist = artist;
+            ChartData.difficulty = difficulty;
+            ChartData.level = level;
+            ChartData.bpm = bpm;
+            ChartData.audioClip = clip;
+            ChartData.filePath = path;
+
+            // 0번 마디(준비 마디) 시작지점: 하단 RTL
+            ChartData.GetOrCreateBar(0).lowerGroupLTR = false;
+
+            // onset 감지
+            List<AudioOnsetDetector.OnsetInfo> onsets =
+                AudioOnsetDetector.DetectOnsets(clip, sensitivity);
+
+            // 채보 생성 (Easy/Normal은 상단↔하단 교대 배치)
+            bool alternating = (difficulty == Difficulty.Easy || difficulty == Difficulty.Normal);
+            AutoChartGenerator.Generate(ChartData, onsets, beatResolution, alternating);
+
+            // 1번 마디로 이동하여 결과 확인
+            LoadBar(1);
+            Debug.Log($"[ChartEditor] Auto-generated chart ({difficulty}): {onsets.Count} onsets, sensitivity={sensitivity}, beat={beatResolution}");
         }
 
         #endregion
