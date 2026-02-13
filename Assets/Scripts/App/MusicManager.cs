@@ -46,7 +46,7 @@ namespace SCOdyssey.App
             }
 
             currentMusic = music;
-            Debug.Log($"[MusicManager] Selected Music: {music.title[Domain.Service.Constants.Language.KR]}");
+            Debug.Log($"[MusicManager] Selected Music: {music.title.GetLocalizedString()}");
         }
 
         /// <summary>

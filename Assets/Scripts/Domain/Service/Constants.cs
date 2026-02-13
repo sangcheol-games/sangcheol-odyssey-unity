@@ -10,13 +10,6 @@ namespace SCOdyssey.Domain.Service
         public const float JUDGE_UHM = 0.126f;
 
 
-        public enum Language
-        {
-            JP,
-            KR,
-            EN
-        }
-
         public enum Difficulty
         {
             Easy,
