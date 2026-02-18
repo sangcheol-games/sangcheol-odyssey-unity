@@ -27,6 +27,15 @@ namespace SCOdyssey.Game
                 holdImage = childs[0];
                 noteImage = childs[1];
             }
+
+            // noteImage를 NoteHead 레이어로 분리하여 holdImage 위에 항상 표시
+            if (noteImage.gameObject.GetComponent<Canvas>() == null)
+            {
+                Canvas noteCanvas = noteImage.gameObject.AddComponent<Canvas>();
+                noteCanvas.overrideSorting = true;
+                noteCanvas.sortingLayerName = "NoteHead";
+                noteCanvas.sortingOrder = 1;
+            }
         }
 
         public virtual void Init(NoteData noteData, Vector2 position, bool isLTR, float holdWidth, Action<NoteController> returnCallback)
