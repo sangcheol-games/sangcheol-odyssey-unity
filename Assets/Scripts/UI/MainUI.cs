@@ -34,7 +34,7 @@ namespace SCOdyssey
             BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
 
 
-            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerEnter, OnClickAdventure);
+            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerClick, OnClickAdventure);
 
 
         }
@@ -42,6 +42,7 @@ namespace SCOdyssey
         private void OnClickAdventure()
         {
             Debug.Log("OnClickAdventure");
+            ServiceLocator.Get<IUIManager>().ShowUI<AdventureUI>();
         }
         private void OnClickOnline()
         {
