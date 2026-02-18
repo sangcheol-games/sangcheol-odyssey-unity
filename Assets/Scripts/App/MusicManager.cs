@@ -10,7 +10,7 @@ namespace SCOdyssey.App
     {
         private List<MusicSO> musicList;
         private MusicSO currentMusic;
-        private Difficulty currentDifficulty;
+        private Difficulty currentDifficulty = Difficulty.Easy;
 
         public MusicManager()
         {
@@ -48,7 +48,7 @@ namespace SCOdyssey.App
             }
 
             currentMusic = music;
-            Debug.Log($"[MusicManager] Selected Music: {music.name}");
+            Debug.Log($"[MusicManager] Selected Music: {music.title.GetLocalizedString()}");
         }
 
         /// <summary>

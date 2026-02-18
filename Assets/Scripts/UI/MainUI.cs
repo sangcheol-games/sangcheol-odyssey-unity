@@ -38,7 +38,7 @@ namespace SCOdyssey
         private void OnClickAdventure()
         {
             Debug.Log("OnClickAdventure");
-            ServiceLocator.Get<IUIManager>().ShowUI<TestSelectUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<AdventureUI>();
         }
         private void OnClickOnline()
         {
