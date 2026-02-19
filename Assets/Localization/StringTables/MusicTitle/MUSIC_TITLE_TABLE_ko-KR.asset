@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
-  m_Name: Music Title Table_ja-JP
+  m_Name: MUSIC_TITLE_TABLE_ko-KR
   m_EditorClassIdentifier: 
   m_LocaleId:
-    m_Code: ja-JP
+    m_Code: ko-KR
   m_SharedData: {fileID: 11400000, guid: f4d7877f300fa34448bbaf75dfb1b389, type: 2}
   m_Metadata:
     m_Items: []
   m_TableData:
   - m_Id: 1891029635072
-    m_Localized: "\u30B5\u30D0\uFF01\u30B5\u30DE\u30FC\uFF01\u30B5\u30F3\u30D0\uFF01"
+    m_Localized: "\uACE0\uB4F1\uC5B4! \uC12C\uBA38! \uC0BC\uBC14!"
     m_Metadata:
       m_Items: []
   references:

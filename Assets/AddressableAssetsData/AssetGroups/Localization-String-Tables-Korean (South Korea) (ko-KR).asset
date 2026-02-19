@@ -15,8 +15,20 @@ MonoBehaviour:
   m_GroupName: Localization-String-Tables-Korean (South Korea) (ko-KR)
   m_GUID: 737f7a8fd8c521a4086709ffffa14efa
   m_SerializeEntries:
+  - m_GUID: 213fc47cf12c14f4d82eb0641ef6aad6
+    m_Address: ARTIST_TABLE_ko-KR
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ko-KR
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6d71219723b624548868c13758f5200e
-    m_Address: Music Title Table_ko-KR
+    m_Address: MUSIC_TITLE_TABLE_ko-KR
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ko-KR
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: dcefa97d71d740640b2b2ee163d9c34e
+    m_Address: VOCALOID_TABLE_ko-KR
     m_ReadOnly: 1
     m_SerializedLabels:
     - Locale-ko-KR

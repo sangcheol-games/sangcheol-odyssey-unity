@@ -16,7 +16,19 @@ MonoBehaviour:
   m_GUID: af295d159b1b974458b44d46b98fdc20
   m_SerializeEntries:
   - m_GUID: 1dc4024c71e81d7429dfe60c93aa560b
-    m_Address: Music Title Table_ja-JP
+    m_Address: MUSIC_TITLE_TABLE_ja-JP
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ja-JP
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: a744f82de8b74f346ad8cfc8637dac18
+    m_Address: VOCALOID_TABLE_ja-JP
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-ja-JP
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: af78d76a6dc31db488d4b26a71c2e4b0
+    m_Address: ARTIST_TABLE_ja-JP
     m_ReadOnly: 1
     m_SerializedLabels:
     - Locale-ja-JP
