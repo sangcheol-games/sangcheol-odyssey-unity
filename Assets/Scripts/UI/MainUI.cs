@@ -47,8 +47,7 @@ namespace SCOdyssey
         private void OnClickLounge()
         {
             Debug.Log("OnClickLounge");
-            ServiceLocator.Get<IUIManager>().CloseUI(this);
-            GetImage((int)Images.Profile).color = Color.red;
+            ServiceLocator.Get<IUIManager>().ShowUI<TestSelectUI>();
         }
         private void OnClickSetting()
         {

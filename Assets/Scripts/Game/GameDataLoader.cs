@@ -29,7 +29,7 @@ namespace SCOdyssey.Game
                 Debug.LogError("[GameDataLoader] No selected music!");
                 yield break;
             }
-            Debug.Log($"[GameDataLoader] Loading Music: {music.title.GetLocalizedString()}");
+            Debug.Log($"[GameDataLoader] Loading Music: {music.name}");
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 

@@ -50,8 +50,8 @@ namespace SCOdyssey.UI
             }
 
             gameObject.SetActive(true);
-            titleText.text = music.title.GetLocalizedString();
-            artistText.text = music.producer.GetLocalizedString();
+            titleText.text = music.title != null ? music.title.GetLocalizedString() : music.name;
+            artistText.text = music.producer != null ? music.producer.GetLocalizedString() : "";
 
             // 4단계 난이도 레벨 표시
             for (int i = 0; i < 4; i++)
