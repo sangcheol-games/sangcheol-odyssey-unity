@@ -17,6 +17,7 @@ namespace SCOdyssey.App
                 if (root == null)
                 {
                     root = new GameObject { name = "@UI_Root" };
+                    Object.DontDestroyOnLoad(root);
                 }
 
                 return root;
