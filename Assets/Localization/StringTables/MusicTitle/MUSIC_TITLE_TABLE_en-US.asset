@@ -22,6 +22,10 @@ MonoBehaviour:
     m_Localized: Mackerel! Summer! Samba!
     m_Metadata:
       m_Items: []
+  - m_Id: 177274052038656
+    m_Localized: CarniCarnival!
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
