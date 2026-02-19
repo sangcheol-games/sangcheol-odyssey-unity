@@ -23,7 +23,7 @@ namespace SCOdyssey.ChartEditor.Preview
         {
             timeOffset = offset;
             startDspTime = AudioSettings.dspTime;
-            pausedElapsed = 0;
+            pausedElapsed = offset;  // offset을 초기값으로 포함하여 이후 GetCurrentTime에서 별도 가산 불필요
             IsPlaying = true;
             IsPaused = false;
         }
@@ -68,7 +68,7 @@ namespace SCOdyssey.ChartEditor.Preview
 
             if (IsPaused) return pausedElapsed;
 
-            return (AudioSettings.dspTime - startDspTime) + pausedElapsed + timeOffset;
+            return (AudioSettings.dspTime - startDspTime) + pausedElapsed;  // timeOffset은 pausedElapsed에 포함됨
         }
     }
 }
