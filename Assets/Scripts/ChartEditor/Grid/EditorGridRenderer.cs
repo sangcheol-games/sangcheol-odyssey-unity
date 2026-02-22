@@ -130,8 +130,12 @@ namespace SCOdyssey.ChartEditor.Grid
 
                     NoteType noteType = (NoteType)(noteChar - '0');
 
-                    // 화면상 왼→오 순서로 비트선 위치 계산
-                    float noteX = leftX + noteInterval * beatIdx;
+                    // LTR: beatIdx=0 → leftEndpoint, beatIdx=beat-1 → 내부 마지막 선
+                    // RTL: beatIdx=0 → 내부 첫 번째 선, beatIdx=beat-1 → rightEndpoint
+                    // RTL은 +1 오프셋으로 배열 인덱스 0~beat-1이 내부선~rightEndpoint에 매핑됨
+                    float noteX = isLTR
+                        ? leftX + noteInterval * beatIdx
+                        : leftX + noteInterval * (beatIdx + 1);
                     Vector2 notePos = new Vector2(noteX, laneY);
 
                     EditorNoteVisual noteVisual = GetNoteVisual();

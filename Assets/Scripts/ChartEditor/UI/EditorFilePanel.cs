@@ -64,9 +64,8 @@ namespace SCOdyssey.ChartEditor.UI
                 return;
             }
 
-            // 현재 BPM 유지하여 변환 (기본정보에서 BPM을 별도로 설정)
-            int bpm = editorManager.ChartData.bpm;
-            EditorChartData loaded = EditorChartConverter.FromChartText(chartText, bpm);
+            // 파일 헤더의 BPM을 그대로 사용
+            EditorChartData loaded = EditorChartConverter.FromChartText(chartText);
             loaded.filePath = path;
 
             // 에디터 데이터 교체

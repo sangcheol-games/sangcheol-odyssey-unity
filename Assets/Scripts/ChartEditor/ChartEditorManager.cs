@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using SCOdyssey.ChartEditor.Analysis;
 using SCOdyssey.ChartEditor.Data;
+using SCOdyssey.ChartEditor.IO;
+using SCOdyssey.ChartEditor.Preview;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -29,6 +31,7 @@ namespace SCOdyssey.ChartEditor
         public AudioSource audioSource;
         public GameObject timelinePrefab;
         public GameObject notePrefab;
+        public EditorPreviewManager previewManager;  // Tab 단축키로 현재마디 재생
 
         [Header("씬 참조 - 방향 표시")]
         public RectTransform[] directionZonesLeft = new RectTransform[2];   // 상단/하단 좌측 클릭 영역
@@ -47,6 +50,17 @@ namespace SCOdyssey.ChartEditor
 
         // 현재 작업 중인 마디 데이터
         public EditorBarData CurrentBar => ChartData.GetOrCreateBar(State.currentBar);
+
+        // 복사 버퍼 (C키로 저장, V키로 붙여넣기)
+        private CopyBuffer _copyBuffer;
+
+        private class CopyBuffer
+        {
+            public int beat;
+            public char[][] laneSequences;  // 딥 카피
+            public bool? upperGroupLTR;
+            public bool? lowerGroupLTR;
+        }
 
         /// <summary>
         /// 채보 데이터 전체 교체 (파일 불러오기 시 사용)
@@ -207,7 +221,7 @@ namespace SCOdyssey.ChartEditor
         /// 노트 배치/삭제 토글
         /// </summary>
         /// <param name="laneNumber">레인 번호 (1~4)</param>
-        /// <param name="beatIndex">비트 위치 인덱스 (화면 왼쪽→오른쪽)</param>
+        /// <param name="beatIndex">그리드 선 번호 (0=leftEndpoint ~ beat=rightEndpoint)</param>
         public void ToggleNote(int laneNumber, int beatIndex)
         {
             EditorBarData bar = CurrentBar;
@@ -226,28 +240,39 @@ namespace SCOdyssey.ChartEditor
                 return;
             }
 
-            // 끝 경계 확인
+            // 그리드 선 번호 → 배열 인덱스 변환
+            // [노트 배치 설계]
+            // EditorGridInput에서 beatIndex는 "그리드 선 번호" (0=leftEndpoint, beat=rightEndpoint)
+            // LTR: 선 0~beat-1이 노트 위치 → arrayIndex = beatIndex (직접 대응)
+            //   선 beat(rightEndpoint)는 유효하지 않음
+            // RTL: 선 1~beat가 노트 위치 → arrayIndex = beatIndex - 1 (한 칸 왼쪽 선이 배열 첫 번째)
+            //   선 0(leftEndpoint)는 유효하지 않음
+            // 렌더링은 EditorGridRenderer에서 RTL에 +1 오프셋으로 arrayIndex → 화면 선 번호 복원
             bool isLTR = bar.GetDirection(laneNumber);
-            if (isLTR && beatIndex >= bar.beat)
+            int arrayIndex;
+            if (isLTR)
             {
-                return; // LTR에서 rightEndpoint 위치는 범위 밖
+                if (beatIndex >= bar.beat) return; // rightEndpoint는 LTR 노트 위치 아님
+                arrayIndex = beatIndex;
             }
-            if (!isLTR && beatIndex <= 0)
+            else
             {
-                return; // RTL에서 leftEndpoint 위치는 범위 밖
+                if (beatIndex <= 0) return; // leftEndpoint는 RTL 노트 위치 아님
+                arrayIndex = beatIndex - 1;
+                if (arrayIndex >= bar.beat) return; // 안전망
             }
 
             int laneIndex = laneNumber - 1; // 0-based
 
             // 토글: 노트가 있으면 삭제, 없으면 삽입
-            if (bar.laneSequences[laneIndex][beatIndex] != '0')
+            if (bar.laneSequences[laneIndex][arrayIndex] != '0')
             {
-                bar.laneSequences[laneIndex][beatIndex] = '0';
+                bar.laneSequences[laneIndex][arrayIndex] = '0';
             }
             else
             {
                 char noteChar = ((int)State.selectedNoteType).ToString()[0];
-                bar.laneSequences[laneIndex][beatIndex] = noteChar;
+                bar.laneSequences[laneIndex][arrayIndex] = noteChar;
             }
 
             RefreshGrid();
@@ -379,21 +404,58 @@ namespace SCOdyssey.ChartEditor
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
 
-            // P키: 프리뷰 일시정지/재개
-            if (keyboard.pKey.wasPressedThisFrame)
+            // P키 / 스페이스바: 프리뷰 일시정지/재개
+            if (keyboard.pKey.wasPressedThisFrame || keyboard.spaceKey.wasPressedThisFrame)
             {
                 OnPauseToggle?.Invoke();
             }
 
-            // 좌우 화살표: 마디 이동 (툴바 포커스가 아닐 때)
-            if (keyboard.leftArrowKey.wasPressedThisFrame && !IsInputFieldFocused())
+            // 입력 필드 포커스 중에는 이하 단축키 비활성화
+            if (IsInputFieldFocused()) return;
+
+            // S: 빠른저장
+            if (keyboard.sKey.wasPressedThisFrame)
             {
-                PrevBar();
+                QuickSave();
             }
-            if (keyboard.rightArrowKey.wasPressedThisFrame && !IsInputFieldFocused())
+
+            // C: 현재 마디 복사, V: 붙여넣기
+            if (keyboard.cKey.wasPressedThisFrame) CopyBar();
+            if (keyboard.vKey.wasPressedThisFrame) PasteBar();
+
+            // 1~4: 노트 타입 선택
+            if (keyboard.digit1Key.wasPressedThisFrame) SelectNoteType(NoteType.Normal);
+            if (keyboard.digit2Key.wasPressedThisFrame) SelectNoteType(NoteType.HoldStart);
+            if (keyboard.digit3Key.wasPressedThisFrame) SelectNoteType(NoteType.Holding);
+            if (keyboard.digit4Key.wasPressedThisFrame) SelectNoteType(NoteType.HoldEnd);
+
+            // D: 방향선택 모드 토글
+            if (keyboard.dKey.wasPressedThisFrame)
             {
-                NextBar();
+                ToggleDirectionMode();
             }
+
+            // Enter: 현재마디 재생
+            if (keyboard.enterKey.wasPressedThisFrame)
+            {
+                if (previewManager != null)
+                    previewManager.PlaySingle(State.currentBar);
+            }
+
+            // Tab: 부분재생 (현재마디 ±1, 총 3마디)
+            if (keyboard.tabKey.wasPressedThisFrame)
+            {
+                if (previewManager != null)
+                    previewManager.PlayPartial(State.currentBar);
+            }
+
+            // 좌우 화살표: 마디 이동
+            if (keyboard.leftArrowKey.wasPressedThisFrame) PrevBar();
+            if (keyboard.rightArrowKey.wasPressedThisFrame) NextBar();
+
+            // PgUp/PgDn: 비트 변경 (4→8→16→32 사이클)
+            if (keyboard.pageUpKey.wasPressedThisFrame) CycleBeatUp();
+            if (keyboard.pageDownKey.wasPressedThisFrame) CycleBeatDown();
         }
 
         private bool IsInputFieldFocused()
@@ -404,12 +466,155 @@ namespace SCOdyssey.ChartEditor
 
         #endregion
 
+        #region 도구 선택 / 저장 / 비트 조작
+
+        private static readonly int[] BeatCycleValues = { 4, 8, 16, 32 };
+
+        /// <summary>
+        /// 노트 타입 선택 및 NoteInsert 모드로 전환
+        /// </summary>
+        public void SelectNoteType(NoteType type)
+        {
+            State.selectedNoteType = type;
+            State.currentTool = EditorTool.NoteInsert;
+            OnToolChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 방향선택 모드 토글
+        /// </summary>
+        public void ToggleDirectionMode()
+        {
+            if (State.currentTool == EditorTool.DirectionSelect)
+                State.currentTool = EditorTool.None;
+            else
+                State.currentTool = EditorTool.DirectionSelect;
+            OnToolChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// 빠른저장: 기존 경로에 덮어쓰기. 경로가 없으면 경고 표시.
+        /// </summary>
+        public void QuickSave()
+        {
+            if (string.IsNullOrEmpty(ChartData.filePath))
+            {
+                ShowWarning("저장 경로가 없습니다.\n파일 메뉴에서 '다른이름으로 저장'을 사용하세요.");
+                return;
+            }
+
+            string chartText = EditorChartConverter.ToChartText(ChartData);
+            if (ChartFileIO.SaveToFile(ChartData.filePath, chartText))
+                Debug.Log($"[ChartEditor] Quick saved: {ChartData.filePath}");
+            else
+                ShowWarning("저장에 실패했습니다.");
+        }
+
+        /// <summary>
+        /// 비트를 사이클 배열에서 한 단계 올림 (4→8→16→32)
+        /// </summary>
+        public void CycleBeatUp()
+        {
+            int idx = GetBeatCycleIndex();
+            if (idx < BeatCycleValues.Length - 1) idx++;
+            SetBeat(BeatCycleValues[idx]);
+        }
+
+        /// <summary>
+        /// 비트를 사이클 배열에서 한 단계 내림 (32→16→8→4)
+        /// </summary>
+        public void CycleBeatDown()
+        {
+            int idx = GetBeatCycleIndex();
+            if (idx > 0) idx--;
+            SetBeat(BeatCycleValues[idx]);
+        }
+
+        private int GetBeatCycleIndex()
+        {
+            for (int i = 0; i < BeatCycleValues.Length; i++)
+            {
+                if (BeatCycleValues[i] == State.currentBeat)
+                    return i;
+            }
+            return 0; // 현재 비트가 사이클에 없으면 최소값(4) 기준
+        }
+
+        #endregion
+
+        #region 복사/붙여넣기
+
+        /// <summary>
+        /// 현재 마디의 노트 배치 + 방향 설정을 버퍼에 복사 (C키).
+        /// </summary>
+        public void CopyBar()
+        {
+            EditorBarData bar = CurrentBar;
+
+            var buffer = new CopyBuffer
+            {
+                beat = bar.beat,
+                laneSequences = new char[4][],
+                upperGroupLTR = bar.upperGroupLTR,
+                lowerGroupLTR = bar.lowerGroupLTR,
+            };
+            for (int i = 0; i < 4; i++)
+            {
+                buffer.laneSequences[i] = new char[bar.beat];
+                System.Array.Copy(bar.laneSequences[i], buffer.laneSequences[i], bar.beat);
+            }
+            _copyBuffer = buffer;
+
+            Debug.Log($"[ChartEditor] 마디 {State.currentBar} 복사 (beat={bar.beat})");
+        }
+
+        /// <summary>
+        /// 버퍼의 노트 배치 + 방향 설정을 현재 마디에 덮어씌움 (V키).
+        /// </summary>
+        public void PasteBar()
+        {
+            if (_copyBuffer == null)
+            {
+                ShowWarning("복사된 데이터가 없습니다.");
+                return;
+            }
+            if (State.currentBar == 0)
+            {
+                ShowWarning("0번 마디에는 붙여넣기할 수 없습니다.");
+                return;
+            }
+
+            EditorBarData bar = CurrentBar;
+            bar.beat = _copyBuffer.beat;
+            bar.upperGroupLTR = _copyBuffer.upperGroupLTR;
+            bar.lowerGroupLTR = _copyBuffer.lowerGroupLTR;
+            bar.laneSequences = new char[4][];
+            for (int i = 0; i < 4; i++)
+            {
+                bar.laneSequences[i] = new char[_copyBuffer.beat];
+                System.Array.Copy(_copyBuffer.laneSequences[i], bar.laneSequences[i], _copyBuffer.beat);
+            }
+
+            State.currentBeat = bar.beat;
+            RefreshDirectionDisplay();
+            RefreshGrid();
+            OnBeatChanged?.Invoke(bar.beat);
+
+            // 붙여넣기 후 버퍼 리셋 (중복 방지)
+            _copyBuffer = null;
+
+            Debug.Log($"[ChartEditor] 마디 {State.currentBar}에 붙여넣기 (beat={bar.beat})");
+        }
+
+        #endregion
+
         #region 이벤트
 
         public System.Action<int> OnBarChanged;
         public System.Action<int> OnBeatChanged;
         public System.Action OnGridRefreshRequested;
         public System.Action OnPauseToggle;
+        public System.Action OnToolChanged;
 
         #endregion
     }

@@ -53,8 +53,13 @@ namespace SCOdyssey.ChartEditor.Data
         }
 
         /// <summary>
-        /// 비트 수 변경. 기존 노트 데이터를 새 비트 수에 맞게 재할당
-        /// 새 배열이 더 짧으면 초과 위치의 노트 손실
+        /// 비트 수 변경. 기존 노트 데이터를 새 비트 수에 맞게 비율 스케일하여 재배치.
+        /// LTR 예: 4비트 "0101" → 8비트 "00100010" (노트 위치를 2배 간격으로 확장)
+        /// RTL 예: 4비트 "0101" → 8비트 "00010001" (시간 기준으로 변환 후 역방향 배열에 저장)
+        /// RTL에서는 array[i] = 화면 우측(시간 시작)부터 역순으로 저장되므로,
+        /// 시간축 기준으로 스케일한 뒤 다시 역방향으로 변환.
+        /// 비배수 변환(예: 4→6)은 AwayFromZero 반올림으로 가장 가까운 위치에 배치.
+        /// 충돌 시 뒤에 처리된 노트가 앞 노트를 덮어씀. 범위 밖 노트는 손실.
         /// </summary>
         public void SetBeat(int newBeat)
         {
@@ -64,10 +69,41 @@ namespace SCOdyssey.ChartEditor.Data
             for (int i = 0; i < 4; i++)
             {
                 newSequences[i] = new char[newBeat];
+                // 초기값 '0'으로 초기화
                 for (int j = 0; j < newBeat; j++)
+                    newSequences[i][j] = '0';
+
+                // 레인 방향 결정 (레인 인덱스 0,1 = 상단 그룹, 2,3 = 하단 그룹)
+                bool? isLTR = i < 2 ? upperGroupLTR : lowerGroupLTR;
+
+                // 기존 노트를 비율에 맞는 새 위치로 이전
+                // AwayFromZero: 0.5 이상이면 항상 올림 (은행가 반올림 방지)
+                for (int oldIdx = 0; oldIdx < beat; oldIdx++)
                 {
-                    // 기존 데이터 범위 내면 복사, 아니면 빈 노트
-                    newSequences[i][j] = (j < beat) ? laneSequences[i][j] : '0';
+                    if (laneSequences[i][oldIdx] == '0') continue;
+
+                    int newIdx;
+                    if (isLTR == false)
+                    {
+                        // RTL: 배열 인덱스가 시간과 역방향 (array[0]=시간 끝, array[beat-1]=시간 시작)
+                        // 시간 기준으로 변환: old_time = (beat-1) - oldIdx
+                        int oldTime = (beat - 1) - oldIdx;
+                        int newTime = (int)System.Math.Round(
+                            (double)oldTime * newBeat / beat,
+                            System.MidpointRounding.AwayFromZero);
+                        // 새 배열 인덱스로 역변환: newIdx = (newBeat-1) - new_time
+                        newIdx = (newBeat - 1) - newTime;
+                    }
+                    else
+                    {
+                        // LTR 또는 방향 미설정: 배열 인덱스 = 시간 순서와 동일
+                        newIdx = (int)System.Math.Round(
+                            (double)oldIdx * newBeat / beat,
+                            System.MidpointRounding.AwayFromZero);
+                    }
+
+                    if (newIdx >= 0 && newIdx < newBeat)
+                        newSequences[i][newIdx] = laneSequences[i][oldIdx];
                 }
             }
 

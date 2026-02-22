@@ -31,6 +31,10 @@ namespace SCOdyssey.ChartEditor.Preview
         private List<GameObject> activeTimelineObjects = new List<GameObject>();
         private List<GameObject> activeNoteObjects = new List<GameObject>();
 
+        // Unity AudioSource 레이턴시 보정 (오디오를 이 값만큼 일찍 재생)
+        // 저지연 엔진으로 교체 시 0으로 변경
+        private const float kAudioLatencyOffset = 0.05f;
+
         // 마디 진행 관리
         private bool hasSpawnedBar = false;
         private double nextBarTime;
@@ -133,12 +137,32 @@ namespace SCOdyssey.ChartEditor.Preview
             timeProvider.Start(startTimeOffset);
 
             // 음원 재생
+            // 0번 마디는 준비 단계(무음) → 음원 t=0이 채보 1번 마디 시작에 대응
+            // audioTime = chartTime - barDuration
+            // startBar=0 → audioTime=-barDuration → barDuration초 후 재생(PlayDelayed)
+            // startBar=1 → audioTime=0 → 즉시 음원 처음부터 재생
+            // startBar=2+ → audioTime=양수 → 해당 위치부터 즉시 재생
             if (editorManager.audioSource != null && editorManager.ChartData.audioClip != null)
             {
                 editorManager.audioSource.clip = editorManager.ChartData.audioClip;
-                editorManager.audioSource.time = (float)startTimeOffset;
-                editorManager.audioSource.Play();
-                Debug.Log($"[EditorPreview] Audio playing: {editorManager.ChartData.audioClip.name}, time={startTimeOffset:F2}s");
+
+                double audioTime = startTimeOffset - barDuration;
+
+                // kAudioLatencyOffset만큼 오디오를 일찍 시작하여 레이턴시 보정
+                double adjustedAudioTime = audioTime - kAudioLatencyOffset;
+
+                if (adjustedAudioTime < 0)
+                {
+                    // 0번 마디 구간 포함 또는 오프셋으로 인해 음수가 된 경우: delay 후 재생
+                    editorManager.audioSource.time = 0f;
+                    editorManager.audioSource.PlayDelayed((float)(-adjustedAudioTime));
+                }
+                else
+                {
+                    editorManager.audioSource.time = (float)adjustedAudioTime;
+                    editorManager.audioSource.Play();
+                }
+                Debug.Log($"[EditorPreview] Audio: {editorManager.ChartData.audioClip.name}, audioTime={audioTime:F2}s (adjusted={adjustedAudioTime:F2}s)");
             }
             else
             {

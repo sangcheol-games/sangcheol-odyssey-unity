@@ -13186,6 +13186,7 @@ MonoBehaviour:
   audioSource: {fileID: 1155553906}
   timelinePrefab: {fileID: 974329378437653435, guid: 12698f78ad5a8d74b84658c173321e46, type: 3}
   notePrefab: {fileID: 3709894694565103827, guid: f05570748528ee44e8ab223fecca343b, type: 3}
+  previewManager: {fileID: 1487012879}
   directionZonesLeft:
   - {fileID: 1336473385}
   - {fileID: 227255713}
