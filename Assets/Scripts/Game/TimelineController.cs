@@ -24,6 +24,7 @@ namespace SCOdyssey.Game
         public bool isLTR;            // 왼쪽에서 오른쪽으로 이동하는지 여부
 
         private Action<TimelineController> onReturn;
+        private Func<double> timeProvider;  // 외부 시간 소스 (에디터 프리뷰용)
 
         private float screenBoundX; // 화면 경계 X 좌표
         private bool isRunning = false;
@@ -37,13 +38,14 @@ namespace SCOdyssey.Game
 
         }
 
-        public void Init(double startTime, double duration, float startX, float endX, Action<TimelineController> returnCallback)
+        public void Init(double startTime, double duration, float startX, float endX, Action<TimelineController> returnCallback, Func<double> timeProvider = null)
         {
             this.startTime = startTime;
             this.duration = duration;
             this.startX = startX;
             this.endX = endX;
             this.onReturn = returnCallback;
+            this.timeProvider = timeProvider;
 
             if (startX < endX)
             {
@@ -72,7 +74,9 @@ namespace SCOdyssey.Game
 
         private void UpdatePosition()
         {
-            double currentTime = ServiceLocator.Get<IGameManager>().GetCurrentTime();
+            double currentTime = timeProvider != null
+                ? timeProvider()
+                : ServiceLocator.Get<IGameManager>().GetCurrentTime();
             double elapsedTime = currentTime - startTime;
             float progress = (float)(elapsedTime / duration);
 
