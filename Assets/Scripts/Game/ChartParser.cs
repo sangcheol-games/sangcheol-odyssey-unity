@@ -20,8 +20,14 @@ namespace SCOdyssey.Game
 
             foreach (string line in lines)
             {
-                // 데이터 라인만 처리 (헤더 라인 "#KEY value"는 스킵)
-                if (!line.StartsWith("#") || !line.Contains(':') || !line.EndsWith(";")) continue;
+                if (!line.StartsWith("#")) continue;
+
+                // 헤더 라인 파싱 (#KEY value)
+                if (!line.Contains(':') || !line.EndsWith(";"))
+                {
+                    ParseHeaderField(line, chartData);
+                    continue;
+                }
 
                 try
                 {
@@ -63,8 +69,26 @@ namespace SCOdyssey.Game
                 }
             }
 
-            Debug.Log($"Chart Parsed Successfully. Total Lanes: {chartData.GetFullChartList().Count}");
+            Debug.Log($"Chart Parsed Successfully. Total Lanes: {chartData.GetFullChartList().Count}, Total Notes: {chartData.totalNotes}");
             return chartData;
+        }
+
+        private static void ParseHeaderField(string line, ChartData chartData)
+        {
+            string content = line.TrimStart('#').Trim();
+            int spaceIndex = content.IndexOf(' ');
+            if (spaceIndex < 0) return;
+
+            string key = content[..spaceIndex].ToUpper();
+            string value = content[(spaceIndex + 1)..].Trim();
+
+            switch (key)
+            {
+                case "NOTES":
+                    if (int.TryParse(value, out int notes))
+                        chartData.totalNotes = notes;
+                    break;
+            }
         }
     }
 }

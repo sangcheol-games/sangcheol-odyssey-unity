@@ -81,7 +81,7 @@ namespace SCOdyssey.App
             }
 
             chartManager.Init(chartData, this);
-            scoreManager.Init(100); // TODO: chartData에서 노트 개수 받아오기
+            scoreManager.Init(chartData.totalNotes);
 
             globalStartTime = AudioSettings.dspTime;
             IsGameRunning = true;
@@ -257,6 +257,7 @@ namespace SCOdyssey.App
                     scoreManager.GetFinalScore(),
                     scoreManager.GetClearRank(),
                     scoreManager.GetMaxCombo(),
+                    scoreManager.GetTotalNoteCount(),
                     scoreManager.GetJudgeCounts(),
                     scoreManager.GetGaugePercent()
                 );

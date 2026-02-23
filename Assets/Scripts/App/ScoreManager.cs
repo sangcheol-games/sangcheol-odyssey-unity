@@ -150,6 +150,9 @@ namespace SCOdyssey.App
             return (int)finalScore;
         }
 
+        // 총 노트 수 반환
+        public int GetTotalNoteCount() => totalNoteCount;
+
         // 최대 콤보 수 반환
         public int GetMaxCombo() => maxCombo;
 

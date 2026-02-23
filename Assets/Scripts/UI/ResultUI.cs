@@ -64,6 +64,7 @@ namespace SCOdyssey.UI
             int finalScore,
             ClearType result,
             int maxCombo,
+            int totalNotes,
             Dictionary<JudgeType, int> judgeCounts,
             float gaugePercent)
         {
@@ -88,6 +89,7 @@ namespace SCOdyssey.UI
             GetText((int)Texts.MaxComboText).text = maxCombo.ToString();
 
             // 판정 통계 표시
+            GetText((int)Texts.TotalNotesText).text = totalNotes.ToString();
             GetText((int)Texts.PerfectCountText).text = judgeCounts[JudgeType.Perfect].ToString();
             GetText((int)Texts.MasterCountText).text = judgeCounts[JudgeType.Master].ToString();
             GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();

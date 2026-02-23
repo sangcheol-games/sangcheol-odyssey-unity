@@ -105,5 +105,25 @@ namespace SCOdyssey.ChartEditor.Data
         {
             return bars;
         }
+
+        /// <summary>
+        /// 전체 채보의 총 노트 수 계산 (NoteType != None인 모든 노트)
+        /// </summary>
+        public int CountTotalNotes()
+        {
+            int count = 0;
+            foreach (var bar in bars.Values)
+            {
+                for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+                {
+                    for (int i = 0; i < bar.beat; i++)
+                    {
+                        if (bar.laneSequences[laneIdx][i] != '0')
+                            count++;
+                    }
+                }
+            }
+            return count;
+        }
     }
 }
