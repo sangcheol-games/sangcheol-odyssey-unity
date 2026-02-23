@@ -44,13 +44,24 @@ namespace SCOdyssey.Domain.Service
             Umm
         }
 
-        public enum ClearRank
+        public enum ClearType
         {
             Fail,           // 점수 < 700,000 (게이지 < 70%)
             Clear,          // 클리어 (기본)
             FullCombo,      // Uhm (miss) = 0
             OverMillion,    // Perfect + Master = Total
             AllPerfect      // Perfect = Total
+        }
+
+        public enum ScoreRank
+        {
+            SSS,    // 115만점 이상
+            SS,     // 100만점 이상
+            S,      // 97만점 이상
+            A,      // 90만점 이상
+            B,      // 80만점 이상
+            C,      // 70만점 이상
+            F       // 70만점 미만
         }
     }
 }

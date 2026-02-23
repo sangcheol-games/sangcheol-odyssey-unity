@@ -193,7 +193,7 @@ namespace SCOdyssey.App
             }
 
             int finalScore = scoreManager.GetFinalScore();
-            ClearRank rank = scoreManager.GetClearRank();
+            ClearType rank = scoreManager.GetClearRank();
 
             Debug.Log($"Game Finished. Score: {finalScore}, Rank: {rank}");
 
@@ -202,7 +202,7 @@ namespace SCOdyssey.App
         }
 
         // 클리어 연출 표시 (2초 대기 후 텍스트 표시)
-        private IEnumerator ShowClearSequence(ClearRank rank)
+        private IEnumerator ShowClearSequence(ClearType rank)
         {
             yield return new WaitForSeconds(2f);
 
@@ -213,23 +213,23 @@ namespace SCOdyssey.App
 
                 switch (rank)
                 {
-                    case ClearRank.AllPerfect:
+                    case ClearType.AllPerfect:
                         clearEffectText.text = "ALL PERFECT";
                         clearEffectText.color = Color.cyan;
                         break;
-                    case ClearRank.OverMillion:
+                    case ClearType.OverMillion:
                         clearEffectText.text = "OVER MILLION";
                         clearEffectText.color = Color.yellow;
                         break;
-                    case ClearRank.FullCombo:
+                    case ClearType.FullCombo:
                         clearEffectText.text = "FULL COMBO";
                         clearEffectText.color = Color.green;
                         break;
-                    case ClearRank.Clear:
+                    case ClearType.Clear:
                         clearEffectText.text = "CLEAR";
                         clearEffectText.color = Color.white;
                         break;
-                    case ClearRank.Fail:
+                    case ClearType.Fail:
                         clearEffectText.text = "FAILED";
                         clearEffectText.color = Color.red;
                         break;

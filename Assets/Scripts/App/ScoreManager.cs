@@ -165,28 +165,28 @@ namespace SCOdyssey.App
         }
 
         // 클리어 등급 판정 (Fail/Clear/FullCombo/OverMillion/AllPerfect)
-        public ClearRank GetClearRank()
+        public ClearType GetClearRank()
         {
             int finalScore = GetFinalScore();
 
             // Fail: 점수 < 700,000 (게이지 < 70%)
             if (finalScore < 700000)
-                return ClearRank.Fail;
+                return ClearType.Fail;
 
             // All Perfect: Perfect 판정만 존재
             if (judgeCounts[JudgeType.Perfect] == totalNoteCount)
-                return ClearRank.AllPerfect;
+                return ClearType.AllPerfect;
 
             // Over Million: Perfect + Master = Total
             if (judgeCounts[JudgeType.Perfect] + judgeCounts[JudgeType.Master] == totalNoteCount)
-                return ClearRank.OverMillion;
+                return ClearType.OverMillion;
 
             // Full Combo: Miss 없음 (Uhm = 0)
             if (judgeCounts[JudgeType.Umm] + judgeCounts[JudgeType.Kind] == 0)
-                return ClearRank.FullCombo;
+                return ClearType.FullCombo;
 
             // Clear: 기본
-            return ClearRank.Clear;
+            return ClearType.Clear;
         }
     }
 }
