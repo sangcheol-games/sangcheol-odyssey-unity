@@ -20,9 +20,15 @@ namespace SCOdyssey.UI
         private int selectedIndex;
         private Difficulty selectedDifficulty = Difficulty.Easy;
 
+        private enum Images
+        {
+            AlbumArt      // 앨범 아트
+        }
+
         protected override void Awake()
         {
             base.Awake();
+            BindImage(typeof(Images));
             Init();
         }
 
@@ -72,6 +78,10 @@ namespace SCOdyssey.UI
                 slots[i].SetData(musicList[dataIndex]);
                 slots[i].SetSelected(i == CENTER_INDEX, selectedDifficulty);
             }
+
+            // 곡 앨범아트 갱신
+            var selectedMusic = musicList[selectedIndex];
+            GetImage((int)Images.AlbumArt).sprite = selectedMusic.albumArt;
         }
 
         /// <summary>

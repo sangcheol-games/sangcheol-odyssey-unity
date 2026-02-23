@@ -67,7 +67,7 @@ namespace SCOdyssey.Game
                     c.a = 0f;
                     break;
                 case NoteState.Ghost:
-                    c.a = 0.05f;
+                    c.a = 0.2f;
                     break;
                 case NoteState.Active:
                     c.a = 1f;

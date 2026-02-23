@@ -15,7 +15,8 @@ MonoBehaviour:
   serializationData:
     SerializedFormat: 2
     SerializedBytes: 
-    ReferencedUnityObjects: []
+    ReferencedUnityObjects:
+    - {fileID: 4900000, guid: bf37b7848e494f5479f7c5c5a3ba728b, type: 3}
     SerializedBytesString: 
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
@@ -96,7 +97,42 @@ MonoBehaviour:
       Entry: 8
       Data: 
     - Name: chartFile
-      Entry: 6
+      Entry: 7
+      Data: 2|System.Collections.Generic.Dictionary`2[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp],[UnityEngine.TextAsset, UnityEngine.CoreModule]], mscorlib
+    - Name: comparer
+      Entry: 7
+      Data: 3|System.Collections.Generic.EnumEqualityComparer`1[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 0
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 12
+      Data: 1
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 1
+    - Name: $v
+      Entry: 10
+      Data: 0
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
       Data: 
   id: 1
   title:
@@ -129,7 +165,7 @@ MonoBehaviour:
   illustrator: Zzul
   animator: Tale
   bpm: 195
-  musicFile: {fileID: 0}
+  musicFile: {fileID: 8300000, guid: e61a4050eb0fd6b42adee0f34c8a0e52, type: 3}
   videoFile: {fileID: 0}
   albumArt: {fileID: 0}
   references:
