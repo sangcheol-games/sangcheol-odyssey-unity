@@ -31,7 +31,7 @@ namespace SCOdyssey.App
             { JudgeType.Master, 0 },
             { JudgeType.Ideal, 0 },
             { JudgeType.Kind, 0 },
-            { JudgeType.Uhm, 0 }
+            { JudgeType.Umm, 0 }
         };
 
         public void Init(int totalNotes)
@@ -84,7 +84,7 @@ namespace SCOdyssey.App
                     comboBreak = true;
                     break;
 
-                case JudgeType.Uhm:
+                case JudgeType.Umm:
                     multiplier = 0.0f;
                     comboBreak = true;
                     break;
@@ -182,7 +182,7 @@ namespace SCOdyssey.App
                 return ClearRank.OverMillion;
 
             // Full Combo: Miss 없음 (Uhm = 0)
-            if (judgeCounts[JudgeType.Uhm] + judgeCounts[JudgeType.Kind] == 0)
+            if (judgeCounts[JudgeType.Umm] + judgeCounts[JudgeType.Kind] == 0)
                 return ClearRank.FullCombo;
 
             // Clear: 기본

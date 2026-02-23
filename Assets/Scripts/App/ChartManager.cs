@@ -481,7 +481,7 @@ namespace SCOdyssey.Game
 
             double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
-            if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
+            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
                 Debug.Log("판정 범위 밖 입력");
                 return;
@@ -493,7 +493,7 @@ namespace SCOdyssey.Game
             else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
             else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
             else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
-            else if (timeDiff <= JUDGE_UHM) result = JudgeType.Uhm;
+            else if (timeDiff <= JUDGE_UMM) result = JudgeType.Umm;
 
             ApplyJudgment(targetNote, listIndex, result);
 
@@ -534,7 +534,7 @@ namespace SCOdyssey.Game
             double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
 
-            if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
+            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
                 Debug.Log("판정 범위 밖 입력");
                 return;
@@ -546,7 +546,7 @@ namespace SCOdyssey.Game
             else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
             else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
             else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
-            else if (timeDiff <= JUDGE_UHM) result = JudgeType.Uhm;
+            else if (timeDiff <= JUDGE_UMM) result = JudgeType.Umm;
 
             ApplyJudgment(targetNote, listIndex, result);
         }
@@ -572,7 +572,7 @@ namespace SCOdyssey.Game
 
             NoteController targetNote = activeNotes[listIndex].Peek();
 
-            if (currentTime > targetNote.noteData.time + JUDGE_UHM)
+            if (currentTime > targetNote.noteData.time + JUDGE_UMM)
             {
                 activeNotes[listIndex].Dequeue();
                 targetNote.OnMiss();
@@ -580,7 +580,7 @@ namespace SCOdyssey.Game
                 gameManager.OnNoteMissed();
 
                 GameObject effect = GetEffectFromPool();
-                effect.GetComponent<EffectController>().Setup(JudgeType.Uhm,
+                effect.GetComponent<EffectController>().Setup(JudgeType.Umm,
                     targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
             }
         }

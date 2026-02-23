@@ -22,7 +22,7 @@ namespace SCOdyssey.UI
             MasterCountText,    // Master 개수
             IdealCountText,     // Ideal 개수
             KindCountText,      // Kind 개수
-            UhmCountText        // Uhm 개수
+            UmmCountText        // Umm 개수
         }
 
         // 버튼 enum
@@ -71,7 +71,7 @@ namespace SCOdyssey.UI
             GetText((int)Texts.MasterCountText).text = judgeCounts[JudgeType.Master].ToString();
             GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();
             GetText((int)Texts.KindCountText).text = judgeCounts[JudgeType.Kind].ToString();
-            GetText((int)Texts.UhmCountText).text = judgeCounts[JudgeType.Uhm].ToString();
+            GetText((int)Texts.UmmCountText).text = judgeCounts[JudgeType.Umm].ToString();
         }
 
         // 등급별 색상 반환

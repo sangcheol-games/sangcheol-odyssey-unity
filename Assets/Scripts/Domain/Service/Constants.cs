@@ -7,7 +7,7 @@ namespace SCOdyssey.Domain.Service
         public const float JUDGE_MASTER = 0.042f;
         public const float JUDGE_IDEAL = 0.084f;
         public const float JUDGE_KIND = 0.105f;
-        public const float JUDGE_UHM = 0.126f;
+        public const float JUDGE_UMM = 0.126f;
 
 
         public enum Difficulty
@@ -41,7 +41,7 @@ namespace SCOdyssey.Domain.Service
             Master,
             Ideal,
             Kind,
-            Uhm
+            Umm
         }
 
         public enum ClearRank

@@ -135,7 +135,7 @@ namespace SCOdyssey.App
 
         public void OnNoteMissed()
         {
-            scoreManager.ProcessJudge(JudgeType.Uhm);
+            scoreManager.ProcessJudge(JudgeType.Umm);
         }
 
 
