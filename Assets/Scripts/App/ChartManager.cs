@@ -450,7 +450,7 @@ namespace SCOdyssey.Game
                     NoteController note = ghostNotes[i].Dequeue();
                     note.SetState(NoteState.Active);
 
-                    if (note.noteData.noteType == NoteType.Holding || note.noteData.noteType == NoteType.HoldEnd)
+                    if (note.noteData.noteType == NoteType.HoldStart || note.noteData.noteType == NoteType.Holding)
                     {
                         int groupID = GetTrackGroupID(i);
                         if (activeTimelines.ContainsKey(groupID))

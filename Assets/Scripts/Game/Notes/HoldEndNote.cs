@@ -1,6 +1,3 @@
-using UnityEngine;
-using static SCOdyssey.Domain.Service.Constants;
-
 namespace SCOdyssey.Game
 {
     public class HoldEndNote : NoteController
@@ -8,19 +5,7 @@ namespace SCOdyssey.Game
         protected override void SetVisual()
         {
             noteImage.enabled = true;
-            holdImage.enabled = true;
-            holdImage.fillAmount = 1f;
-        }
-
-        protected override void Update()
-        {
-            base.Update();
-
-            if (currentState == NoteState.Active && trackingTimeline != null)
-            {
-                UpdateHoldFill();
-            }
-
+            holdImage.enabled = false;  // 홀드바 없음: 바의 시각 효과는 HoldStart/HoldingNote가 담당
         }
     }
 }

@@ -14,6 +14,7 @@ namespace SCOdyssey.Game
         protected Image holdImage;
         protected float holdWidth = 0f;
         protected bool isJudged = false;
+        protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
         protected TimelineController trackingTimeline;    // 감시할 타임라인
         protected RectTransform rectTransform;
@@ -44,9 +45,10 @@ namespace SCOdyssey.Game
             this.onReturn = returnCallback;
             this.rectTransform.anchoredPosition = position;
             this.isJudged = false;
+            this.isHoldRemaining = false;
 
-            if (!isLTR) holdImage.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-            else holdImage.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            if (!isLTR) holdImage.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            else holdImage.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
             
             this.holdWidth = holdWidth;
 
@@ -121,19 +123,19 @@ namespace SCOdyssey.Game
         protected void UpdateHoldFill()
         {
             float timelineX = trackingTimeline.rectTransform.anchoredPosition.x;
-            float holdEndX = rectTransform.anchoredPosition.x;
+            float holdStartX = rectTransform.anchoredPosition.x;
 
             float passedDistance = 0f;
 
             if (trackingTimeline.isLTR)
             {
-                if (timelineX > holdEndX - holdWidth)
-                    passedDistance = timelineX - holdEndX + holdWidth;
+                if (timelineX > holdStartX)
+                    passedDistance = timelineX - holdStartX;
             }
             else
             {
-                if (timelineX < holdEndX + holdWidth)
-                    passedDistance = holdEndX + holdWidth - timelineX;
+                if (timelineX < holdStartX)
+                    passedDistance = holdStartX - timelineX;
             }
 
             passedDistance = Mathf.Clamp(passedDistance, 0f, holdWidth);
