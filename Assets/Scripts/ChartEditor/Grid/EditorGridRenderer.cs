@@ -139,7 +139,7 @@ namespace SCOdyssey.ChartEditor.Grid
                     Vector2 notePos = new Vector2(noteX, laneY);
 
                     EditorNoteVisual noteVisual = GetNoteVisual();
-                    noteVisual.Init(noteType, notePos, beatIdx, laneNumber, isLTR, bar.beat);
+                    noteVisual.Init(noteType, notePos, beatIdx, laneNumber, isLTR, bar.beat, noteInterval);
                     activeNotes.Add(noteVisual);
                 }
             }
