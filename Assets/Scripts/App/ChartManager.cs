@@ -430,9 +430,24 @@ namespace SCOdyssey.Game
 
                     if (isConflict && currentTimeline != null)
                     {
-                        // 같은 레인 충돌: 숨겨진 상태로 생성하고 판정선 감시 붙임
-                        noteController.TrackTimeline(currentTimeline);
-                        noteController.SetState(NoteState.Hidden);
+                        // 같은 레인 충돌: 노트가 현재 타임라인의 endpoint에 위치하는지 확인
+                        // endpoint 노트는 판정선이 절대 지나칠 수 없어 Hidden 유지 시 Active로 직행하므로 즉시 Ghost 표시
+                        float noteX = spawnPos.x;
+                        bool atEndpoint = currentIsLTR
+                            ? Mathf.Approximately(noteX, rightEndpoint.anchoredPosition.x)  // LTR: rightEndpoint
+                            : Mathf.Approximately(noteX, leftEndpoint.anchoredPosition.x);  // RTL: leftEndpoint
+
+                        if (!atEndpoint)
+                        {
+                            // endpoint가 아님: 판정선 감시로 Ghost 전환
+                            noteController.TrackTimeline(currentTimeline);
+                            noteController.SetState(NoteState.Hidden);
+                        }
+                        else
+                        {
+                            // endpoint에 위치: 즉시 Ghost로 표시
+                            noteController.SetState(NoteState.Ghost);
+                        }
                     }
                     else
                     {
