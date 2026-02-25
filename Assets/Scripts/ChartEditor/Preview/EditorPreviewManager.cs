@@ -259,14 +259,14 @@ namespace SCOdyssey.ChartEditor.Preview
             timelineObj.transform.SetParent(editorManager.noteParent, false);
 
             // 타임라인 Y 위치 설정 (해당 그룹의 레인 위치 기반)
-            RectTransform timelineRT = timelineObj.GetComponent<RectTransform>();
             int timelineIndex = groupID; // 0=상단, 1=하단
-            // ChartManager의 timelineTransforms와 동일하게 위치 설정
+            // ChartManager와 동일하게 월드 좌표 사용 (anchoredPosition은 부모 좌표계에 종속되어 불일치 발생 가능)
             if (editorManager.laneTransforms.Length > timelineIndex * 2)
             {
-                float y = (editorManager.laneTransforms[timelineIndex * 2].anchoredPosition.y
-                         + editorManager.laneTransforms[timelineIndex * 2 + 1].anchoredPosition.y) / 2f;
-                timelineRT.anchoredPosition = new Vector2(timelineRT.anchoredPosition.x, y);
+                float worldY = (editorManager.laneTransforms[timelineIndex * 2].position.y
+                              + editorManager.laneTransforms[timelineIndex * 2 + 1].position.y) / 2f;
+                Vector3 worldPos = timelineObj.transform.position;
+                timelineObj.transform.position = new Vector3(worldPos.x, worldY, worldPos.z);
             }
 
             TimelineController controller = timelineObj.GetComponent<TimelineController>();
@@ -289,7 +289,11 @@ namespace SCOdyssey.ChartEditor.Preview
                     barDuration,
                     startX,
                     endX,
-                    (tc) => ReturnToPool(timelinePool, tc.gameObject),
+                    (tc) => {
+                        // 자연 반환 시 activeTimelineObjects에서도 제거 (double-enqueue 방지)
+                        activeTimelineObjects.Remove(tc.gameObject);
+                        ReturnToPool(timelinePool, tc.gameObject);
+                    },
                     timeProvider.GetCurrentTime   // 에디터 시간 소스 주입
                 );
             }
@@ -387,13 +391,18 @@ namespace SCOdyssey.ChartEditor.Preview
 
         private void ClearActiveObjects()
         {
-            foreach (var obj in activeTimelineObjects)
+            // 원본 리스트를 먼저 Clear하고 복사본을 순회
+            // → Deactivate → onReturn → activeTimelineObjects.Remove() 호출 시 이미 빈 리스트라 예외 없음
+            var timelinesToClear = new List<GameObject>(activeTimelineObjects);
+            activeTimelineObjects.Clear();
+
+            foreach (var obj in timelinesToClear)
             {
                 if (obj != null)
                 {
                     // TimelineController 정지
-                    var tc = obj.GetComponent<TimelineController>();
-                    if (tc != null) tc.Deactivate();
+                    if (obj.TryGetComponent<TimelineController>(out var tc))
+                        tc.Deactivate();
                     else
                     {
                         obj.SetActive(false);
@@ -401,7 +410,6 @@ namespace SCOdyssey.ChartEditor.Preview
                     }
                 }
             }
-            activeTimelineObjects.Clear();
 
             foreach (var obj in activeNoteObjects)
             {
