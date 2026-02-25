@@ -423,11 +423,12 @@ namespace SCOdyssey.ChartEditor
             if (keyboard.cKey.wasPressedThisFrame) CopyBar();
             if (keyboard.vKey.wasPressedThisFrame) PasteBar();
 
-            // 1~4: 노트 타입 선택
+            // 1~5: 노트 타입 선택
             if (keyboard.digit1Key.wasPressedThisFrame) SelectNoteType(NoteType.Normal);
             if (keyboard.digit2Key.wasPressedThisFrame) SelectNoteType(NoteType.HoldStart);
             if (keyboard.digit3Key.wasPressedThisFrame) SelectNoteType(NoteType.Holding);
             if (keyboard.digit4Key.wasPressedThisFrame) SelectNoteType(NoteType.HoldEnd);
+            if (keyboard.digit5Key.wasPressedThisFrame) SelectNoteType(NoteType.HoldRelease);
 
             // D: 방향선택 모드 토글
             if (keyboard.dKey.wasPressedThisFrame)

@@ -56,8 +56,9 @@ namespace SCOdyssey.ChartEditor.Grid
         /// <param name="laneNumber">레인 번호 (1~4)</param>
         /// <param name="isLTR">진행 방향</param>
         /// <param name="beatCount">총 비트수 (소팅 순서 계산용)</param>
-        /// <param name="noteInterval">비트 간격 px (홀드바 크기용)</param>
-        public void Init(NoteType noteType, Vector2 position, int beatIndex, int laneNumber, bool isLTR, int beatCount, float noteInterval)
+        /// <param name="noteInterval">비트 간격 px</param>
+        /// <param name="holdBarBeats">HoldStart 전용: 홀드바가 뻗을 비트 수</param>
+        public void Init(NoteType noteType, Vector2 position, int beatIndex, int laneNumber, bool isLTR, int beatCount, float noteInterval, int holdBarBeats = 1)
         {
             NoteType = noteType;
             BeatIndex = beatIndex;
@@ -73,21 +74,31 @@ namespace SCOdyssey.ChartEditor.Grid
             switch (noteType)
             {
                 case NoteType.HoldStart:
-                    // 헤드 + 홀드바 (앞쪽으로 뻗음)
+                    // 헤드 + 홀드바 (HoldEnd/HoldRelease까지 맞춤형 길이)
                     image.enabled = true;
                     image.color = noteColor;
                     rectTransform.sizeDelta = new Vector2(30f, 30f);
-                    ShowHoldBar(isLTR, noteInterval, noteColor);
+                    ShowHoldBar(isLTR, holdBarBeats * noteInterval, noteColor);
                     break;
 
                 case NoteType.Holding:
-                    // 홀드바만 (헤드 없음)
-                    image.enabled = false;
-                    ShowHoldBar(isLTR, noteInterval, noteColor);
+                    // 게임에선 비표시, 에디터에서는 소형 반투명 마커로 위치 표시
+                    image.enabled = true;
+                    image.color = new Color(noteColor.r, noteColor.g, noteColor.b, 0.6f);
+                    rectTransform.sizeDelta = new Vector2(16f, 16f);
+                    holdBarObject.SetActive(false);
                     break;
 
                 case NoteType.HoldEnd:
-                    // 헤드만 (홀드바 없음)
+                    // 게임에선 비표시, 에디터에서는 소형 반투명 마커로 위치 표시
+                    image.enabled = true;
+                    image.color = new Color(noteColor.r, noteColor.g, noteColor.b, 0.6f);
+                    rectTransform.sizeDelta = new Vector2(16f, 16f);
+                    holdBarObject.SetActive(false);
+                    break;
+
+                case NoteType.HoldRelease:
+                    // 헤드만 표시 (릴리즈 판정)
                     image.enabled = true;
                     image.color = noteColor;
                     rectTransform.sizeDelta = new Vector2(30f, 30f);
@@ -105,14 +116,14 @@ namespace SCOdyssey.ChartEditor.Grid
             gameObject.SetActive(true);
         }
 
-        private void ShowHoldBar(bool isLTR, float noteInterval, Color noteColor)
+        private void ShowHoldBar(bool isLTR, float barWidth, Color noteColor)
         {
             holdBarObject.SetActive(true);
 
-            // 진행 방향으로 noteInterval만큼 뻗음
-            float offsetX = isLTR ? noteInterval / 2f : -noteInterval / 2f;
+            // 진행 방향으로 barWidth만큼 뻗음
+            float offsetX = isLTR ? barWidth / 2f : -barWidth / 2f;
             holdBarRT.anchoredPosition = new Vector2(offsetX, 0f);
-            holdBarRT.sizeDelta = new Vector2(noteInterval, 8f);
+            holdBarRT.sizeDelta = new Vector2(barWidth, 8f);
 
             // 바 색상: 노트 색상 기반, 반투명
             Color barColor = noteColor;
@@ -133,11 +144,12 @@ namespace SCOdyssey.ChartEditor.Grid
         {
             return type switch
             {
-                NoteType.Normal    => new Color(0.2f, 0.6f, 1f,  1f),   // 파랑
-                NoteType.HoldStart => new Color(0.2f, 0.8f, 0.2f, 1f),  // 초록
-                NoteType.Holding   => new Color(0.6f, 0.8f, 0.2f, 1f),  // 연두
-                NoteType.HoldEnd   => new Color(1f,   0.6f, 0.2f, 1f),  // 주황
-                _                  => Color.white
+                NoteType.Normal      => new Color(0.2f, 0.6f, 1f,   1f),   // 파랑
+                NoteType.HoldStart   => new Color(0.2f, 0.8f, 0.2f, 1f),   // 초록
+                NoteType.Holding     => new Color(0.6f, 0.8f, 0.2f, 1f),   // 연두 (비표시지만 색상 보존)
+                NoteType.HoldEnd     => new Color(1f,   0.6f, 0.2f, 1f),   // 주황 (비표시지만 색상 보존)
+                NoteType.HoldRelease => new Color(1f,   0.3f, 0.5f, 1f),   // 분홍/핑크
+                _                    => Color.white
             };
         }
     }

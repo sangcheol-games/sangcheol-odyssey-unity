@@ -30,15 +30,36 @@ namespace SCOdyssey.Game
             double stepTime = duration / beat; // 한 노트당 지속 시간
 
             if (!isLTR) noteSequence = new string(noteSequence.Reverse().ToArray());
+            // RTL 반전 후: index 0 = 첫 번째로 판정되는 노트 (원래 채보 기준 오른쪽 끝)
 
             for (int i = 0; i < beat; i++)
             {
                 char noteChar = noteSequence[i];
-                NoteType noteType = GetNoteType(int.Parse(noteChar.ToString()));
+                NoteType noteType = GetNoteType(noteChar - '0');
                 if (noteType == NoteType.None) continue;
 
                 double noteTime = time + (i * stepTime);
-                Notes.Enqueue(new NoteData(i, noteTime, noteType, line));
+                NoteData noteData = new NoteData(i, noteTime, noteType, line);
+
+                if (noteType == NoteType.HoldStart)
+                {
+                    // 반전 후 순서 기준으로 앞을 탐색하여 HoldEnd(4) 또는 HoldRelease(5) 위치를 찾음
+
+                    int? holdEnd = null;
+                    for (int j = i + 1; j < beat; j++)
+                    {
+                        int fwd = noteSequence[j] - '0';
+                        if (fwd == 4 || fwd == 5)
+                        {
+                            holdEnd = j - i;
+                            break;
+                        }
+                    }
+                    // 없으면 마디 끝까지 (endpoint까지)
+                    noteData.holdBarBeats = holdEnd ?? (beat - i);
+                }
+
+                Notes.Enqueue(noteData);
             }
 
         }
@@ -51,6 +72,7 @@ namespace SCOdyssey.Game
                 case 2: return NoteType.HoldStart;
                 case 3: return NoteType.Holding;
                 case 4: return NoteType.HoldEnd;
+                case 5: return NoteType.HoldRelease;
                 default: return NoteType.None;
             }
         }

@@ -4,8 +4,15 @@ namespace SCOdyssey.Game
     {
         protected override void SetVisual()
         {
-            noteImage.enabled = true;
-            holdImage.enabled = false;  // 홀드바 없음: 바의 시각 효과는 HoldStart/HoldingNote가 담당
+            // 끝점 플래그 전용 노트: 시각 표시 없음, 누르고 있는지 판정만 담당
+            noteImage.enabled = false;
+            holdImage.enabled = false;
+        }
+
+        public override void OnHit()
+        {
+            if (isJudged) return;
+            DeleteNote();
         }
     }
 }

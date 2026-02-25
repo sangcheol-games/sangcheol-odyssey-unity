@@ -415,11 +415,16 @@ namespace SCOdyssey.Game
                         laneRT.anchoredPosition.y
                     );
 
+                    // HoldStart는 holdBarBeats * noteInterval로 실제 홀드바 길이 계산
+                    float holdWidth = noteData.noteType == NoteType.HoldStart
+                        ? noteInterval * (noteData.holdBarBeats ?? 1)
+                        : noteInterval;
+
                     noteController.Init(
                         noteData,
                         spawnPos,
                         lane.isLTR,
-                        noteInterval,
+                        holdWidth,
                         (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
                     );
 
@@ -450,7 +455,9 @@ namespace SCOdyssey.Game
                     NoteController note = ghostNotes[i].Dequeue();
                     note.SetState(NoteState.Active);
 
-                    if (note.noteData.noteType == NoteType.HoldStart || note.noteData.noteType == NoteType.Holding)
+                    // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
+                    // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
+                    if (note.noteData.noteType == NoteType.HoldStart)
                     {
                         int groupID = GetTrackGroupID(i);
                         if (activeTimelines.ContainsKey(groupID))
@@ -507,7 +514,9 @@ namespace SCOdyssey.Game
             //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
 
             NoteController targetNote = queue.Peek();
-            if (targetNote.noteData.noteType != NoteType.Holding) return;
+            // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
+            if (targetNote.noteData.noteType != NoteType.Holding &&
+                targetNote.noteData.noteType != NoteType.HoldEnd) return;
 
             double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 
@@ -529,7 +538,7 @@ namespace SCOdyssey.Game
             if (queue.Count == 0) return;
 
             NoteController targetNote = queue.Peek();
-            if (targetNote.noteData.noteType != NoteType.HoldEnd) return; // 홀딩 중인 노트가 없으면 무시
+            if (targetNote.noteData.noteType != NoteType.HoldRelease) return; // 릴리즈 판정 노트가 없으면 무시
 
             double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
 

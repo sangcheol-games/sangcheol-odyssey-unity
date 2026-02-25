@@ -43,6 +43,7 @@ namespace SCOdyssey.ChartEditor.UI
         public Button btnNoteHoldStart;
         public Button btnNoteHolding;
         public Button btnNoteHoldEnd;
+        public Button btnNoteHoldRelease;
 
         [Header("방향선택")]
         public Button btnDirection;
@@ -134,6 +135,8 @@ namespace SCOdyssey.ChartEditor.UI
                 btnNoteHolding.onClick.AddListener(() => SelectNoteType(NoteType.Holding));
             if (btnNoteHoldEnd != null)
                 btnNoteHoldEnd.onClick.AddListener(() => SelectNoteType(NoteType.HoldEnd));
+            if (btnNoteHoldRelease != null)
+                btnNoteHoldRelease.onClick.AddListener(() => SelectNoteType(NoteType.HoldRelease));
 
             // 방향선택
             if (btnDirection != null)
@@ -318,10 +321,11 @@ namespace SCOdyssey.ChartEditor.UI
         {
             return type switch
             {
-                NoteType.Normal => "일반",
-                NoteType.HoldStart => "홀드시작",
-                NoteType.Holding => "홀딩",
-                NoteType.HoldEnd => "홀드끝",
+                NoteType.Normal      => "일반",
+                NoteType.HoldStart   => "홀드시작",
+                NoteType.Holding     => "홀딩",
+                NoteType.HoldEnd     => "홀드끝",
+                NoteType.HoldRelease => "홀드릴리즈",
                 _ => ""
             };
         }

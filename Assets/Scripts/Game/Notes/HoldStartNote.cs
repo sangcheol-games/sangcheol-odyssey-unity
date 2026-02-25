@@ -1,3 +1,4 @@
+using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
@@ -10,6 +11,10 @@ namespace SCOdyssey.Game
             holdImage.enabled = true;
             holdImage.fillAmount = 1f;
             holdImage.fillOrigin = 1;   // Right: fillAmount 감소 시 왼쪽(판정선 진입 방향)부터 소모
+
+            // holdWidth = holdBarBeats * noteInterval: 실제 HoldEnd/HoldRelease까지의 픽셀 거리
+            RectTransform holdRT = holdImage.rectTransform;
+            holdRT.sizeDelta = new Vector2(holdWidth, holdRT.sizeDelta.y);
         }
 
         // 판정 시 시스템에서는 제거되지만, 홀드바 시각효과는 링거링으로 유지

@@ -31,8 +31,8 @@ namespace SCOdyssey.Domain.Service
             Normal = 1,
             HoldStart = 2,
             Holding = 3,
-            HoldEnd = 4
-
+            HoldEnd = 4,        // 끝점 플래그: 시각 없음, 누르고 있는지 판정
+            HoldRelease = 5     // 릴리즈 판정: 헤드만 표시, 손을 떼는 판정 담당
         }
 
         public enum JudgeType
