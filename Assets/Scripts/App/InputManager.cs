@@ -12,6 +12,7 @@ namespace SCOdyssey.App
         public event Action OnCancel;
         public event Action<int> OnLanePressed;
         public event Action<int> OnLaneReleased;
+        public event Action OnRestart;
 
         public bool IsInputActive { get; private set; } = true;
 
@@ -30,6 +31,8 @@ namespace SCOdyssey.App
             inputActions.Game.Lane3.canceled += _ => HandleLaneRelease(3);
             inputActions.Game.Lane4.canceled += _ => HandleLaneRelease(4);
 
+            inputActions.Game.Restart.performed += _ => HandleRestart();
+
             inputActions.UI.Select.performed += ctx => HandleSelect(ctx.ReadValue<Vector2>());
             inputActions.UI.Submit.performed += _ => HandleSubmit();
             inputActions.UI.Cancel.performed += _ => HandleCancel();
@@ -40,6 +43,7 @@ namespace SCOdyssey.App
         private void HandleCancel() { if (IsInputActive) OnCancel?.Invoke(); }
         private void HandleLaneInput(int lane) { if (IsInputActive) OnLanePressed?.Invoke(lane); }
         private void HandleLaneRelease(int lane) { if (IsInputActive) OnLaneReleased?.Invoke(lane); }
+        private void HandleRestart() { if (IsInputActive) OnRestart?.Invoke(); }
         
 
         public void SwitchToUI()

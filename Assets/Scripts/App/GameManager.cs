@@ -53,6 +53,7 @@ namespace SCOdyssey.App
                 inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
                 inputManager.OnLanePressed += HandleLaneInput;
                 inputManager.OnLaneReleased += HandleLaneRelease;
+                inputManager.OnRestart += HandleRestart;
             }
             else
             {
@@ -71,7 +72,9 @@ namespace SCOdyssey.App
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
             {
                 inputManager.OnLanePressed -= HandleLaneInput;
-                inputManager.SwitchToUI(); 
+                inputManager.OnLaneReleased -= HandleLaneRelease;
+                inputManager.OnRestart -= HandleRestart;
+                inputManager.SwitchToUI();
             }
         }
 
@@ -135,6 +138,12 @@ namespace SCOdyssey.App
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {laneIndex} Released");
             chartManager.TryJudgeRelease(laneIndex);
+        }
+
+        private void HandleRestart()
+        {
+            if (!IsGameRunning) return;
+            SceneManager.LoadScene("GameScene");
         }
 
 
