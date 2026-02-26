@@ -3,7 +3,6 @@ using Sirenix.OdinInspector;
 using Sirenix.Serialization;
 using UnityEngine;
 using UnityEngine.Localization;
-using UnityEngine.Video;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Domain.Entity
@@ -28,7 +27,8 @@ namespace SCOdyssey.Domain.Entity
 
         public Dictionary<Difficulty, TextAsset> chartFile;
         public AudioClip musicFile;
-        public VideoClip videoFile;
+        public string videoFileName;    // StreamingAssets/Videos/ 폴더 내 파일명 (예: "song_0001.mp4")
+        public Sprite backgroundArt;    // 게임 배경 아트 (BGA 없거나 꺼진 경우 표시)
         public Sprite albumArt;
 
     }

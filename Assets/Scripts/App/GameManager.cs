@@ -22,6 +22,9 @@ namespace SCOdyssey.App
         public ChartManager chartManager;
         public ChartData chartData;
 
+        [Header("BGA")]
+        public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
+
 
         [Header("게임 상태")]
         private double globalStartTime;
@@ -87,9 +90,16 @@ namespace SCOdyssey.App
             IsGameRunning = true;
         }
         
+        public void SetBGAData(string videoFileName, Sprite backgroundArt)
+        {
+            bgaController?.Init(videoFileName, backgroundArt);
+        }
+
         public void StartMusic(double delayTime)
         {
+            double dspStartTime = AudioSettings.dspTime + delayTime;
             audioSource.PlayDelayed((float)delayTime);
+            bgaController?.SchedulePlay(dspStartTime);
         }
 
         public double GetCurrentTime()
@@ -201,12 +211,10 @@ namespace SCOdyssey.App
             StartCoroutine(ShowClearSequence(rank));
         }
 
-        // 클리어 연출 표시 (2초 대기 후 텍스트 표시)
+        // 클리어 연출 표시 (즉시 텍스트 표시 후 4초 대기)
         private IEnumerator ShowClearSequence(ClearType rank)
         {
-            yield return new WaitForSeconds(2f);
-
-            // 클리어 텍스트 설정 및 표시
+            // 클리어 텍스트 설정 및 즉시 표시
             if (clearEffectText != null)
             {
                 clearEffectText.gameObject.SetActive(true);
@@ -235,12 +243,13 @@ namespace SCOdyssey.App
                         break;
                 }
 
-                // 2초 표시
-                yield return new WaitForSeconds(2f);
+                // 4초 표시
+                yield return new WaitForSeconds(4f);
                 clearEffectText.gameObject.SetActive(false);
             }
 
-            // GameScene Canvas 비활성화 후 결과 화면 표시
+            // BGA 정지 후 GameScene Canvas 비활성화 및 결과 화면 표시
+            bgaController?.Stop();
             if (gameCanvas != null)
             {
                 gameCanvas.gameObject.SetActive(false);

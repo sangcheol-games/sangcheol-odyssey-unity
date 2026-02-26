@@ -43,7 +43,8 @@ namespace SCOdyssey.Game
                 Debug.LogWarning("[GameDataLoader] musicFile is null!");
             }
 
-            // TODO: Load Resource(배경, 비디오 등)
+            // BGA 및 배경아트 로딩
+            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
 
             yield return LoadChart(music);
 
