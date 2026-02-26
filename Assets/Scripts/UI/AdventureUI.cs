@@ -25,10 +25,19 @@ namespace SCOdyssey.UI
             AlbumArt      // 앨범 아트
         }
 
+        private enum Buttons
+        {
+            BackButton    // 뒤로가기
+        }
+
         protected override void Awake()
         {
             base.Awake();
             BindImage(typeof(Images));
+            BindButton(typeof(Buttons));
+
+            GetButton((int)Buttons.BackButton).onClick.AddListener(OnClickBackButton);
+
             Init();
         }
 
@@ -90,6 +99,12 @@ namespace SCOdyssey.UI
             return ((index % count) + count) % count;
         }
 
+        private void OnClickBackButton()
+        {
+            var uiManager = ServiceLocator.Get<IUIManager>();
+            uiManager.CloseUI(this);
+        }
+
         protected override void HandleSelect(Vector2 direction)
         {
             if (musicList == null || musicList.Count == 0) return;
@@ -126,9 +141,6 @@ namespace SCOdyssey.UI
             var musicManager = ServiceLocator.Get<IMusicManager>();
             musicManager.SelectMusic(musicList[selectedIndex]);
             musicManager.SelectDifficulty(selectedDifficulty);
-
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
 
             SceneManager.LoadScene("GameScene");
         }
