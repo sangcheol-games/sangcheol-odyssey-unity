@@ -104,7 +104,7 @@ namespace SCOdyssey.Game
 
             bool isPassed = false;
 
-            const float TIMELINE_OFFSET = 150f; // 판정선이 충분히 지나간 후 ghost로 전환하도록 여유 공간 설정
+            const float TIMELINE_OFFSET = 20f; // 판정선이 충분히 지나간 후 ghost로 전환하도록 여유 공간 설정
 
             if (trackingTimeline.isLTR)
             {
