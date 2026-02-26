@@ -56,9 +56,7 @@ namespace SCOdyssey.UI
             for (int i = 0; i < DISPLAY_COUNT; i++)
             {
                 GameObject go = ResourceLoader.PrefabInstantiate("UI/MusicListUI", musicListContainer);
-                var slot = go.AddComponent<MusicListUI>();
-                slot.Init();
-                slots[i] = slot;
+                slots[i] = go.AddComponent<MusicListUI>();
             }
 
             selectedIndex = 0;
@@ -75,8 +73,7 @@ namespace SCOdyssey.UI
             for (int i = 0; i < DISPLAY_COUNT; i++)
             {
                 int dataIndex = WrapIndex(selectedIndex - CENTER_INDEX + i);
-                slots[i].SetData(musicList[dataIndex]);
-                slots[i].SetSelected(i == CENTER_INDEX, selectedDifficulty);
+                slots[i].SetData(musicList[dataIndex], i == CENTER_INDEX, selectedDifficulty);
             }
 
             // 곡 앨범아트 갱신
@@ -103,11 +100,18 @@ namespace SCOdyssey.UI
             else if (direction.y < 0)
                 selectedIndex = WrapIndex(selectedIndex + 1);
 
-            // 좌우: 난이도 선택
-            if (direction.x > 0 && selectedDifficulty < Difficulty.Extreme)
-                selectedDifficulty++;
-            else if (direction.x < 0 && selectedDifficulty > Difficulty.Easy)
-                selectedDifficulty--;
+            // 좌우: 난이도 선택 (level -1인 난이도는 스킵)
+            var music = musicList[selectedIndex];
+            if (direction.x > 0)
+            {
+                for (Difficulty d = selectedDifficulty + 1; d <= Difficulty.Extreme; d++)
+                    if (IsAvailable(music, d)) { selectedDifficulty = d; break; }
+            }
+            else if (direction.x < 0)
+            {
+                for (Difficulty d = selectedDifficulty - 1; d >= Difficulty.Easy; d--)
+                    if (IsAvailable(music, d)) { selectedDifficulty = d; break; }
+            }
 
             RefreshList();
         }
@@ -115,6 +119,9 @@ namespace SCOdyssey.UI
         protected override void HandleSubmit()
         {
             if (musicList == null || musicList.Count == 0) return;
+
+            // 준비되지 않은 난이도는 선택 불가
+            if (!IsAvailable(musicList[selectedIndex], selectedDifficulty)) return;
 
             var musicManager = ServiceLocator.Get<IMusicManager>();
             musicManager.SelectMusic(musicList[selectedIndex]);
@@ -124,6 +131,11 @@ namespace SCOdyssey.UI
             uiManager.CloseUI(this);
 
             SceneManager.LoadScene("GameScene");
+        }
+
+        private bool IsAvailable(MusicSO music, Difficulty diff)
+        {
+            return music.level != null && music.level.TryGetValue(diff, out int lv) && lv != -1;
         }
 
         protected override void HandleCancel()

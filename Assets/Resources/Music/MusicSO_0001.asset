@@ -17,6 +17,7 @@ MonoBehaviour:
     SerializedBytes: 
     ReferencedUnityObjects:
     - {fileID: 4900000, guid: bf37b7848e494f5479f7c5c5a3ba728b, type: 3}
+    - {fileID: 4900000, guid: ac9c448fc8b02d24a88bbf9d79bb5726, type: 3}
     SerializedBytesString: 
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
@@ -50,7 +51,7 @@ MonoBehaviour:
       Data: 0
     - Name: $v
       Entry: 3
-      Data: 3
+      Data: -1
     - Name: 
       Entry: 8
       Data: 
@@ -86,7 +87,7 @@ MonoBehaviour:
       Data: 3
     - Name: $v
       Entry: 3
-      Data: 9
+      Data: -1
     - Name: 
       Entry: 8
       Data: 
@@ -115,7 +116,7 @@ MonoBehaviour:
       Data: 
     - Name: 
       Entry: 12
-      Data: 1
+      Data: 2
     - Name: 
       Entry: 7
       Data: 
@@ -125,6 +126,18 @@ MonoBehaviour:
     - Name: $v
       Entry: 10
       Data: 0
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 2
+    - Name: $v
+      Entry: 10
+      Data: 1
     - Name: 
       Entry: 8
       Data: 
@@ -166,8 +179,9 @@ MonoBehaviour:
   animator: Tale
   bpm: 195
   musicFile: {fileID: 8300000, guid: e61a4050eb0fd6b42adee0f34c8a0e52, type: 3}
-  videoFile: {fileID: 0}
-  albumArt: {fileID: 0}
+  videoFileName: BGA_0001.mp4
+  backgroundArt: {fileID: -7052913442509953211, guid: 64fa82816eb702e4eaf33bc551902ad4, type: 3}
+  albumArt: {fileID: 7811851848434822332, guid: a2fb80a4ebd3c104da310a5d9056f8cc, type: 3}
   references:
     version: 2
     RefIds: []

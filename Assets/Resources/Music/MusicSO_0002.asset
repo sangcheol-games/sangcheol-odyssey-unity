@@ -49,7 +49,7 @@ MonoBehaviour:
       Data: 0
     - Name: $v
       Entry: 3
-      Data: 2
+      Data: -1
     - Name: 
       Entry: 8
       Data: 
@@ -61,7 +61,7 @@ MonoBehaviour:
       Data: 1
     - Name: $v
       Entry: 3
-      Data: 4
+      Data: -1
     - Name: 
       Entry: 8
       Data: 
@@ -85,7 +85,7 @@ MonoBehaviour:
       Data: 3
     - Name: $v
       Entry: 3
-      Data: 8
+      Data: -1
     - Name: 
       Entry: 8
       Data: 
@@ -130,7 +130,8 @@ MonoBehaviour:
   animator: FRIYAY
   bpm: 180
   musicFile: {fileID: 0}
-  videoFile: {fileID: 0}
+  videoFileName: 
+  backgroundArt: {fileID: 0}
   albumArt: {fileID: 0}
   references:
     version: 2
