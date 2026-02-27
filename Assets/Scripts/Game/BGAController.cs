@@ -1,4 +1,6 @@
 using System.IO;
+using SCOdyssey.App;
+using SCOdyssey.Core;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Video;
@@ -12,10 +14,16 @@ namespace SCOdyssey.Game
         public RawImage bgaScreen;      // BGA 영상 표시용 RawImage
         public Image backgroundArt;     // 배경아트 스프라이트 표시용 Image (BGA 꺼진 경우에만 표시)
 
+        private IAudioManager _audioManager;
         private bool isPrepared = false;
         private bool isScheduled = false;
         private double scheduledDspTime = 0;
         private bool bgaEnabled = true;
+
+        private void Start()
+        {
+            ServiceLocator.TryGet<IAudioManager>(out _audioManager);
+        }
 
         /// <summary>
         /// 배경 초기화. GameDataLoader에서 호출.
@@ -121,7 +129,9 @@ namespace SCOdyssey.Game
         private void Update()
         {
             if (!isScheduled || !isPrepared) return;
-            if (AudioSettings.dspTime < scheduledDspTime) return;
+
+            double now = _audioManager != null ? _audioManager.GetDSPTime() : AudioSettings.dspTime;
+            if (now < scheduledDspTime) return;
 
             isScheduled = false;
             videoPlayer.Play();

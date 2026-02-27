@@ -178,7 +178,7 @@ MonoBehaviour:
   illustrator: Zzul
   animator: Tale
   bpm: 195
-  musicFile: {fileID: 8300000, guid: e61a4050eb0fd6b42adee0f34c8a0e52, type: 3}
+  audioFilePath: "\u30B5\u30D0\uFF01\u30B5\u30DE\u30FC\uFF01\u30B5\u30F3\u30D0\uFF01.ogg"
   videoFileName: BGA_0001.mp4
   backgroundArt: {fileID: -7052913442509953211, guid: 64fa82816eb702e4eaf33bc551902ad4, type: 3}
   albumArt: {fileID: 7811851848434822332, guid: a2fb80a4ebd3c104da310a5d9056f8cc, type: 3}

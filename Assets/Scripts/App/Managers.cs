@@ -36,6 +36,10 @@ namespace SCOdyssey.App
             var musicManager = new MusicManager();
             ServiceLocator.TryRegister<IMusicManager>(musicManager);
 
+            // FMODAudioManager는 MonoBehaviour이므로 AddComponent로 생성 (DontDestroyOnLoad 유지)
+            var fmodAudio = gameObject.AddComponent<FMODAudioManager>();
+            ServiceLocator.TryRegister<IAudioManager>(fmodAudio);
+
             Application.targetFrameRate = 60;   // 앱 프레임 60으로 고정
         }
 

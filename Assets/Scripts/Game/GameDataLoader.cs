@@ -33,14 +33,22 @@ namespace SCOdyssey.Game
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
-            // 오디오 클립 로딩
-            if (music.musicFile != null)
+            // FMOD 오디오 로딩
+            if (!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
             {
-                gameManager.SetAudioClip(music.musicFile);
+                Debug.LogError("[GameDataLoader] IAudioManager not found in ServiceLocator!");
+                yield break;
+            }
+
+            if (!string.IsNullOrEmpty(music.audioFilePath))
+            {
+                audioManager.LoadAudio(music.audioFilePath);
+                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
+                while (!audioManager.IsLoaded) yield return null;
             }
             else
             {
-                Debug.LogWarning("[GameDataLoader] musicFile is null!");
+                Debug.LogWarning("[GameDataLoader] audioFilePath is empty!");
             }
 
             // BGA 및 배경아트 로딩

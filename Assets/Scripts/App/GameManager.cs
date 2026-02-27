@@ -13,11 +13,7 @@ namespace SCOdyssey.App
     public class GameManager : MonoBehaviour, IGameManager
     {
         [Header("참조")]
-        public AudioSource audioSource;
-        public void SetAudioClip(AudioClip audioClip)     // GameDataLoader에서 MusicSO의 musicFile을 전달받아 설정
-        {
-            this.audioSource.clip = audioClip;
-        }
+        private IAudioManager _audioManager;
         public ScoreManager scoreManager;
         public ChartManager chartManager;
         public ChartData chartData;
@@ -29,7 +25,7 @@ namespace SCOdyssey.App
         [Header("게임 상태")]
         private double globalStartTime;
         public bool IsGameRunning { get; private set; } = false;
-        public bool IsAudioPlaying => audioSource != null && audioSource.isPlaying;
+        public bool IsAudioPlaying => _audioManager != null && _audioManager.IsPlaying;
 
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
@@ -43,6 +39,8 @@ namespace SCOdyssey.App
         private void Awake()
         {
             ServiceLocator.TryRegister<IGameManager>(this);
+            if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
+                Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
         }
 
         private void Start()
@@ -80,7 +78,7 @@ namespace SCOdyssey.App
 
         public void StartGame()
         {
-            if (chartManager == null || audioSource == null || chartData == null)
+            if (chartManager == null || _audioManager == null || chartData == null)
             {
                 Debug.LogError("GameManager 초기화 실패!");
                 return;
@@ -89,7 +87,7 @@ namespace SCOdyssey.App
             chartManager.Init(chartData, this);
             scoreManager.Init(chartData.totalNotes);
 
-            globalStartTime = AudioSettings.dspTime;
+            globalStartTime = _audioManager.GetDSPTime();
             IsGameRunning = true;
         }
         
@@ -100,15 +98,15 @@ namespace SCOdyssey.App
 
         public void StartMusic(double delayTime)
         {
-            double dspStartTime = AudioSettings.dspTime + delayTime;
-            audioSource.PlayDelayed((float)delayTime);
+            double dspStartTime = _audioManager.GetDSPTime() + delayTime;
+            _audioManager.PlayScheduled(dspStartTime);
             bgaController?.SchedulePlay(dspStartTime);
         }
 
         public double GetCurrentTime()
         {
             if (!IsGameRunning) return 0f;
-            return AudioSettings.dspTime - globalStartTime;
+            return _audioManager.GetDSPTime() - globalStartTime;
         }
 
 
@@ -200,10 +198,7 @@ namespace SCOdyssey.App
             IsGameRunning = false;
 
             // 음악 정지
-            if (audioSource != null && audioSource.isPlaying)
-            {
-                audioSource.Stop();
-            }
+            _audioManager?.Stop();
 
             // UI 모드로 전환
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))

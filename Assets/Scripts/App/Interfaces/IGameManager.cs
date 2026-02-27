@@ -8,7 +8,6 @@ namespace SCOdyssey.App
 {
     public interface IGameManager
     {
-        void SetAudioClip(AudioClip audioClip);    // GameDataLoader에서 MusicSO의 musicFile을 전달받아 설정
         void SetBGAData(string videoFileName, Sprite backgroundArt);
 
         void StartGame();
