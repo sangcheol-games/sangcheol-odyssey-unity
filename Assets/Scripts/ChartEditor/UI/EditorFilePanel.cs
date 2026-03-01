@@ -1,8 +1,6 @@
-using System.Collections;
 using SCOdyssey.ChartEditor.Data;
 using SCOdyssey.ChartEditor.IO;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.UI;
 
 namespace SCOdyssey.ChartEditor.UI
@@ -127,54 +125,12 @@ namespace SCOdyssey.ChartEditor.UI
                 return;
             }
 
-            // 코루틴은 editorManager에서 실행 (이 패널은 바로 비활성화되므로)
-            editorManager.StartCoroutine(LoadAudioFile(path));
+            // FMOD 비동기 로드 시작 (Update에서 IsLoaded 폴링)
+            editorManager.ChartData.audioFilePath = path;
+            editorManager.fmodAudio?.LoadAudio(path);
+
             gameObject.SetActive(false);
-        }
-
-        /// <summary>
-        /// UnityWebRequest를 사용하여 외부 오디오 파일 로드
-        /// </summary>
-        private IEnumerator LoadAudioFile(string filePath)
-        {
-            // file:// 프로토콜로 로컬 파일 접근
-            string url = "file:///" + filePath.Replace("\\", "/");
-
-            AudioType audioType = GetAudioType(filePath);
-
-            using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, audioType))
-            {
-                yield return request.SendWebRequest();
-
-                if (request.result == UnityWebRequest.Result.Success)
-                {
-                    AudioClip clip = DownloadHandlerAudioClip.GetContent(request);
-                    clip.name = System.IO.Path.GetFileNameWithoutExtension(filePath);
-
-                    editorManager.ChartData.audioClip = clip;
-
-                    if (editorManager.audioSource != null)
-                        editorManager.audioSource.clip = clip;
-
-                    Debug.Log($"[EditorFile] Audio loaded: {clip.name} ({clip.length:F1}s)");
-                }
-                else
-                {
-                    editorManager.ShowWarning($"음원 파일 로드 실패: {request.error}");
-                }
-            }
-        }
-
-        private AudioType GetAudioType(string path)
-        {
-            string ext = System.IO.Path.GetExtension(path).ToLower();
-            return ext switch
-            {
-                ".wav" => AudioType.WAV,
-                ".mp3" => AudioType.MPEG,
-                ".ogg" => AudioType.OGGVORBIS,
-                _ => AudioType.UNKNOWN
-            };
+            Debug.Log($"[EditorFile] Audio loading started: {path}");
         }
     }
 }

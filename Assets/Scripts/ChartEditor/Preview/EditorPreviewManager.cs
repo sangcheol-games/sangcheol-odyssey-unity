@@ -9,6 +9,7 @@ namespace SCOdyssey.ChartEditor.Preview
     /// <summary>
     /// 에디터 프리뷰 재생 엔진.
     /// TimelineController + NotePrefab을 재활용하여 판정 없이 시각적 프리뷰 제공.
+    /// 오디오는 EditorFMODAudio를 통해 FMOD Low-Level API로 재생.
     /// </summary>
     public class EditorPreviewManager : MonoBehaviour
     {
@@ -30,10 +31,6 @@ namespace SCOdyssey.ChartEditor.Preview
         private Queue<GameObject> notePool = new Queue<GameObject>();
         private List<GameObject> activeTimelineObjects = new List<GameObject>();
         private List<GameObject> activeNoteObjects = new List<GameObject>();
-
-        // Unity AudioSource 레이턴시 보정 (오디오를 이 값만큼 일찍 재생)
-        // 저지연 엔진으로 교체 시 0으로 변경
-        private const float kAudioLatencyOffset = 0.05f;
 
         // 마디 진행 관리
         private bool hasSpawnedBar = false;
@@ -134,40 +131,28 @@ namespace SCOdyssey.ChartEditor.Preview
             double startTimeOffset = startBar * barDuration;
             nextBarTime = startTimeOffset;
 
-            timeProvider.Start(startTimeOffset);
+            // EditorFMODAudio가 없거나 미로드 시 타임라인만 진행 (무음)
+            if (editorManager.fmodAudio == null || !editorManager.fmodAudio.IsLoaded)
+            {
+                Debug.LogWarning("[EditorPreview] 음원이 로드되지 않았습니다. 타임라인만 재생합니다.");
+                // DSP 시간 소스 없이 재생할 수 없으므로 조기 리턴
+                editorManager.State.isPlaying = false;
+                editorManager.State.isPaused = false;
+                return;
+            }
+
+            // FMOD DSP 클록 기반 시간 추적 시작
+            timeProvider.Start(startTimeOffset, editorManager.fmodAudio.GetDSPTime);
 
             // 음원 재생
             // 0번 마디는 준비 단계(무음) → 음원 t=0이 채보 1번 마디 시작에 대응
             // audioTime = chartTime - barDuration
-            // startBar=0 → audioTime=-barDuration → barDuration초 후 재생(PlayDelayed)
-            // startBar=1 → audioTime=0 → 즉시 음원 처음부터 재생
+            // startBar=0 → audioTime=-barDuration → barDuration초 후 재생 (FMOD 딜레이 스케줄링)
+            // startBar=1 → audioTime=0 → 즉시 처음부터 재생
             // startBar=2+ → audioTime=양수 → 해당 위치부터 즉시 재생
-            if (editorManager.audioSource != null && editorManager.ChartData.audioClip != null)
-            {
-                editorManager.audioSource.clip = editorManager.ChartData.audioClip;
-
-                double audioTime = startTimeOffset - barDuration;
-
-                // kAudioLatencyOffset만큼 오디오를 일찍 시작하여 레이턴시 보정
-                double adjustedAudioTime = audioTime - kAudioLatencyOffset;
-
-                if (adjustedAudioTime < 0)
-                {
-                    // 0번 마디 구간 포함 또는 오프셋으로 인해 음수가 된 경우: delay 후 재생
-                    editorManager.audioSource.time = 0f;
-                    editorManager.audioSource.PlayDelayed((float)(-adjustedAudioTime));
-                }
-                else
-                {
-                    editorManager.audioSource.time = (float)adjustedAudioTime;
-                    editorManager.audioSource.Play();
-                }
-                Debug.Log($"[EditorPreview] Audio: {editorManager.ChartData.audioClip.name}, audioTime={audioTime:F2}s (adjusted={adjustedAudioTime:F2}s)");
-            }
-            else
-            {
-                Debug.LogWarning($"[EditorPreview] Audio not playing - audioSource={editorManager.audioSource != null}, audioClip={editorManager.ChartData.audioClip != null}");
-            }
+            double audioTime = startTimeOffset - barDuration;
+            editorManager.fmodAudio.Play(audioTime);
+            Debug.Log($"[EditorPreview] 재생 시작. startBar={startBar}, audioTime={audioTime:F2}s");
 
             // 에디터 상태 갱신
             editorManager.State.isPlaying = true;
@@ -179,8 +164,8 @@ namespace SCOdyssey.ChartEditor.Preview
             timeProvider.Stop();
 
             // 음원 정지
-            if (editorManager != null && editorManager.audioSource != null)
-                editorManager.audioSource.Stop();
+            if (editorManager != null && editorManager.fmodAudio != null)
+                editorManager.fmodAudio.Stop();
 
             // 활성 오브젝트 풀 반환
             ClearActiveObjects();
@@ -200,15 +185,15 @@ namespace SCOdyssey.ChartEditor.Preview
             if (timeProvider.IsPaused)
             {
                 timeProvider.Resume();
-                if (editorManager.audioSource != null)
-                    editorManager.audioSource.UnPause();
+                if (editorManager.fmodAudio != null)
+                    editorManager.fmodAudio.Resume();
                 editorManager.State.isPaused = false;
             }
             else
             {
                 timeProvider.Pause();
-                if (editorManager.audioSource != null)
-                    editorManager.audioSource.Pause();
+                if (editorManager.fmodAudio != null)
+                    editorManager.fmodAudio.Pause();
                 editorManager.State.isPaused = true;
             }
         }

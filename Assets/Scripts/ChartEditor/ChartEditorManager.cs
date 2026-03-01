@@ -28,7 +28,7 @@ namespace SCOdyssey.ChartEditor
         public Transform objectPoolParent;      // 오브젝트 풀
 
         [Header("씬 참조 - 프리뷰")]
-        public AudioSource audioSource;
+        public EditorFMODAudio fmodAudio;
         public GameObject timelinePrefab;
         public GameObject notePrefab;
         public EditorPreviewManager previewManager;  // Tab 단축키로 현재마디 재생
@@ -331,7 +331,7 @@ namespace SCOdyssey.ChartEditor
         /// </summary>
         public void GenerateChart(Difficulty difficulty)
         {
-            if (ChartData.audioClip == null)
+            if (fmodAudio == null || !fmodAudio.IsLoaded)
             {
                 ShowWarning("음원 파일을 먼저 불러와주세요.");
                 return;
@@ -339,12 +339,12 @@ namespace SCOdyssey.ChartEditor
 
             var (sensitivity, beatResolution) = GetGeneratePreset(difficulty);
 
-            // 기존 채보 초기화 (헤더 메타데이터, audioClip, filePath 유지)
+            // 기존 채보 초기화 (헤더 메타데이터, audioFilePath, filePath 유지)
             string title = ChartData.title;
             string artist = ChartData.artist;
             int level = ChartData.level;
             int bpm = ChartData.bpm;
-            AudioClip clip = ChartData.audioClip;
+            string audioFilePath = ChartData.audioFilePath;
             string path = ChartData.filePath;
 
             ChartData.Clear();
@@ -353,15 +353,22 @@ namespace SCOdyssey.ChartEditor
             ChartData.difficulty = difficulty;
             ChartData.level = level;
             ChartData.bpm = bpm;
-            ChartData.audioClip = clip;
+            ChartData.audioFilePath = audioFilePath;
             ChartData.filePath = path;
 
             // 0번 마디(준비 마디) 시작지점: 하단 RTL
             ChartData.GetOrCreateBar(0).lowerGroupLTR = false;
 
-            // onset 감지
+            // FMOD를 통해 PCM 샘플 추출 후 onset 감지
+            float[] monoSamples = fmodAudio.GetMonoSamples(out int sampleRate);
+            if (monoSamples == null)
+            {
+                ShowWarning("음원 데이터를 읽을 수 없습니다.");
+                return;
+            }
+
             List<AudioOnsetDetector.OnsetInfo> onsets =
-                AudioOnsetDetector.DetectOnsets(clip, sensitivity);
+                AudioOnsetDetector.DetectOnsets(monoSamples, sampleRate, sensitivity);
 
             // 채보 생성 (Easy/Normal은 상단↔하단 교대 배치)
             bool alternating = (difficulty == Difficulty.Easy || difficulty == Difficulty.Normal);
