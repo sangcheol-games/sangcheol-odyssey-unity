@@ -116,6 +116,59 @@ namespace SCOdyssey.App
         }
 
         /// <summary>
+        /// 복호화된 바이트 배열을 FMOD OPENMEMORY 방식으로 로드.
+        /// IContentProvider(LocalContentProvider/AddressablesContentProvider)에서 복호화된 bytes를 전달받아 사용.
+        /// OPENMEMORY는 동기 로드이므로 NONBLOCKING 폴링 불필요, 반환 즉시 IsLoaded=true.
+        /// </summary>
+        public void LoadAudioFromBytes(byte[] audioData)
+        {
+            if (audioData == null || audioData.Length == 0)
+            {
+                Debug.LogError("[FMODAudioManager] LoadAudioFromBytes: 유효하지 않은 데이터입니다.");
+                return;
+            }
+
+            // 이전 사운드 해제
+            if (_sound.hasHandle())
+            {
+                Stop();
+                _sound.release();
+                _sound = default;
+            }
+
+            _isLoaded = false;
+            _isLoading = false;
+
+            // GCHandle로 byte[]를 고정(Pin)하여 비관리 포인터 획득
+            System.Runtime.InteropServices.GCHandle handle =
+                System.Runtime.InteropServices.GCHandle.Alloc(audioData,
+                    System.Runtime.InteropServices.GCHandleType.Pinned);
+
+            FMOD.CREATESOUNDEXINFO exInfo = new FMOD.CREATESOUNDEXINFO();
+            exInfo.cbsize = Marshal.SizeOf(exInfo);
+            exInfo.length = (uint)audioData.Length;
+
+            FMOD.RESULT result = RuntimeManager.CoreSystem.createSound(
+                handle.AddrOfPinnedObject(),
+                FMOD.MODE.OPENMEMORY,   // 메모리 포인터에서 로드 (FMOD가 내부 복사)
+                ref exInfo,
+                out _sound);
+
+            // OPENMEMORY는 createSound 내부에서 데이터를 복사하므로 즉시 해제 가능
+            handle.Free();
+
+            if (result != FMOD.RESULT.OK)
+            {
+                Debug.LogError($"[FMODAudioManager] LoadAudioFromBytes 실패: {result}");
+                return;
+            }
+
+            // OPENMEMORY는 동기 로드 - 즉시 사용 가능
+            _isLoaded = true;
+            Debug.Log($"[FMODAudioManager] OPENMEMORY 오디오 로드 완료. ({audioData.Length / 1024}KB)");
+        }
+
+        /// <summary>
         /// DSP 클록 기반 sample-accurate 재생 예약.
         /// dspStartTime: GetDSPTime() + delaySeconds
         /// </summary>

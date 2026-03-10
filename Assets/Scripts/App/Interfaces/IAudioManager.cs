@@ -17,7 +17,8 @@ namespace SCOdyssey.App
 
     public interface IAudioManager
     {
-        void LoadAudio(string filePath);         // StreamingAssets/Music/ 기준 파일명
+        void LoadAudio(string filePath);         // StreamingAssets/Music/ 기준 파일명 (LocalContentProvider에서 사용)
+        void LoadAudioFromBytes(byte[] audioData); // 복호화된 바이트 배열에서 FMOD OPENMEMORY 방식으로 로드
         void PlayScheduled(double dspStartTime); // sample-accurate 재생 예약
         void Stop();
         double GetDSPTime();   // AudioSettings.dspTime 대체 (double 정밀도 필수)

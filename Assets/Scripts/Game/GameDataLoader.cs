@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Threading.Tasks;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
@@ -33,26 +34,37 @@ namespace SCOdyssey.Game
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
-            // FMOD 오디오 로딩
             if (!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
             {
                 Debug.LogError("[GameDataLoader] IAudioManager not found in ServiceLocator!");
                 yield break;
             }
 
-            if (!string.IsNullOrEmpty(music.audioFilePath))
+            if (!ServiceLocator.TryGet<IContentProvider>(out var contentProvider))
             {
-                audioManager.LoadAudio(music.audioFilePath);
-                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
-                while (!audioManager.IsLoaded) yield return null;
+                Debug.LogError("[GameDataLoader] IContentProvider not found in ServiceLocator!");
+                yield break;
+            }
+
+            // IContentProvider를 통해 오디오 로딩 (로컬/CDN 공통 인터페이스)
+            Task<byte[]> audioTask = contentProvider.LoadAudioBytesAsync(music);
+            yield return new WaitUntil(() => audioTask.IsCompleted);
+
+            if (audioTask.Result != null)
+            {
+                // OPENMEMORY 방식으로 로드 (동기, 즉시 IsLoaded=true)
+                audioManager.LoadAudioFromBytes(audioTask.Result);
             }
             else
             {
-                Debug.LogWarning("[GameDataLoader] audioFilePath is empty!");
+                Debug.LogWarning("[GameDataLoader] 오디오 데이터를 로드하지 못했습니다.");
             }
 
-            // BGA 및 배경아트 로딩
-            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
+            // IContentProvider를 통해 BGA 경로 취득 (로컬: StreamingAssets, CDN: 복호화 캐시)
+            Task<string> bgaTask = contentProvider.GetBGAPathAsync(music);
+            yield return new WaitUntil(() => bgaTask.IsCompleted);
+
+            gameManager.SetBGAData(bgaTask.Result, music.backgroundArt);
 
             yield return LoadChart(music);
 
