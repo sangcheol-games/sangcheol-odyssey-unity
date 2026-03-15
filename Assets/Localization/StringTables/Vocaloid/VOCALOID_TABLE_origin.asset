@@ -9,17 +9,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1bb1838fe8befb0429646b938e757ff3, type: 3}
-  m_Name: Korean (South Korea) (ko-KR)
+  m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
+  m_Name: VOCALOID_TABLE_origin
   m_EditorClassIdentifier: 
-  m_Identifier:
-    m_Code: ko-KR
+  m_LocaleId:
+    m_Code: origin
+  m_SharedData: {fileID: 11400000, guid: df65b7b7ffdb3e34e92c243cd4010b91, type: 2}
   m_Metadata:
     m_Items: []
-  m_LocaleName: Korean (South Korea) (ko-KR)
-  m_CustomFormatCultureCode: 
-  m_UseCustomFormatter: 0
-  m_SortOrder: 2
+  m_TableData:
+  - m_Id: 19023679488
+    m_Localized: "\u521D\u97F3\u30DF\u30AF"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

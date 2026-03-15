@@ -1,6 +1,9 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Localization.Settings;
+using SCOdyssey.App;
+using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -49,6 +52,27 @@ namespace SCOdyssey.UI
         protected override void HandleSubmit() { }
         protected override void HandleCancel() { }
 
+        private string GetLocalizedText(UnityEngine.Localization.LocalizedString localizedString, string fallback = "")
+        {
+            if (localizedString == null) return fallback;
+
+            var displayCode = ServiceLocator.Get<ISettingsManager>().Current.displayLanguageCode;
+            var locale = LocalizationSettings.AvailableLocales.GetLocale(displayCode);
+
+            // 해당 locale이 없으면 현재 선택된 locale로 폴백
+            if (locale == null)
+                return localizedString.GetLocalizedString();
+
+            // WaitForCompletion()은 테이블 미로드 시 블로킹 발생 가능
+            // 성능 이슈 시: Window > Asset Management > Localization Tables
+            //               → String Table Collection 선택
+            //               → Inspector에서 Preload All Tables 체크
+            // Preload 활성화 시 게임 시작 시 테이블이 미리 로드되어 즉시 반환됨
+            return LocalizationSettings.StringDatabase
+                .GetLocalizedStringAsync(localizedString.TableReference, localizedString.TableEntryReference, locale)
+                .WaitForCompletion();
+        }
+
         /// <summary>
         /// 곡 데이터 및 선택 상태를 표시합니다.
         /// </summary>
@@ -61,8 +85,8 @@ namespace SCOdyssey.UI
             }
 
             gameObject.SetActive(true);
-            GetText((int)Texts.Title).text = music.title != null ? music.title.GetLocalizedString() : music.name;
-            GetText((int)Texts.Artist).text = music.producer != null ? music.producer.GetLocalizedString() : "";
+            GetText((int)Texts.Title).text = GetLocalizedText(music.title, music.name);
+            GetText((int)Texts.Artist).text = GetLocalizedText(music.producer);
 
             // 곡 선택 하이라이트
             if (backgroundImage != null)

@@ -10,7 +10,7 @@ namespace SCOdyssey.Domain.Dto
         public int audioOffsetMs = 0;       // -200 ~ 200 ms
         public bool autoPlay = false;
         public string languageCode = "ko-KR";       // BCP 47 (ko-KR / ja-JP / en-US)
-        public string displayLanguageCode = "original"; // 곡 제목 표시 언어 (original / ko-KR / ja-JP / en-US)
+        public string displayLanguageCode = "origin";  // 곡 제목 표시 언어 (origin / ko-KR / ja-JP / en-US)
 
         // Graphic
         public bool fullScreen = true;

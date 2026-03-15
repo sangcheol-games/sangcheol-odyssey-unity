@@ -10,38 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
-  m_Name: Localization-Locales
+  m_Name: Localization-String-Tables-Origin (Origin)
   m_EditorClassIdentifier: 
-  m_GroupName: Localization-Locales
-  m_GUID: f5dd12d7ebf03c84b8a50442c98cf972
+  m_GroupName: Localization-String-Tables-Origin (Origin)
+  m_GUID: 3cf9f57ef802c4e4b9e7d458326507f8
   m_SerializeEntries:
-  - m_GUID: 3157ab7695da8314e8cfd4cf15efce2e
-    m_Address: Japanese (Japan) (ja-JP)
+  - m_GUID: 3a9a5ed93ed9ba9469632cb9ff09b543
+    m_Address: ARTIST_TABLE_origin
     m_ReadOnly: 1
     m_SerializedLabels:
-    - Locale
+    - Locale-origin
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 68960abe8b127a241bb2e2babf2d1bdc
-    m_Address: Origin (Origin)
+  - m_GUID: 5b55e080dea3f5b4da287845a7fc43db
+    m_Address: MUSIC_TITLE_TABLE_origin
     m_ReadOnly: 1
     m_SerializedLabels:
-    - Locale
+    - Locale-origin
     FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: a8a877e40218a234c8268ac1b9738bba
-    m_Address: English (United States) (en-US)
+  - m_GUID: c595217e19482f94a9fe7936cf8bc3c8
+    m_Address: VOCALOID_TABLE_origin
     m_ReadOnly: 1
     m_SerializedLabels:
-    - Locale
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b3bd31d5a499699468fb9b9c1c8f7efe
-    m_Address: Korean (South Korea) (ko-KR)
-    m_ReadOnly: 1
-    m_SerializedLabels:
-    - Locale
+    - Locale-origin
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 1
   m_Settings: {fileID: 11400000, guid: 112116277362b4341ba484bb41042fc3, type: 2}
   m_SchemaSet:
     m_Schemas:
-    - {fileID: 11400000, guid: dd2a1398f0e545a449febae2851857e4, type: 2}
-    - {fileID: 11400000, guid: 82281c15ad77f404ea6c5b8599a1c216, type: 2}
+    - {fileID: 11400000, guid: a4acecfe365e4754da9eb1d5e4d3643f, type: 2}
+    - {fileID: 11400000, guid: a27d4162e1633884199c62862fc9ed52, type: 2}
