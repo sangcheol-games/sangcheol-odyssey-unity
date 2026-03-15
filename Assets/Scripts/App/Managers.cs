@@ -25,6 +25,12 @@ namespace SCOdyssey.App
 
         private void InitServices()
         {
+            // 설정 매니저를 가장 먼저 등록하여 다른 매니저 초기화에 설정값 반영
+            var settingsManager = new SettingsManager();
+            ServiceLocator.TryRegister<ISettingsManager>(settingsManager);
+            settingsManager.Load();
+            settingsManager.Apply();
+
             var inputManager = new InputManager();
             inputManager.Enable();
             ServiceLocator.TryRegister<IInputManager>(inputManager);
@@ -40,7 +46,7 @@ namespace SCOdyssey.App
             var fmodAudio = gameObject.AddComponent<FMODAudioManager>();
             ServiceLocator.TryRegister<IAudioManager>(fmodAudio);
 
-            Application.targetFrameRate = 60;   // 앱 프레임 60으로 고정
+            // targetFrameRate는 SettingsManager.Apply()에서 설정값으로 적용됨
         }
 
 

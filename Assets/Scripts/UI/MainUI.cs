@@ -33,6 +33,7 @@ namespace SCOdyssey
 
             BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerClick, OnClickAdventure);
             BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
+            BindEvent(GetButton((int)Buttons.Setting).gameObject, EventTriggerType.PointerClick, OnClickSetting);
         }
 
         private void OnClickAdventure()
@@ -50,7 +51,7 @@ namespace SCOdyssey
         }
         private void OnClickSetting()
         {
-            Debug.Log("OnClickSetting");
+            ServiceLocator.Get<IUIManager>().ShowUI<GameSettingUI>();
         }
 
         protected override void HandleSelect(Vector2 direction)
