@@ -1,4 +1,6 @@
 using System;
+using SCOdyssey.Core;
+using SCOdyssey.App;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
@@ -69,7 +71,10 @@ namespace SCOdyssey.Game
                     c.a = 0f;
                     break;
                 case NoteState.Ghost:
-                    c.a = 0.2f;
+                    float ghostOpacity = 0.2f;
+                    if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
+                        ghostOpacity = sm.Current.noteOpacity;
+                    c.a = ghostOpacity;
                     break;
                 case NoteState.Active:
                     c.a = 1f;

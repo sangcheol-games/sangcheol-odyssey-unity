@@ -11,6 +11,8 @@ namespace SCOdyssey.Domain.Dto
         public bool autoPlay = false;
         public string languageCode = "ko-KR";       // BCP 47 (ko-KR / ja-JP / en-US)
         public string displayLanguageCode = "origin";  // 곡 제목 표시 언어 (origin / ko-KR / ja-JP / en-US)
+        public float bgaOpacity = 0.4f;               // BGA 투명도 0 ~ 1
+        public float noteOpacity = 0.2f;              // 고스트 노트 투명도 0 ~ 0.5
 
         // Graphic
         public bool fullScreen = true;

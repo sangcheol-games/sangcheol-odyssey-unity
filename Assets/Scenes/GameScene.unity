@@ -283,6 +283,7 @@ MonoBehaviour:
   videoPlayer: {fileID: 199462506}
   bgaScreen: {fileID: 199462508}
   backgroundArt: {fileID: 1993549160}
+  alphaOverlay: {fileID: 1345585983}
 --- !u!114 &199462508
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1672,7 +1673,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   testChartFile: {fileID: 4900000, guid: 3c5acbe65d472344aa7133ea4c74a96f, type: 3}
   testBpm: 160
-  testMusic: {fileID: 8300000, guid: 25cc3e5853e7cd845937acdc86c3b953, type: 3}
+  testAudioPath: 
 --- !u!1 &1077280429
 GameObject:
   m_ObjectHideFlags: 0
@@ -1963,7 +1964,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0, g: 0, b: 0, a: 0.9019608}
+  m_Color: {r: 0, g: 0, b: 0, a: 0.5019608}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -2866,7 +2867,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f3c1f3912e09724e9d5705481cbe502, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  audioSource: {fileID: 1155553906}
   scoreManager: {fileID: 2128768035}
   chartManager: {fileID: 222975566}
   bgaController: {fileID: 199462507}

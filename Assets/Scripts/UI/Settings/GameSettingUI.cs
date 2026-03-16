@@ -3,6 +3,7 @@ using SCOdyssey.Core;
 using SCOdyssey.UI;
 using UnityEngine;
 using UnityEngine.Localization.Settings;
+using UnityEngine.UI;
 
 namespace SCOdyssey
 {
@@ -25,6 +26,14 @@ namespace SCOdyssey
         {
             Text_LanguageValue,
             Text_DisplayLanguageValue,
+            Text_BgaOpacityValue,
+            Text_NoteOpacityValue,
+        }
+
+        private enum Sliders
+        {
+            Slider_BgaOpacity,
+            Slider_NoteOpacity,
         }
 
         // 기본 언어 목록 (BCP 47)
@@ -47,6 +56,7 @@ namespace SCOdyssey
         {
             BindButton(typeof(Buttons));
             BindText(typeof(Texts));
+            Bind<Slider>(typeof(Sliders));
 
             var current = ServiceLocator.Get<ISettingsManager>().Current;
 
@@ -71,9 +81,51 @@ namespace SCOdyssey
             GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
             GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
 
+            // BGA 투명도 슬라이더 (0 ~ 1, 기본값 1)
+            var bgaSlider = Get<Slider>((int)Sliders.Slider_BgaOpacity);
+            bgaSlider.minValue = 0f;
+            bgaSlider.maxValue = 1f;
+            bgaSlider.value = current.bgaOpacity;
+            UpdateBgaOpacityLabel(current.bgaOpacity);
+            bgaSlider.onValueChanged.AddListener(v =>
+            {
+                UpdateBgaOpacityLabel(v);
+                var settings = ServiceLocator.Get<ISettingsManager>();
+                settings.Current.bgaOpacity = v;
+                settings.Save();
+            });
+
+            // 고스트 노트 투명도 슬라이더 (슬라이더 0~1 → 실제 opacity 0~0.5 매핑)
+            var noteSlider = Get<Slider>((int)Sliders.Slider_NoteOpacity);
+            noteSlider.minValue = 0f;
+            noteSlider.maxValue = 1f;
+            noteSlider.value = current.noteOpacity / 0.5f;
+            UpdateNoteOpacityLabel(noteSlider.value);
+            noteSlider.onValueChanged.AddListener(v =>
+            {
+                UpdateNoteOpacityLabel(v);
+                var settings = ServiceLocator.Get<ISettingsManager>();
+                settings.Current.noteOpacity = v * 0.5f;
+                settings.Save();
+            });
+
             // 닫기 버튼
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
         }
+
+        #region Opacity
+
+        private void UpdateBgaOpacityLabel(float value)
+        {
+            GetText((int)Texts.Text_BgaOpacityValue).text = $"{Mathf.RoundToInt(value * 100)}%";
+        }
+
+        private void UpdateNoteOpacityLabel(float value)
+        {
+            GetText((int)Texts.Text_NoteOpacityValue).text = $"{Mathf.RoundToInt(value * 100)}%";
+        }
+
+        #endregion
 
         #region Language
 

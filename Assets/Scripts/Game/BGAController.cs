@@ -13,6 +13,7 @@ namespace SCOdyssey.Game
         public VideoPlayer videoPlayer;
         public RawImage bgaScreen;      // BGA 영상 표시용 RawImage
         public Image backgroundArt;     // 배경아트 스프라이트 표시용 Image (BGA 꺼진 경우에만 표시)
+        public Image alphaOverlay;      // BGA 위에 올린 검정 Image (투명도 조절용)
 
         private IAudioManager _audioManager;
         private bool isPrepared = false;
@@ -35,6 +36,10 @@ namespace SCOdyssey.Game
             {
                 backgroundArt.sprite = backgroundArtSprite;
             }
+
+            // 저장된 BGA 투명도 적용
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+                SetOpacity(settingsManager.Current.bgaOpacity);
 
             if (bgaEnabled)
             {
@@ -85,6 +90,17 @@ namespace SCOdyssey.Game
         {
             scheduledDspTime = dspStartTime;
             isScheduled = true;
+        }
+
+        /// <summary>
+        /// BGA 투명도 설정. 1 = BGA 완전 표시 (overlay 투명), 0 = BGA 완전 차단 (overlay 불투명 검정).
+        /// </summary>
+        public void SetOpacity(float opacity)
+        {
+            if (alphaOverlay == null) return;
+            var c = alphaOverlay.color;
+            c.a = 1f - Mathf.Clamp01(opacity);
+            alphaOverlay.color = c;
         }
 
         /// <summary>
