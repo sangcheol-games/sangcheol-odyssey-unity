@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
+using SCOdyssey.Core;
 using TMPro;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
@@ -501,7 +502,12 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
 
-            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
+                offsetSec = sm.Current.judgmentOffset * 0.003;
+
+            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
+            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
@@ -533,7 +539,11 @@ namespace SCOdyssey.Game
             if (targetNote.noteData.noteType != NoteType.Holding &&
                 targetNote.noteData.noteType != NoteType.HoldEnd) return;
 
-            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
+                offsetSec = sm.Current.judgmentOffset * 0.003;
+
+            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
 
             if (timeDiff < JUDGE_PERFECT)
             {
@@ -555,8 +565,11 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.HoldRelease) return; // 릴리즈 판정 노트가 없으면 무시
 
-            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var sm2))
+                offsetSec = sm2.Current.judgmentOffset * 0.003;
 
+            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {

@@ -7,7 +7,8 @@ namespace SCOdyssey.Domain.Dto
     {
         // Game
         public float noteSpeed = 2.0f;      // 0.5 ~ 5.0
-        public int audioOffsetMs = 0;       // -200 ~ 200 ms
+        public int audioOffsetMs = 0;       // 노트싱크 오프셋 -200 ~ 200 ms
+        public int judgmentOffset = 0;      // 판정 타이밍 오프셋 -20 ~ 20 (1단위 = 3ms)
         public bool autoPlay = false;
         public string languageCode = "ko-KR";       // BCP 47 (ko-KR / ja-JP / en-US)
         public string displayLanguageCode = "origin";  // 곡 제목 표시 언어 (origin / ko-KR / ja-JP / en-US)

@@ -28,12 +28,16 @@ namespace SCOdyssey
             Text_DisplayLanguageValue,
             Text_BgaOpacityValue,
             Text_NoteOpacityValue,
+            Text_NoteSyncValue,
+            Text_JudgmentSyncValue,
         }
 
         private enum Sliders
         {
             Slider_BgaOpacity,
             Slider_NoteOpacity,
+            Slider_NoteSync,
+            Slider_JudgmentSync,
         }
 
         // 기본 언어 목록 (BCP 47)
@@ -109,6 +113,38 @@ namespace SCOdyssey
                 settings.Save();
             });
 
+            // 노트싱크 슬라이더 (-200 ~ 200ms, wholeNumbers)
+            var noteSyncSlider = Get<Slider>((int)Sliders.Slider_NoteSync);
+            noteSyncSlider.minValue = -200f;
+            noteSyncSlider.maxValue = 200f;
+            noteSyncSlider.wholeNumbers = true;
+            noteSyncSlider.value = current.audioOffsetMs;
+            UpdateNoteSyncLabel(current.audioOffsetMs);
+            noteSyncSlider.onValueChanged.AddListener(v =>
+            {
+                int ms = Mathf.RoundToInt(v);
+                UpdateNoteSyncLabel(ms);
+                var settings = ServiceLocator.Get<ISettingsManager>();
+                settings.Current.audioOffsetMs = ms;
+                settings.Save();
+            });
+
+            // 판정 싱크 슬라이더 (-20 ~ 20, 1단위 = 3ms)
+            var judgmentSlider = Get<Slider>((int)Sliders.Slider_JudgmentSync);
+            judgmentSlider.minValue = -20f;
+            judgmentSlider.maxValue = 20f;
+            judgmentSlider.wholeNumbers = true;
+            judgmentSlider.value = current.judgmentOffset;
+            UpdateJudgmentSyncLabel(current.judgmentOffset);
+            judgmentSlider.onValueChanged.AddListener(v =>
+            {
+                int step = Mathf.RoundToInt(v);
+                UpdateJudgmentSyncLabel(step);
+                var settings = ServiceLocator.Get<ISettingsManager>();
+                settings.Current.judgmentOffset = step;
+                settings.Save();
+            });
+
             // 닫기 버튼
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
         }
@@ -123,6 +159,22 @@ namespace SCOdyssey
         private void UpdateNoteOpacityLabel(float value)
         {
             GetText((int)Texts.Text_NoteOpacityValue).text = $"{Mathf.RoundToInt(value * 100)}%";
+        }
+
+        #endregion
+
+        #region Sync
+
+        private void UpdateNoteSyncLabel(int ms)
+        {
+            string sign = ms > 0 ? "+" : "";
+            GetText((int)Texts.Text_NoteSyncValue).text = $"{sign}{ms}ms";
+        }
+
+        private void UpdateJudgmentSyncLabel(int step)
+        {
+            string sign = step > 0 ? "+" : "";
+            GetText((int)Texts.Text_JudgmentSyncValue).text = $"{sign}{step}";
         }
 
         #endregion

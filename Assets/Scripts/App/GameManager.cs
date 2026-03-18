@@ -98,7 +98,12 @@ namespace SCOdyssey.App
 
         public void StartMusic(double delayTime)
         {
-            double dspStartTime = _audioManager.GetDSPTime() + delayTime;
+            // 노트싱크 오프셋 적용 (양수: 음악 늦게 시작, 음수: 음악 일찍 시작)
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+                offsetSec = settingsManager.Current.audioOffsetMs / 1000.0;
+
+            double dspStartTime = _audioManager.GetDSPTime() + delayTime + offsetSec;
             _audioManager.PlayScheduled(dspStartTime);
             bgaController?.SchedulePlay(dspStartTime);
         }
