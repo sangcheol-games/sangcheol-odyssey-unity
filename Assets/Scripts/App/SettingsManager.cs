@@ -30,20 +30,36 @@ namespace SCOdyssey.App
             PlayerPrefs.Save();
         }
 
+        private static readonly FullScreenMode[] DisplayModes =
+        {
+            FullScreenMode.ExclusiveFullScreen, // 0: 전체 화면
+            FullScreenMode.Windowed,            // 1: 창 모드
+            FullScreenMode.FullScreenWindow,    // 2: 전체 창 모드
+        };
+
         public void Apply()
         {
             // Graphic
             Application.targetFrameRate = _current.targetFrameRate;
 
-            var resolutions = Screen.resolutions;
+            var mode = (_current.displayMode >= 0 && _current.displayMode < DisplayModes.Length)
+                ? DisplayModes[_current.displayMode]
+                : FullScreenMode.ExclusiveFullScreen;
+
+            // 고정 해상도 목록 (16:9) — GraphicSettingUI.Resolutions와 동기화 필요
+            var resolutions = new (int w, int h)[]
+            {
+                (1024, 576), (1152, 648), (1280, 720),
+                (1366, 768), (1600, 900), (1920, 1080)
+            };
             if (_current.resolutionIndex >= 0 && _current.resolutionIndex < resolutions.Length)
             {
                 var res = resolutions[_current.resolutionIndex];
-                Screen.SetResolution(res.width, res.height, _current.fullScreen);
+                Screen.SetResolution(res.w, res.h, mode);
             }
             else
             {
-                Screen.fullScreen = _current.fullScreen;
+                Screen.fullScreenMode = mode;
             }
 
             // Sound: IAudioManager에 볼륨 제어 메서드 추가 후 여기서 적용

@@ -7,7 +7,7 @@ namespace SCOdyssey.Domain.Dto
     {
         // Game
         public float noteSpeed = 2.0f;      // 0.5 ~ 5.0
-        public int audioOffsetMs = 0;       // 노트싱크 오프셋 -200 ~ 200 ms
+        public int audioOffsetMs = 0;       // 노트 출력 타이밍 오프셋 -200 ~ 200 ms
         public int judgmentOffset = 0;      // 판정 타이밍 오프셋 -20 ~ 20 (1단위 = 3ms)
         public bool autoPlay = false;
         public string languageCode = "ko-KR";       // BCP 47 (ko-KR / ja-JP / en-US)
@@ -16,9 +16,9 @@ namespace SCOdyssey.Domain.Dto
         public float noteOpacity = 0.2f;              // 고스트 노트 투명도 0 ~ 0.5
 
         // Graphic
-        public bool fullScreen = true;
+        public int displayMode = 0;         // 0=전체 화면 / 1=창 모드 / 2=전체 창 모드
         public int targetFrameRate = 60;    // 30 / 60 / 120 / -1(무제한)
-        public int resolutionIndex = 0;     // Screen.resolutions 배열 인덱스
+        public int resolutionIndex = 5;     // 0~5: 1024×576, 1152×648, 1280×720, 1366×768, 1600×900, 1920×1080
 
         // Sound
         public float masterVolume = 1f;     // 0 ~ 1
