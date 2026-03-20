@@ -1,5 +1,6 @@
 using SCOdyssey.App;
 using SCOdyssey.Core;
+using SCOdyssey.Domain.Dto;
 using SCOdyssey.UI;
 using UnityEngine;
 using UnityEngine.Localization.Settings;
@@ -19,6 +20,8 @@ namespace SCOdyssey
             Btn_LanguageNext,
             Btn_DisplayLanguagePrev,
             Btn_DisplayLanguageNext,
+            Btn_Save,
+            Btn_Reset,
             Btn_Close,
         }
 
@@ -48,6 +51,9 @@ namespace SCOdyssey
         private static readonly string[] DisplayLanguageCodes  = { "origin", "ko-KR", "ja-JP", "en-US" };
         private static readonly string[] DisplayLanguageLabels = { "원제", "한국어", "日本語", "English" };
 
+        // _pending: UI에서 변경한 값을 임시로 보관. Btn_Save를 눌러야 실제로 저장됨.
+        // Btn_Close를 누르면 _pending은 버려지고 기존 설정값이 유지됨.
+        private SettingsData _pending;
         private int _languageIndex;
         private int _displayLanguageIndex;
 
@@ -62,90 +68,80 @@ namespace SCOdyssey
             BindText(typeof(Texts));
             Bind<Slider>(typeof(Sliders));
 
+            // 현재 저장된 설정을 JSON 직렬화/역직렬화로 깊은 복사 → _pending에 저장
             var current = ServiceLocator.Get<ISettingsManager>().Current;
+            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
 
-            // 저장된 기본 언어 코드로 인덱스 초기화
-            _languageIndex = Mathf.Max(0, System.Array.IndexOf(LanguageCodes, current.languageCode));
+            #region Language
+            _languageIndex = Mathf.Max(0, System.Array.IndexOf(LanguageCodes, _pending.languageCode));
             UpdateLanguageLabel();
-
-            // 저장된 표시 언어 코드로 인덱스 초기화
-            _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, current.displayLanguageCode));
-            UpdateDisplayLanguageLabel();
-
-            // 기본 언어 Arrow Selector
             GetButton((int)Buttons.Btn_LanguagePrev).onClick.AddListener(OnLanguagePrev);
             GetButton((int)Buttons.Btn_LanguageNext).onClick.AddListener(OnLanguageNext);
 
-            // 표시 언어 Arrow Selector
+            _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, _pending.displayLanguageCode));
+            UpdateDisplayLanguageLabel();
             GetButton((int)Buttons.Btn_DisplayLanguagePrev).onClick.AddListener(OnDisplayLanguagePrev);
             GetButton((int)Buttons.Btn_DisplayLanguageNext).onClick.AddListener(OnDisplayLanguageNext);
+            #endregion
 
-            // 탭 버튼
-            GetButton((int)Buttons.Tab_Graphic).onClick.AddListener(SwitchToGraphic);
-            GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
-            GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
-
-            // BGA 투명도 슬라이더 (0 ~ 1, 기본값 1)
+            #region Opacity
             var bgaSlider = Get<Slider>((int)Sliders.Slider_BgaOpacity);
             bgaSlider.minValue = 0f;
             bgaSlider.maxValue = 1f;
-            bgaSlider.value = current.bgaOpacity;
-            UpdateBgaOpacityLabel(current.bgaOpacity);
+            bgaSlider.value = _pending.bgaOpacity;
+            UpdateBgaOpacityLabel(_pending.bgaOpacity);
             bgaSlider.onValueChanged.AddListener(v =>
             {
+                _pending.bgaOpacity = v;
                 UpdateBgaOpacityLabel(v);
-                var settings = ServiceLocator.Get<ISettingsManager>();
-                settings.Current.bgaOpacity = v;
-                settings.Save();
             });
 
-            // 고스트 노트 투명도 슬라이더 (슬라이더 0~1 → 실제 opacity 0~0.5 매핑)
             var noteSlider = Get<Slider>((int)Sliders.Slider_NoteOpacity);
             noteSlider.minValue = 0f;
             noteSlider.maxValue = 1f;
-            noteSlider.value = current.noteOpacity / 0.5f;
+            noteSlider.value = _pending.noteOpacity / 0.5f;
             UpdateNoteOpacityLabel(noteSlider.value);
             noteSlider.onValueChanged.AddListener(v =>
             {
+                _pending.noteOpacity = v * 0.5f;
                 UpdateNoteOpacityLabel(v);
-                var settings = ServiceLocator.Get<ISettingsManager>();
-                settings.Current.noteOpacity = v * 0.5f;
-                settings.Save();
             });
+            #endregion
 
-            // 노트싱크 슬라이더 (-200 ~ 200ms, wholeNumbers)
+            #region Sync
             var noteSyncSlider = Get<Slider>((int)Sliders.Slider_NoteSync);
             noteSyncSlider.minValue = -200f;
             noteSyncSlider.maxValue = 200f;
             noteSyncSlider.wholeNumbers = true;
-            noteSyncSlider.value = current.audioOffsetMs;
-            UpdateNoteSyncLabel(current.audioOffsetMs);
+            noteSyncSlider.value = _pending.audioOffsetMs;
+            UpdateNoteSyncLabel(_pending.audioOffsetMs);
             noteSyncSlider.onValueChanged.AddListener(v =>
             {
                 int ms = Mathf.RoundToInt(v);
+                _pending.audioOffsetMs = ms;
                 UpdateNoteSyncLabel(ms);
-                var settings = ServiceLocator.Get<ISettingsManager>();
-                settings.Current.audioOffsetMs = ms;
-                settings.Save();
             });
 
-            // 판정 싱크 슬라이더 (-20 ~ 20, 1단위 = 3ms)
             var judgmentSlider = Get<Slider>((int)Sliders.Slider_JudgmentSync);
             judgmentSlider.minValue = -20f;
             judgmentSlider.maxValue = 20f;
             judgmentSlider.wholeNumbers = true;
-            judgmentSlider.value = current.judgmentOffset;
-            UpdateJudgmentSyncLabel(current.judgmentOffset);
+            judgmentSlider.value = _pending.judgmentOffset;
+            UpdateJudgmentSyncLabel(_pending.judgmentOffset);
             judgmentSlider.onValueChanged.AddListener(v =>
             {
                 int step = Mathf.RoundToInt(v);
+                _pending.judgmentOffset = step;
                 UpdateJudgmentSyncLabel(step);
-                var settings = ServiceLocator.Get<ISettingsManager>();
-                settings.Current.judgmentOffset = step;
-                settings.Save();
             });
+            #endregion
 
-            // 닫기 버튼
+            GetButton((int)Buttons.Tab_Graphic).onClick.AddListener(SwitchToGraphic);
+            GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
+            GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
+
+            GetButton((int)Buttons.Btn_Save).onClick.AddListener(OnClickSave);
+            GetButton((int)Buttons.Btn_Reset).onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
         }
 
@@ -183,29 +179,16 @@ namespace SCOdyssey
 
         private void OnLanguagePrev()
         {
-            _languageIndex = (_languageIndex - 1 + LanguageCodes.Length) % LanguageCodes.Length;
-            ApplyLanguage();
+            if (_languageIndex <= 0) return;
+            _pending.languageCode = LanguageCodes[--_languageIndex];
+            UpdateLanguageLabel();
         }
 
         private void OnLanguageNext()
         {
-            _languageIndex = (_languageIndex + 1) % LanguageCodes.Length;
-            ApplyLanguage();
-        }
-
-        private void ApplyLanguage()
-        {
+            if (_languageIndex >= LanguageCodes.Length - 1) return;
+            _pending.languageCode = LanguageCodes[++_languageIndex];
             UpdateLanguageLabel();
-
-            // Unity Localization 즉시 적용
-            var locale = LocalizationSettings.AvailableLocales.GetLocale(LanguageCodes[_languageIndex]);
-            if (locale != null)
-                LocalizationSettings.SelectedLocale = locale;
-
-            // 설정 저장
-            var settings = ServiceLocator.Get<ISettingsManager>();
-            settings.Current.languageCode = LanguageCodes[_languageIndex];
-            settings.Save();
         }
 
         private void UpdateLanguageLabel()
@@ -215,23 +198,16 @@ namespace SCOdyssey
 
         private void OnDisplayLanguagePrev()
         {
-            _displayLanguageIndex = (_displayLanguageIndex - 1 + DisplayLanguageCodes.Length) % DisplayLanguageCodes.Length;
-            ApplyDisplayLanguage();
+            if (_displayLanguageIndex <= 0) return;
+            _pending.displayLanguageCode = DisplayLanguageCodes[--_displayLanguageIndex];
+            UpdateDisplayLanguageLabel();
         }
 
         private void OnDisplayLanguageNext()
         {
-            _displayLanguageIndex = (_displayLanguageIndex + 1) % DisplayLanguageCodes.Length;
-            ApplyDisplayLanguage();
-        }
-
-        private void ApplyDisplayLanguage()
-        {
+            if (_displayLanguageIndex >= DisplayLanguageCodes.Length - 1) return;
+            _pending.displayLanguageCode = DisplayLanguageCodes[++_displayLanguageIndex];
             UpdateDisplayLanguageLabel();
-
-            var settings = ServiceLocator.Get<ISettingsManager>();
-            settings.Current.displayLanguageCode = DisplayLanguageCodes[_displayLanguageIndex];
-            settings.Save();
         }
 
         private void UpdateDisplayLanguageLabel()
@@ -241,25 +217,41 @@ namespace SCOdyssey
 
         #endregion
 
-        private void SwitchToGraphic()
+        private void OnClickSave()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.ShowUI<GraphicSettingUI>();
-            uiManager.CloseUI(this);
+            var settings = ServiceLocator.Get<ISettingsManager>();
+
+            // UI 텍스트가 갱신을 위해 Unity Localization의 SelectedLocale 변경
+            var locale = LocalizationSettings.AvailableLocales.GetLocale(_pending.languageCode);
+            if (locale != null)
+                LocalizationSettings.SelectedLocale = locale;
+
+            // _pending의 값을 Current에 복사한 뒤 Apply(시스템 반영) + Save(PlayerPrefs 저장)
+            settings.Current.languageCode        = _pending.languageCode;
+            settings.Current.displayLanguageCode = _pending.displayLanguageCode;
+            settings.Current.bgaOpacity          = _pending.bgaOpacity;
+            settings.Current.noteOpacity         = _pending.noteOpacity;
+            settings.Current.audioOffsetMs       = _pending.audioOffsetMs;
+            settings.Current.judgmentOffset      = _pending.judgmentOffset;
+            settings.Apply();
+            settings.Save();
         }
 
-        private void SwitchToSound()
+        private void OnClickReset()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.ShowUI<SoundSettingUI>();
-            uiManager.CloseUI(this);
-        }
+            _pending = new SettingsData();
 
-        private void SwitchToAccount()
-        {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.ShowUI<AccountSettingUI>();
-            uiManager.CloseUI(this);
+            // 모든 UI 컴포넌트를 기본값으로 갱신
+            _languageIndex = Mathf.Max(0, System.Array.IndexOf(LanguageCodes, _pending.languageCode));
+            UpdateLanguageLabel();
+
+            _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, _pending.displayLanguageCode));
+            UpdateDisplayLanguageLabel();
+
+            Get<Slider>((int)Sliders.Slider_BgaOpacity).value   = _pending.bgaOpacity;
+            Get<Slider>((int)Sliders.Slider_NoteOpacity).value  = _pending.noteOpacity / 0.5f;
+            Get<Slider>((int)Sliders.Slider_NoteSync).value     = _pending.audioOffsetMs;
+            Get<Slider>((int)Sliders.Slider_JudgmentSync).value = _pending.judgmentOffset;
         }
 
         private void OnClickClose()
@@ -267,8 +259,29 @@ namespace SCOdyssey
             ServiceLocator.Get<IUIManager>().CloseUI(this);
         }
 
+        private void SwitchToGraphic()
+        {
+            var uiManager = ServiceLocator.Get<IUIManager>();
+            uiManager.CloseUI(this);
+            uiManager.ShowUI<GraphicSettingUI>();
+        }
+
+        private void SwitchToSound()
+        {
+            var uiManager = ServiceLocator.Get<IUIManager>();
+            uiManager.CloseUI(this);
+            uiManager.ShowUI<SoundSettingUI>();
+        }
+
+        private void SwitchToAccount()
+        {
+            var uiManager = ServiceLocator.Get<IUIManager>();
+            uiManager.CloseUI(this);
+            uiManager.ShowUI<AccountSettingUI>();
+        }
+
         protected override void HandleSelect(Vector2 direction) { }
-        protected override void HandleSubmit() { }
+        protected override void HandleSubmit() => OnClickSave();
         protected override void HandleCancel() => OnClickClose();
     }
 }
