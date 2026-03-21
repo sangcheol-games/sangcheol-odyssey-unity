@@ -62,8 +62,14 @@ namespace SCOdyssey.App
                 Screen.fullScreenMode = mode;
             }
 
-            // Sound: IAudioManager에 볼륨 제어 메서드 추가 후 여기서 적용
-            // TODO: ServiceLocator.TryGet<IAudioManager>(out var audio) → audio.SetVolume(...)
+            // Sound
+            if (ServiceLocator.TryGet<IAudioManager>(out var audio))
+            {
+                audio.SetMasterVolume(_current.masterVolume);
+                audio.SetBgmVolume(_current.bgmVolume);
+                audio.SetHitSoundVolume(_current.hitSoundVolume);
+                audio.SetSfxVolume(_current.sfxVolume);
+            }
 
             OnSettingsChanged?.Invoke(_current);
         }

@@ -21,9 +21,10 @@ namespace SCOdyssey.Domain.Dto
         public int resolutionIndex = 5;     // 0~5: 1024×576, 1152×648, 1280×720, 1366×768, 1600×900, 1920×1080
 
         // Sound
-        public float masterVolume = 1f;     // 0 ~ 1
-        public float bgmVolume = 1f;
-        public float sfxVolume = 1f;
+        public float masterVolume = 1f;       // 0 ~ 1
+        public float bgmVolume = 1f;          // 배경음(음악)
+        public float hitSoundVolume = 1f;     // 타격음
+        public float sfxVolume = 1f;          // 효과음
         public int audioDeviceIndex = 0;    // FMOD 출력 장치 인덱스
     }
 }

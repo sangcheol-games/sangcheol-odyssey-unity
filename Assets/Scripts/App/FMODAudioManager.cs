@@ -10,7 +10,11 @@ namespace SCOdyssey.App
     {
         private FMOD.Sound _sound;
         private FMOD.Channel _channel;
-        private FMOD.ChannelGroup _masterGroup;
+        private FMOD.ChannelGroup _masterGroup;    // FMOD 시스템 마스터 (getDSPClock 전용)
+        private FMOD.ChannelGroup _ourMasterGroup; // 게임 전체 볼륨 제어
+        private FMOD.ChannelGroup _bgmGroup;       // 배경음(음악) 볼륨
+        private FMOD.ChannelGroup _hitSoundGroup;  // 타격음 볼륨
+        private FMOD.ChannelGroup _sfxGroup;       // 효과음 볼륨
         private bool _isLoaded;
         private bool _isLoading;
 
@@ -31,7 +35,18 @@ namespace SCOdyssey.App
         // -------------------------------------------------------
         private void Awake()
         {
+            // DSP 클록 조회용 시스템 마스터
             RuntimeManager.CoreSystem.getMasterChannelGroup(out _masterGroup);
+
+            // 게임 볼륨 제어용 ChannelGroup 계층 생성
+            RuntimeManager.CoreSystem.createChannelGroup("Master",   out _ourMasterGroup);
+            RuntimeManager.CoreSystem.createChannelGroup("BGM",      out _bgmGroup);
+            RuntimeManager.CoreSystem.createChannelGroup("HitSound", out _hitSoundGroup);
+            RuntimeManager.CoreSystem.createChannelGroup("SFX",      out _sfxGroup);
+            _ourMasterGroup.addGroup(_bgmGroup,      false, out _);
+            _ourMasterGroup.addGroup(_hitSoundGroup, false, out _);
+            _ourMasterGroup.addGroup(_sfxGroup,      false, out _);
+
             // TODO(ASIO): _outputConfig.OutputType이 ASIO라면
             // 여기서 system.setOutput(FMOD.OUTPUTTYPE.ASIO) 적용
             // (단, RuntimeManager 수동 초기화 방식으로 전환 필요)
@@ -61,6 +76,10 @@ namespace SCOdyssey.App
         {
             Stop();
             if (_sound.hasHandle()) _sound.release();
+            _bgmGroup.release();
+            _hitSoundGroup.release();
+            _sfxGroup.release();
+            _ourMasterGroup.release();
         }
 
         // --- IAudioManager 구현 ---
@@ -133,7 +152,7 @@ namespace SCOdyssey.App
             ulong startDspClock = (ulong)(dspStartTime * sampleRate);
 
             // 일시정지 상태로 재생 시작 후 정확한 클록에 딜레이 설정
-            RuntimeManager.CoreSystem.playSound(_sound, _masterGroup, true, out _channel);
+            RuntimeManager.CoreSystem.playSound(_sound, _bgmGroup, true, out _channel);
             _channel.setDelay(startDspClock, 0, false);
             _channel.setPaused(false);
 
@@ -168,8 +187,21 @@ namespace SCOdyssey.App
 
         public string[] GetAvailableDevices()
         {
-            // ASIO 구현 시: system.getNumDrivers() + system.getDriverInfo()로 목록 반환
-            return System.Array.Empty<string>();
+            RuntimeManager.CoreSystem.getNumDrivers(out int count);
+            var names = new string[count];
+            for (int i = 0; i < count; i++)
+                RuntimeManager.CoreSystem.getDriverInfo(i, out names[i], 256, out _, out _, out _, out _);
+            return names;
         }
+
+        public void SetAudioDevice(int driverIndex)
+        {
+            RuntimeManager.CoreSystem.setDriver(driverIndex);
+        }
+
+        public void SetMasterVolume(float volume)   => _ourMasterGroup.setVolume(volume);
+        public void SetBgmVolume(float volume)       => _bgmGroup.setVolume(volume);
+        public void SetHitSoundVolume(float volume)  => _hitSoundGroup.setVolume(volume);
+        public void SetSfxVolume(float volume)       => _sfxGroup.setVolume(volume);
     }
 }

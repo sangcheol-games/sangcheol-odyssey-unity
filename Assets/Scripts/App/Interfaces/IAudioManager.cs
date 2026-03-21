@@ -29,7 +29,15 @@ namespace SCOdyssey.App
         void ConfigureOutput(AudioOutputConfig config);
 
         // 사용 가능한 오디오 드라이버 목록 조회 (설정 UI용)
-        // 현재는 빈 배열 반환. ASIO 구현 시 채움.
         string[] GetAvailableDevices();
+
+        // 재생 장치 변경 (FMOD setDriver — 런타임 호출 가능)
+        void SetAudioDevice(int driverIndex);
+
+        // 볼륨 제어 (0 ~ 1) — SettingsManager.Apply()에서 호출
+        void SetMasterVolume(float volume);
+        void SetBgmVolume(float volume);
+        void SetHitSoundVolume(float volume);
+        void SetSfxVolume(float volume);
     }
 }
