@@ -17,6 +17,8 @@ namespace SCOdyssey
             Tab_Account,
             Btn_AudioDevicePrev,
             Btn_AudioDeviceNext,
+            Btn_PlayInBackgroundPrev,
+            Btn_PlayInBackgroundNext,
             Btn_Save,
             Btn_Reset,
             Btn_Close
@@ -29,6 +31,7 @@ namespace SCOdyssey
             Text_HitSoundVolumeValue,
             Text_SfxVolumeValue,
             Text_AudioDeviceValue,
+            Text_PlayInBackgroundValue,
             Text_BufferSizeValue
         }
 
@@ -40,6 +43,8 @@ namespace SCOdyssey
             Slider_SfxVolume,
             Slider_BufferSize
         }
+
+        private static readonly string[] PlayInBackgroundLabels = { "OFF", "ON" };
 
         // _pending: UI에서 변경한 값을 임시로 보관. Btn_Save를 눌러야 실제로 저장됨.
         private SettingsData _pending;
@@ -86,6 +91,22 @@ namespace SCOdyssey
             InitVolumeSlider(Sliders.Slider_BgmVolume,      Texts.Text_BgmVolumeValue,      _pending.bgmVolume,      v => _pending.bgmVolume      = v);
             InitVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, _pending.hitSoundVolume, v => _pending.hitSoundVolume = v);
             InitVolumeSlider(Sliders.Slider_SfxVolume,      Texts.Text_SfxVolumeValue,      _pending.sfxVolume,      v => _pending.sfxVolume      = v);
+            #endregion
+
+            #region Play In Background
+            GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[_pending.playInBackground ? 1 : 0];
+            GetButton((int)Buttons.Btn_PlayInBackgroundPrev).onClick.AddListener(() =>
+            {
+                if (!_pending.playInBackground) return;
+                _pending.playInBackground = false;
+                GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[0];
+            });
+            GetButton((int)Buttons.Btn_PlayInBackgroundNext).onClick.AddListener(() =>
+            {
+                if (_pending.playInBackground) return;
+                _pending.playInBackground = true;
+                GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[1];
+            });
             #endregion
 
             #region Buffer Size
@@ -146,7 +167,8 @@ namespace SCOdyssey
         {
             // _pending의 값을 Current에 복사한 뒤 Apply(시스템 반영) + Save(PlayerPrefs 저장)
             var settings = ServiceLocator.Get<ISettingsManager>();
-            settings.Current.audioDeviceIndex = _pending.audioDeviceIndex;
+            settings.Current.audioDeviceIndex    = _pending.audioDeviceIndex;
+            settings.Current.playInBackground     = _pending.playInBackground;
             if (ServiceLocator.TryGet<IAudioManager>(out var audio))
                 audio.SetAudioDevice(_pending.audioDeviceIndex);
             settings.Current.masterVolume   = _pending.masterVolume;
@@ -165,6 +187,7 @@ namespace SCOdyssey
             _pending = new SettingsData();
             _audioDeviceIndex = _pending.audioDeviceIndex;
             RefreshAudioDeviceText();
+            GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[0]; // "OFF"
             Get<Slider>((int)Sliders.Slider_MasterVolume).value   = _pending.masterVolume;
             Get<Slider>((int)Sliders.Slider_BgmVolume).value      = _pending.bgmVolume;
             Get<Slider>((int)Sliders.Slider_HitSoundVolume).value = _pending.hitSoundVolume;

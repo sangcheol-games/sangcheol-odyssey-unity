@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using FMODUnity;
+using SCOdyssey.Core;
 using UnityEngine;
 
 namespace SCOdyssey.App
@@ -50,6 +51,13 @@ namespace SCOdyssey.App
             // TODO(ASIO): _outputConfig.OutputType이 ASIO라면
             // 여기서 system.setOutput(FMOD.OUTPUTTYPE.ASIO) 적용
             // (단, RuntimeManager 수동 초기화 방식으로 전환 필요)
+        }
+
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            // 포커스를 잃고 백그라운드 재생이 꺼져 있으면 음소거
+            bool shouldMute = !hasFocus && !ServiceLocator.Get<ISettingsManager>().Current.playInBackground;
+            _ourMasterGroup.setMute(shouldMute);
         }
 
         // NONBLOCKING 로드 완료 폴링
