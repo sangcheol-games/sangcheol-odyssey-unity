@@ -28,7 +28,8 @@ namespace SCOdyssey
             Text_BgmVolumeValue,
             Text_HitSoundVolumeValue,
             Text_SfxVolumeValue,
-            Text_AudioDeviceValue
+            Text_AudioDeviceValue,
+            Text_BufferSizeValue
         }
 
         private enum Sliders
@@ -36,7 +37,8 @@ namespace SCOdyssey
             Slider_MasterVolume,
             Slider_BgmVolume,
             Slider_HitSoundVolume,
-            Slider_SfxVolume
+            Slider_SfxVolume,
+            Slider_BufferSize
         }
 
         // _pending: UI에서 변경한 값을 임시로 보관. Btn_Save를 눌러야 실제로 저장됨.
@@ -84,6 +86,22 @@ namespace SCOdyssey
             InitVolumeSlider(Sliders.Slider_BgmVolume,      Texts.Text_BgmVolumeValue,      _pending.bgmVolume,      v => _pending.bgmVolume      = v);
             InitVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, _pending.hitSoundVolume, v => _pending.hitSoundVolume = v);
             InitVolumeSlider(Sliders.Slider_SfxVolume,      Texts.Text_SfxVolumeValue,      _pending.sfxVolume,      v => _pending.sfxVolume      = v);
+            #endregion
+
+            #region Buffer Size
+            var bufferSizes = new[] { 64, 128, 256, 512, 1024 };
+            var bufferSlider = Get<Slider>((int)Sliders.Slider_BufferSize);
+            bufferSlider.wholeNumbers = true;
+            bufferSlider.minValue = 0;
+            bufferSlider.maxValue = 4;
+            bufferSlider.value = _pending.audioBufferIndex;
+            GetText((int)Texts.Text_BufferSizeValue).text = bufferSizes[_pending.audioBufferIndex].ToString();
+            bufferSlider.onValueChanged.AddListener(v =>
+            {
+                int idx = Mathf.RoundToInt(v);
+                _pending.audioBufferIndex = idx;
+                GetText((int)Texts.Text_BufferSizeValue).text = bufferSizes[idx].ToString();
+            });
             #endregion
 
             GetButton((int)Buttons.Tab_Game).onClick.AddListener(SwitchToGame);
@@ -134,7 +152,9 @@ namespace SCOdyssey
             settings.Current.masterVolume   = _pending.masterVolume;
             settings.Current.bgmVolume      = _pending.bgmVolume;
             settings.Current.hitSoundVolume = _pending.hitSoundVolume;
-            settings.Current.sfxVolume      = _pending.sfxVolume;
+            settings.Current.sfxVolume       = _pending.sfxVolume;
+            // 버퍼 크기는 FMODAudioPreInit에서 다음 시작 시 적용됨 (런타임 변경 불가)
+            settings.Current.audioBufferIndex = _pending.audioBufferIndex;
             settings.Apply();
             settings.Save();
         }
@@ -148,7 +168,8 @@ namespace SCOdyssey
             Get<Slider>((int)Sliders.Slider_MasterVolume).value   = _pending.masterVolume;
             Get<Slider>((int)Sliders.Slider_BgmVolume).value      = _pending.bgmVolume;
             Get<Slider>((int)Sliders.Slider_HitSoundVolume).value = _pending.hitSoundVolume;
-            Get<Slider>((int)Sliders.Slider_SfxVolume).value      = _pending.sfxVolume;
+            Get<Slider>((int)Sliders.Slider_SfxVolume).value       = _pending.sfxVolume;
+            Get<Slider>((int)Sliders.Slider_BufferSize).value      = _pending.audioBufferIndex; // = 2 (256)
         }
 
         private void OnClickClose()

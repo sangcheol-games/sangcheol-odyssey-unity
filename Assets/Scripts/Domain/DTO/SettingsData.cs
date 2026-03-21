@@ -25,6 +25,7 @@ namespace SCOdyssey.Domain.Dto
         public float bgmVolume = 1f;          // 배경음(음악)
         public float hitSoundVolume = 1f;     // 타격음
         public float sfxVolume = 1f;          // 효과음
-        public int audioDeviceIndex = 0;    // FMOD 출력 장치 인덱스
+        public int audioDeviceIndex = 0;     // FMOD 출력 장치 인덱스
+        public int audioBufferIndex = 2;     // 0=64 / 1=128 / 2=256 / 3=512 / 4=1024
     }
 }

@@ -868,6 +868,8 @@ namespace FMODUnity
         public int VirtualChannelCount { get { return PropertyAccessors.VirtualChannelCount.Get(this); } }
         public int RealChannelCount { get { return PropertyAccessors.RealChannelCount.Get(this); } }
         public int DSPBufferLength { get { return PropertyAccessors.DSPBufferLength.Get(this); } }
+        // [SCOdyssey 추가] FMOD 업데이트 시 이 메서드를 다시 추가해야 함
+        public void SetDSPBufferLength(int value) { Properties.DSPBufferLength.Value = value; Properties.DSPBufferLength.HasValue = true; }
         public int DSPBufferCount { get { return PropertyAccessors.DSPBufferCount.Get(this); } }
         public List<string> Plugins { get { return PropertyAccessors.Plugins.Get(this); } }
         public List<string> StaticPlugins { get { return PropertyAccessors.StaticPlugins.Get(this); } }
