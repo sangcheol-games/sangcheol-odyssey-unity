@@ -18,7 +18,7 @@ namespace SCOdyssey.Domain.Dto
         // Graphic
         public int displayMode = 0;         // 0=전체 화면 / 1=창 모드 / 2=전체 창 모드
         public int targetFrameRate = 60;    // 30 / 60 / 120 / -1(무제한)
-        public int resolutionIndex = 5;     // 0~5: 1024×576, 1152×648, 1280×720, 1366×768, 1600×900, 1920×1080
+        public int resolutionIndex = 4;     // 0~4: 1024×768, 1280×720, 1366×768, 1600×900, 1920×1080
 
         // Sound
         public float masterVolume = 1f;       // 0 ~ 1

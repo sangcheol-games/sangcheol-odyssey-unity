@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using SCOdyssey.UI;
 using SCOdyssey.Core;
+using Unity.VisualScripting;
 
 namespace SCOdyssey.App
 {
@@ -25,23 +28,51 @@ namespace SCOdyssey.App
         }
         public void Init()
         {
+            SceneManager.sceneLoaded += OnSceneLoaded;
             ShowUI<MainUI>();
         }
+
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            RefreshCamera();
+            // MainScene: 스택에 보존된 UI를 다시 표시 / 그 외 씬: UI 숨김 (스택은 유지)
+            bool isMainScene = scene.name == "MainScene";
+            foreach (Transform child in Root.transform)
+                child.gameObject.SetActive(isMainScene);
+        }
+
+        // 씬 전환 후 @UI_Root의 Canvas worldCamera를 새 씬의 Camera.main으로 갱신
+        // (@UI_Root는 DontDestroyOnLoad이므로 씬 전환 시 worldCamera가 null이 됨)
+        private void RefreshCamera()
+        {
+            if (Camera.main == null) return;
+            foreach (Transform child in Root.transform)
+            {
+                var canvas = child.GetComponent<Canvas>();
+                if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
+                    canvas.worldCamera = Camera.main;
+            }
+        }
+
         private void SetCanvas(GameObject go, bool sort = true)
         {
             Canvas canvas = go.GetComponent<Canvas>();
+
+            // Screen Space - Camera: Camera.rect(레터박스)를 Canvas에도 적용
+            canvas.renderMode    = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera   = Camera.main;
+            canvas.planeDistance = 10f;
             canvas.overrideSorting = true;
 
-            if (sort)
-            {
-                canvas.sortingOrder = order;
-                order++;
-            }
-            else
-            {
-                canvas.sortingOrder = 0;
-            }
-            Debug.Log("SetCanvas Complete");
+            if (sort) { canvas.sortingOrder = order++; }
+            else      { canvas.sortingOrder = 0; }
+
+            // CanvasScaler 보장 (16:9 기준, Scale With Screen Size)
+            var scaler = go.GetOrAddComponent<CanvasScaler>();
+            scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            scaler.screenMatchMode     = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight  = 0.5f;
         }
 
         // UI 동적 생성

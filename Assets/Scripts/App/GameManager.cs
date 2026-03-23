@@ -41,6 +41,13 @@ namespace SCOdyssey.App
             ServiceLocator.TryRegister<IGameManager>(this);
             if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
                 Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
+
+            // gameCanvas가 Screen Space - Camera이면 worldCamera 설정
+            if (gameCanvas != null && Camera.main != null
+                && gameCanvas.renderMode == RenderMode.ScreenSpaceCamera)
+            {
+                gameCanvas.worldCamera = Camera.main;
+            }
         }
 
         private void Start()

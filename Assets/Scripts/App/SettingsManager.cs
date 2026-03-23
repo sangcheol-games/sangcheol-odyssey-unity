@@ -46,10 +46,10 @@ namespace SCOdyssey.App
                 ? DisplayModes[_current.displayMode]
                 : FullScreenMode.ExclusiveFullScreen;
 
-            // 고정 해상도 목록 (16:9) — GraphicSettingUI.Resolutions와 동기화 필요
+            // 고정 해상도 목록 — GraphicSettingUI.Resolutions와 동기화 필요
             var resolutions = new (int w, int h)[]
             {
-                (1024, 576), (1152, 648), (1280, 720),
+                (1024, 768), (1280, 720),
                 (1366, 768), (1600, 900), (1920, 1080)
             };
             if (_current.resolutionIndex >= 0 && _current.resolutionIndex < resolutions.Length)

@@ -33,10 +33,9 @@ namespace SCOdyssey
             Text_DisplayModeValue
         }
 
-        // 16:9 고정 해상도 목록
         private static readonly (int w, int h)[] Resolutions =
         {
-            (1024, 576), (1152, 648), (1280, 720),
+            (1024, 768), (1280, 720),
             (1366, 768), (1600, 900), (1920, 1080)
         };
 
