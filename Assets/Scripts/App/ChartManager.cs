@@ -491,7 +491,7 @@ namespace SCOdyssey.Game
 
 
         #region Judgement
-        public void TryJudgeInput(int laneIndex)
+        public void TryJudgeInput(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
             isLaneHolding[listIndex] = true;
@@ -507,7 +507,7 @@ namespace SCOdyssey.Game
                 offsetSec = sm.Current.judgmentOffset * 0.003;
 
             // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
+            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - offsetSec);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
@@ -554,7 +554,7 @@ namespace SCOdyssey.Game
         }
 
 
-        public void TryJudgeRelease(int laneIndex)
+        public void TryJudgeRelease(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;
             isLaneHolding[listIndex] = false;
@@ -569,7 +569,7 @@ namespace SCOdyssey.Game
             if (ServiceLocator.TryGet<ISettingsManager>(out var sm2))
                 offsetSec = sm2.Current.judgmentOffset * 0.003;
 
-            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
+            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - offsetSec);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {

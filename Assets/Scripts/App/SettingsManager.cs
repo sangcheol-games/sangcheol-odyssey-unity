@@ -71,6 +71,9 @@ namespace SCOdyssey.App
                 audio.SetSfxVolume(_current.sfxVolume);
             }
 
+            // Input
+            UnityEngine.InputSystem.InputSystem.pollingFrequency = _current.inputPollingRateHz;
+
             OnSettingsChanged?.Invoke(_current);
         }
 

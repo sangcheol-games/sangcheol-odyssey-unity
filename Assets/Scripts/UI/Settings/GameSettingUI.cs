@@ -20,6 +20,8 @@ namespace SCOdyssey
             Btn_LanguageNext,
             Btn_DisplayLanguagePrev,
             Btn_DisplayLanguageNext,
+            Btn_PollingRatePrev,
+            Btn_PollingRateNext,
             Btn_Save,
             Btn_Reset,
             Btn_Close,
@@ -29,6 +31,7 @@ namespace SCOdyssey
         {
             Text_LanguageValue,
             Text_DisplayLanguageValue,
+            Text_PollingRateValue,
             Text_BgaOpacityValue,
             Text_NoteOpacityValue,
             Text_NoteSyncValue,
@@ -51,11 +54,16 @@ namespace SCOdyssey
         private static readonly string[] DisplayLanguageCodes  = { "origin", "ko-KR", "ja-JP", "en-US" };
         private static readonly string[] DisplayLanguageLabels = { "원제", "한국어", "日本語", "English" };
 
+        // 입력 폴링레이트 목록
+        private static readonly int[]    PollingRateValues = { 1000, 2000, 4000, 8000 };
+        private static readonly string[] PollingRateLabels = { "1000 Hz", "2000 Hz", "4000 Hz", "8000 Hz" };
+
         // _pending: UI에서 변경한 값을 임시로 보관. Btn_Save를 눌러야 실제로 저장됨.
         // Btn_Close를 누르면 _pending은 버려지고 기존 설정값이 유지됨.
         private SettingsData _pending;
         private int _languageIndex;
         private int _displayLanguageIndex;
+        private int _pollingRateIndex;
 
         private void Start()
         {
@@ -82,6 +90,11 @@ namespace SCOdyssey
             UpdateDisplayLanguageLabel();
             GetButton((int)Buttons.Btn_DisplayLanguagePrev).onClick.AddListener(OnDisplayLanguagePrev);
             GetButton((int)Buttons.Btn_DisplayLanguageNext).onClick.AddListener(OnDisplayLanguageNext);
+
+            _pollingRateIndex = Mathf.Max(0, System.Array.IndexOf(PollingRateValues, _pending.inputPollingRateHz));
+            UpdatePollingRateLabel();
+            GetButton((int)Buttons.Btn_PollingRatePrev).onClick.AddListener(OnPollingRatePrev);
+            GetButton((int)Buttons.Btn_PollingRateNext).onClick.AddListener(OnPollingRateNext);
             #endregion
 
             #region Opacity
@@ -215,6 +228,25 @@ namespace SCOdyssey
             GetText((int)Texts.Text_DisplayLanguageValue).text = DisplayLanguageLabels[_displayLanguageIndex];
         }
 
+        private void OnPollingRatePrev()
+        {
+            if (_pollingRateIndex <= 0) return;
+            _pending.inputPollingRateHz = PollingRateValues[--_pollingRateIndex];
+            UpdatePollingRateLabel();
+        }
+
+        private void OnPollingRateNext()
+        {
+            if (_pollingRateIndex >= PollingRateValues.Length - 1) return;
+            _pending.inputPollingRateHz = PollingRateValues[++_pollingRateIndex];
+            UpdatePollingRateLabel();
+        }
+
+        private void UpdatePollingRateLabel()
+        {
+            GetText((int)Texts.Text_PollingRateValue).text = PollingRateLabels[_pollingRateIndex];
+        }
+
         #endregion
 
         private void OnClickSave()
@@ -233,6 +265,7 @@ namespace SCOdyssey
             settings.Current.noteOpacity         = _pending.noteOpacity;
             settings.Current.audioOffsetMs       = _pending.audioOffsetMs;
             settings.Current.judgmentOffset      = _pending.judgmentOffset;
+            settings.Current.inputPollingRateHz  = _pending.inputPollingRateHz;
             settings.Apply();
             settings.Save();
         }
@@ -247,6 +280,9 @@ namespace SCOdyssey
 
             _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, _pending.displayLanguageCode));
             UpdateDisplayLanguageLabel();
+
+            _pollingRateIndex = Mathf.Max(0, System.Array.IndexOf(PollingRateValues, _pending.inputPollingRateHz));
+            UpdatePollingRateLabel();
 
             Get<Slider>((int)Sliders.Slider_BgaOpacity).value   = _pending.bgaOpacity;
             Get<Slider>((int)Sliders.Slider_NoteOpacity).value  = _pending.noteOpacity / 0.5f;

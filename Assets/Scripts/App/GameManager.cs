@@ -14,6 +14,7 @@ namespace SCOdyssey.App
     {
         [Header("참조")]
         private IAudioManager _audioManager;
+        private IInputManager _inputManager;
         public ScoreManager scoreManager;
         public ChartManager chartManager;
         public ChartData chartData;
@@ -53,12 +54,12 @@ namespace SCOdyssey.App
         private void Start()
         {
             // InputManager는 Managers에서 이미 생성 및 등록됨
-            if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
+            if (ServiceLocator.TryGet<IInputManager>(out _inputManager))
             {
-                inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
-                inputManager.OnLanePressed += HandleLaneInput;
-                inputManager.OnLaneReleased += HandleLaneRelease;
-                inputManager.OnRestart += HandleRestart;
+                _inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
+                _inputManager.OnLanePressed += HandleLaneInput;
+                _inputManager.OnLaneReleased += HandleLaneRelease;
+                _inputManager.OnRestart += HandleRestart;
             }
             else
             {
@@ -74,12 +75,12 @@ namespace SCOdyssey.App
         {
             ServiceLocator.Remove<IGameManager>();
 
-            if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
+            if (_inputManager != null)
             {
-                inputManager.OnLanePressed -= HandleLaneInput;
-                inputManager.OnLaneReleased -= HandleLaneRelease;
-                inputManager.OnRestart -= HandleRestart;
-                inputManager.SwitchToUI();
+                _inputManager.OnLanePressed -= HandleLaneInput;
+                _inputManager.OnLaneReleased -= HandleLaneRelease;
+                _inputManager.OnRestart -= HandleRestart;
+                _inputManager.SwitchToUI();
             }
         }
 
@@ -95,6 +96,11 @@ namespace SCOdyssey.App
             scoreManager.Init(chartData.totalNotes);
 
             globalStartTime = _audioManager.GetDSPTime();
+
+            // 동기점 기록: FMOD DSP 클럭(globalStartTime)과 OS 클럭을 같은 시점에 연속으로 읽어 변환 기준을 설정
+            // AudioSettings.dspTime(Unity 내장)은 FMOD 클럭과 기준점이 다르므로 사용 금지
+            _inputManager?.SetTimeSyncPoint(globalStartTime, Time.realtimeSinceStartupAsDouble);
+
             IsGameRunning = true;
         }
         
@@ -137,17 +143,17 @@ namespace SCOdyssey.App
             // chartManager.Initialize(data); 
         }
 
-        private void HandleLaneInput(int laneIndex)
+        private void HandleLaneInput(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
-            chartManager.TryJudgeInput(laneIndex);
+            chartManager.TryJudgeInput(laneIndex, inputDspTime - globalStartTime);
         }
 
-        private void HandleLaneRelease(int laneIndex)
+        private void HandleLaneRelease(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {laneIndex} Released");
-            chartManager.TryJudgeRelease(laneIndex);
+            chartManager.TryJudgeRelease(laneIndex, inputDspTime - globalStartTime);
         }
 
         private void HandleRestart()
