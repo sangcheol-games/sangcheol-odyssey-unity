@@ -64,6 +64,7 @@ namespace SCOdyssey.Game
         private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
 
         private bool[] isLaneHolding = { false, false, false, false }; // 각 레인별 롱노트 홀딩 상태 추적
+        private double?[] bufferedInput = new double?[4]; // 마디 전환 직전 선입력 버퍼 (index: laneIndex - 1)
         
         public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[4];
 
@@ -509,10 +510,11 @@ namespace SCOdyssey.Game
                     }
 
                     activeNotes[i].Enqueue(note);
+                    FlushBufferedInput(i); // 선입력이 있으면 즉시 재판정
                 }
             }
         }
-        
+
         #endregion
 
 
@@ -523,7 +525,12 @@ namespace SCOdyssey.Game
             isLaneHolding[listIndex] = true;
 
             var queue = activeNotes[listIndex];
-            if (queue.Count == 0) return;
+            if (queue.Count == 0)
+            {
+                // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
+                bufferedInput[listIndex] = inputGameTime;
+                return;
+            }
 
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
@@ -551,6 +558,22 @@ namespace SCOdyssey.Game
 
             ApplyJudgment(targetNote, listIndex, result);
 
+        }
+
+        /// <summary>
+        /// 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
+        /// press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
+        /// </summary>
+        private void FlushBufferedInput(int listIndex)
+        {
+            if (!bufferedInput[listIndex].HasValue) return;
+
+            double inputTime = bufferedInput[listIndex].Value;
+            bufferedInput[listIndex] = null;
+
+            if (!isLaneHolding[listIndex]) return; // 이미 손을 뗀 경우 폐기
+
+            TryJudgeInput(listIndex + 1, inputTime);
         }
 
         private void CheckHoldingBody(int listIndex)
