@@ -6,7 +6,6 @@ namespace SCOdyssey.Game
         {
             // 끝점 플래그 전용 노트: 시각 표시 없음, 누르고 있는지 판정만 담당
             noteImage.enabled = false;
-            holdImage.enabled = false;
         }
 
         public override void OnHit()

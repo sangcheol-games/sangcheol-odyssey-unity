@@ -6,7 +6,6 @@ namespace SCOdyssey.Game
         {
             // 홀딩 판정 전용 노트: 시각 표시 없음 (홀드바는 HoldStart가 전담)
             noteImage.enabled = false;
-            holdImage.enabled = false;
         }
 
         public override void OnHit()

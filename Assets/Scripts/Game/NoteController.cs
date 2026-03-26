@@ -13,8 +13,8 @@ namespace SCOdyssey.Game
         protected Action<NoteController> onReturn;
 
         protected Image noteImage;
-        protected Image holdImage;
         protected float holdWidth = 0f;
+        protected bool isLTR;
         protected bool isJudged = false;
         protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
@@ -24,21 +24,8 @@ namespace SCOdyssey.Game
         protected virtual void Awake()
         {
             rectTransform = GetComponent<RectTransform>();
-            if (noteImage == null || holdImage == null)     // 이미지 컴포넌트 자동 할당
-            {
-                Image[] childs = GetComponentsInChildren<Image>();
-                holdImage = childs[0];
-                noteImage = childs[1];
-            }
-
-            // noteImage를 NoteHead 레이어로 분리하여 holdImage 위에 항상 표시
-            if (noteImage.gameObject.GetComponent<Canvas>() == null)
-            {
-                Canvas noteCanvas = noteImage.gameObject.AddComponent<Canvas>();
-                noteCanvas.overrideSorting = true;
-                noteCanvas.sortingLayerName = "NoteHead";
-                noteCanvas.sortingOrder = 1;
-            }
+            if (noteImage == null)
+                noteImage = GetComponentInChildren<Image>();
         }
 
         public virtual void Init(NoteData noteData, Vector2 position, bool isLTR, float holdWidth, Action<NoteController> returnCallback)
@@ -48,10 +35,7 @@ namespace SCOdyssey.Game
             this.rectTransform.anchoredPosition = position;
             this.isJudged = false;
             this.isHoldRemaining = false;
-
-            if (!isLTR) holdImage.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
-            else holdImage.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-            
+            this.isLTR = isLTR;
             this.holdWidth = holdWidth;
 
             trackingTimeline = null;
@@ -81,8 +65,10 @@ namespace SCOdyssey.Game
                     break;
             }
             noteImage.color = c;
-            holdImage.color = c;
+            ApplyAlpha(c.a);
         }
+
+        protected virtual void ApplyAlpha(float alpha) { }
 
         protected abstract void SetVisual();
 
@@ -125,31 +111,6 @@ namespace SCOdyssey.Game
                 SetState(NoteState.Ghost); // 판정선이 지나갔으니 고스트로 전환
                 trackingTimeline = null; // 더 이상 감시 안 함
             }
-        }
-
-        protected void UpdateHoldFill()
-        {
-            float timelineX = trackingTimeline.rectTransform.anchoredPosition.x;
-            float holdStartX = rectTransform.anchoredPosition.x;
-
-            float passedDistance = 0f;
-
-            if (trackingTimeline.isLTR)
-            {
-                if (timelineX > holdStartX)
-                    passedDistance = timelineX - holdStartX;
-            }
-            else
-            {
-                if (timelineX < holdStartX)
-                    passedDistance = holdStartX - timelineX;
-            }
-
-            passedDistance = Mathf.Clamp(passedDistance, 0f, holdWidth);
-
-            float fillRatio = 1f - (passedDistance / holdWidth);
-
-            holdImage.fillAmount = fillRatio;
         }
 
         public virtual void OnMiss()

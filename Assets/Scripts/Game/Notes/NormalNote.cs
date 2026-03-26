@@ -7,7 +7,6 @@ namespace SCOdyssey.Game
         protected override void SetVisual()
         {
             noteImage.enabled = true;
-            holdImage.enabled = false;
         }
     }
 }

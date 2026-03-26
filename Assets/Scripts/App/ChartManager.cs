@@ -24,6 +24,12 @@ namespace SCOdyssey.Game
         public GameObject notePrefab;
         private Queue<GameObject> notePool = new Queue<GameObject>();
 
+        [Header("레이어 분리")]
+        public RectTransform holdLayer;     // HoldBar용 Canvas (Inspector 할당)
+        public RectTransform headLayer;     // NoteHead용 Canvas (Inspector 할당)
+        public GameObject holdBarPrefab;    // holdImage만 있는 별도 프리팹 (Inspector 할당)
+        private Queue<GameObject> holdBarPool = new Queue<GameObject>();
+
         [Header("이펙트 풀링")]
         public GameObject effectPrefab;
         private Queue<GameObject> effectPool = new Queue<GameObject>();
@@ -405,7 +411,7 @@ namespace SCOdyssey.Game
                 foreach (var noteData in lane.Notes)
                 {
                     GameObject note = GetNoteFromPool();
-                    note.transform.SetParent(noteParent, false);
+                    note.transform.SetParent(headLayer, false);
 
                     NoteAdapter noteAdapter = note.GetComponent<NoteAdapter>();
 
@@ -421,13 +427,33 @@ namespace SCOdyssey.Game
                         ? noteInterval * (noteData.holdBarBeats ?? 1)
                         : noteInterval;
 
-                    noteController.Init(
-                        noteData,
-                        spawnPos,
-                        lane.isLTR,
-                        holdWidth,
-                        (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
-                    );
+                    if (noteData.noteType == NoteType.HoldStart)
+                    {
+                        GameObject holdBar = GetFromPool(holdBarPool, holdBarPrefab);
+                        holdBar.transform.SetParent(holdLayer, false);
+                        ((HoldStartNote)noteController).SetHoldBar(holdBar);
+                        noteController.Init(
+                            noteData,
+                            spawnPos,
+                            lane.isLTR,
+                            holdWidth,
+                            (returnedNote) =>
+                            {
+                                ReturnToPool(holdBarPool, holdBar);
+                                ReturnNoteToPool(returnedNote.gameObject);
+                            }
+                        );
+                    }
+                    else
+                    {
+                        noteController.Init(
+                            noteData,
+                            spawnPos,
+                            lane.isLTR,
+                            holdWidth,
+                            (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
+                        );
+                    }
 
                     if (isConflict && currentTimeline != null)
                     {
