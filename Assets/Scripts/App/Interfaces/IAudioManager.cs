@@ -20,6 +20,8 @@ namespace SCOdyssey.App
         void LoadAudio(string filePath);         // StreamingAssets/Music/ 기준 파일명
         void PlayScheduled(double dspStartTime); // sample-accurate 재생 예약
         void Stop();
+        void Pause();
+        void Resume();
         double GetDSPTime();   // AudioSettings.dspTime 대체 (double 정밀도 필수)
         bool IsPlaying { get; }
         bool IsLoaded { get; } // GameDataLoader의 로딩 대기용

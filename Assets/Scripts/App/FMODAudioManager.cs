@@ -173,6 +173,9 @@ namespace SCOdyssey.App
                 _channel.stop();
         }
 
+        public void Pause()  { if (_channel.hasHandle()) _channel.setPaused(true); }
+        public void Resume() { if (_channel.hasHandle()) _channel.setPaused(false); }
+
         /// <summary>
         /// FMOD DSP 클록 시간을 double 초로 반환.
         /// AudioSettings.dspTime과 동등한 정밀도.

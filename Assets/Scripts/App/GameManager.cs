@@ -26,6 +26,8 @@ namespace SCOdyssey.App
         [Header("게임 상태")]
         private double globalStartTime;
         public bool IsGameRunning { get; private set; } = false;
+        public bool IsPaused { get; private set; } = false;
+        private double _pauseDspTime;
         public bool IsAudioPlaying => _audioManager != null && _audioManager.IsPlaying;
 
         [Header("UI")]
@@ -60,6 +62,7 @@ namespace SCOdyssey.App
                 _inputManager.OnLanePressed += HandleLaneInput;
                 _inputManager.OnLaneReleased += HandleLaneRelease;
                 _inputManager.OnRestart += HandleRestart;
+                _inputManager.OnPause += HandlePause;
             }
             else
             {
@@ -80,6 +83,7 @@ namespace SCOdyssey.App
                 _inputManager.OnLanePressed -= HandleLaneInput;
                 _inputManager.OnLaneReleased -= HandleLaneRelease;
                 _inputManager.OnRestart -= HandleRestart;
+                _inputManager.OnPause -= HandlePause;
                 _inputManager.SwitchToUI();
             }
         }
@@ -124,17 +128,68 @@ namespace SCOdyssey.App
         public double GetCurrentTime()
         {
             if (!IsGameRunning) return 0f;
+            // 일시정지 중: DSP 클록이 계속 진행해도 채보 시간은 일시정지 시점으로 고정
+            // → TimelineController, NoteController 등 GetCurrentTime() 기반 위치 계산이 모두 멈춤
+            if (IsPaused) return _pauseDspTime - globalStartTime;
             return _audioManager.GetDSPTime() - globalStartTime;
         }
 
 
         private void Update()
         {
-            if (!IsGameRunning) return;
+            if (!IsGameRunning || IsPaused) return;
 
             chartManager.SyncTime(GetCurrentTime());
-
         }
+
+        public void Pause()
+        {
+            if (!IsGameRunning || IsPaused) return;
+            IsPaused = true;
+            _pauseDspTime = _audioManager.GetDSPTime();
+            _audioManager.Pause();
+            bgaController?.Pause();
+            _inputManager.SwitchToUI();
+            if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
+            {
+                var pauseUI = uiManager.ShowUI<PauseUI>();
+                // Two-Layer 기준: headLayer(2) 위인 3으로 고정하여 최상단 렌더링 보장.
+                if (pauseUI.TryGetComponent<Canvas>(out var pauseCanvas))
+                    pauseCanvas.sortingOrder = 3;
+            }
+        }
+
+        public void Resume()
+        {
+            if (!IsGameRunning || !IsPaused) return;
+            StartCoroutine(ResumeCountdownSequence());
+        }
+
+        private IEnumerator ResumeCountdownSequence()
+        {
+            _inputManager.SetInputActive(false); // 카운트다운 중 입력 차단
+            if (clearEffectText != null)
+            {
+                clearEffectText.gameObject.SetActive(true);
+                for (int i = 3; i >= 1; i--)
+                {
+                    clearEffectText.text = i.ToString();
+                    clearEffectText.color = Color.white;
+                    yield return new WaitForSeconds(1f);
+                }
+                clearEffectText.gameObject.SetActive(false);
+            }
+
+            // 일시정지 동안 흐른 DSP 시간만큼 globalStartTime을 보정하여 채보 위치를 유지
+            globalStartTime += _audioManager.GetDSPTime() - _pauseDspTime;
+            _audioManager.Resume();
+            bgaController?.Resume();
+            _inputManager.SetInputActive(true);
+            _inputManager.SwitchToGameplay();
+            IsPaused = false;
+        }
+
+        private void HandlePause() => Pause();
 
         public void SetChartData(ChartData data)
         {

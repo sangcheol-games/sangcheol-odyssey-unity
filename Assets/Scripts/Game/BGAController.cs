@@ -133,6 +133,22 @@ namespace SCOdyssey.Game
             if (videoPlayer.isPlaying) videoPlayer.Stop();
         }
 
+        /// <summary>
+        /// 일시정지. GameManager.Pause()에서 호출.
+        /// </summary>
+        public void Pause()
+        {
+            if (videoPlayer.isPlaying) videoPlayer.Pause();
+        }
+
+        /// <summary>
+        /// 재개. GameManager.ResumeCountdownSequence()에서 호출.
+        /// </summary>
+        public void Resume()
+        {
+            if (videoPlayer.isPaused) videoPlayer.Play();
+        }
+
         private void OnPrepared(VideoPlayer vp)
         {
             vp.prepareCompleted -= OnPrepared;

@@ -13,6 +13,7 @@ namespace SCOdyssey.App
         void StartGame();
         double GetCurrentTime();
         bool IsGameRunning { get; }
+        bool IsPaused { get; }
         bool IsAudioPlaying { get; }  // 오디오 재생 중인지 확인
 
         void StartMusic(double delay);
@@ -22,6 +23,9 @@ namespace SCOdyssey.App
 
         void OnNoteJudged(JudgeType judgeType);
         void OnNoteMissed();
+
+        void Pause();
+        void Resume();
 
         void OnGameFinished();
     }

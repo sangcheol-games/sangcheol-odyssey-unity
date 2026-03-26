@@ -13,6 +13,7 @@ namespace SCOdyssey.App
         public event Action<int, double> OnLanePressed;
         public event Action<int, double> OnLaneReleased;
         public event Action OnRestart;
+        public event Action OnPause;
 
         public bool IsInputActive { get; private set; } = true;
 
@@ -35,6 +36,7 @@ namespace SCOdyssey.App
             inputActions.Game.Lane4.canceled += ctx => HandleLaneRelease(4, ctx.time);
 
             inputActions.Game.Restart.performed += _ => HandleRestart();
+            inputActions.Game.Pause.performed += _ => HandlePause();
 
             inputActions.UI.Select.performed += ctx => HandleSelect(ctx.ReadValue<Vector2>());
             inputActions.UI.Submit.performed += _ => HandleSubmit();
@@ -47,6 +49,7 @@ namespace SCOdyssey.App
         private void HandleLaneInput(int lane, double ctxTime) { if (IsInputActive) OnLanePressed?.Invoke(lane, ConvertToDspTime(ctxTime)); }
         private void HandleLaneRelease(int lane, double ctxTime) { if (IsInputActive) OnLaneReleased?.Invoke(lane, ConvertToDspTime(ctxTime)); }
         private void HandleRestart() { if (IsInputActive) OnRestart?.Invoke(); }
+        private void HandlePause()   { if (IsInputActive) OnPause?.Invoke(); }
         
 
         public void SwitchToUI()
