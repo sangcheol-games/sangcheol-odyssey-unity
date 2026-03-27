@@ -29,8 +29,10 @@ namespace SCOdyssey.ChartEditor.Preview
         // 오브젝트 풀
         private Queue<GameObject> timelinePool = new Queue<GameObject>();
         private Queue<GameObject> notePool = new Queue<GameObject>();
+        private Queue<GameObject> holdBarPool = new Queue<GameObject>();
         private List<GameObject> activeTimelineObjects = new List<GameObject>();
         private List<GameObject> activeNoteObjects = new List<GameObject>();
+        private List<GameObject> activeHoldBarObjects = new List<GameObject>();
 
         // 마디 진행 관리
         private bool hasSpawnedBar = false;
@@ -312,13 +314,41 @@ namespace SCOdyssey.ChartEditor.Preview
                         laneRT.anchoredPosition.y
                     );
 
-                    noteController.Init(
-                        noteData,
-                        spawnPos,
-                        lane.isLTR,
-                        noteInterval,
-                        (returnedNote) => ReturnToPool(notePool, returnedNote.gameObject)
-                    );
+                    // HoldStart: holdBar 오브젝트 제공 + holdWidth를 holdBarBeats 기반으로 계산
+                    if (noteData.noteType == NoteType.HoldStart && editorManager.holdBarPrefab != null)
+                    {
+                        float holdWidth = noteInterval * (noteData.holdBarBeats ?? 1);
+                        GameObject holdBar = GetFromPool(holdBarPool, editorManager.holdBarPrefab);
+                        RectTransform holdLayerParent = editorManager.holdLayer != null
+                            ? editorManager.holdLayer
+                            : editorManager.noteParent;
+                        holdBar.transform.SetParent(holdLayerParent, false);
+                        ((HoldStartNote)noteController).SetHoldBar(holdBar);
+                        activeHoldBarObjects.Add(holdBar);
+
+                        noteController.Init(
+                            noteData,
+                            spawnPos,
+                            lane.isLTR,
+                            holdWidth,
+                            (returnedNote) =>
+                            {
+                                activeHoldBarObjects.Remove(holdBar);
+                                ReturnToPool(holdBarPool, holdBar);
+                                ReturnToPool(notePool, returnedNote.gameObject);
+                            }
+                        );
+                    }
+                    else
+                    {
+                        noteController.Init(
+                            noteData,
+                            spawnPos,
+                            lane.isLTR,
+                            noteInterval,
+                            (returnedNote) => ReturnToPool(notePool, returnedNote.gameObject)
+                        );
+                    }
 
                     noteController.SetState(NoteState.Active);
                 }
@@ -372,6 +402,13 @@ namespace SCOdyssey.ChartEditor.Preview
                 }
             }
             activeNoteObjects.Clear();
+
+            foreach (var obj in activeHoldBarObjects)
+            {
+                if (obj != null)
+                    ReturnToPool(holdBarPool, obj);
+            }
+            activeHoldBarObjects.Clear();
         }
 
         private void ClearActiveObjects()
@@ -407,6 +444,13 @@ namespace SCOdyssey.ChartEditor.Preview
                 }
             }
             activeNoteObjects.Clear();
+
+            foreach (var obj in activeHoldBarObjects)
+            {
+                if (obj != null)
+                    ReturnToPool(holdBarPool, obj);
+            }
+            activeHoldBarObjects.Clear();
         }
 
         #endregion

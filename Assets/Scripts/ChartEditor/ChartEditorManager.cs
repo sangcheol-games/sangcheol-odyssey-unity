@@ -31,6 +31,8 @@ namespace SCOdyssey.ChartEditor
         public EditorFMODAudio fmodAudio;
         public GameObject timelinePrefab;
         public GameObject notePrefab;
+        public GameObject holdBarPrefab;    // holdImage만 있는 별도 프리팹 (Inspector 할당)
+        public RectTransform holdLayer;     // HoldBar용 부모 레이어 (noteParent 하위, Inspector 할당)
         public EditorPreviewManager previewManager;  // Tab 단축키로 현재마디 재생
 
         [Header("씬 참조 - 방향 표시")]
