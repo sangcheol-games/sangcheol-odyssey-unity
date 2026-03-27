@@ -8,8 +8,9 @@ namespace SCOdyssey.Game
         public int index;           // 채보 순서
         public double time;          // 판정 시간
         public NoteType noteType;   // 노트 타입
-        public int laneIndex;     // 라인 번호
-        
+        public int laneIndex;       // 라인 번호
+        public int? holdBarBeats;   // HoldStart 전용: 홀드바가 뻗어야 할 비트 수 (HoldEnd/HoldRelease 위치까지)
+
         public NoteData(int index, double time, NoteType noteType, int laneIndex)
         {
             this.index = index;

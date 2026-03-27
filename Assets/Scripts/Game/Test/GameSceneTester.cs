@@ -8,7 +8,7 @@ public class GameSceneTester : MonoBehaviour
     [Header("Test Settings")]
     public TextAsset testChartFile;
     public int testBpm = 160;
-    public AudioClip testMusic;
+    public string testAudioPath;   // StreamingAssets 기준 상대 경로 (예: "Music/test.ogg")
 
     void Start()
     {
@@ -18,18 +18,13 @@ public class GameSceneTester : MonoBehaviour
             Debug.LogError("IGameManager가 등록되지 않았습니다!");
             return;
         }
-        
-        if (gameManager == null)
-        {
-            Debug.LogError("GameManager가 씬에 없습니다!");
-            return;
-        }
 
         Debug.Log("--- [TEST MODE] Starting Game ---");
 
-        if (testMusic != null)
+        if (!string.IsNullOrEmpty(testAudioPath) &&
+            ServiceLocator.TryGet<IAudioManager>(out var audioManager))
         {
-            gameManager.SetAudioClip(testMusic);
+            audioManager.LoadAudio(testAudioPath);
         }
 
         if (testChartFile != null)

@@ -6,10 +6,11 @@ namespace SCOdyssey.Game
     public class NoteAdapter : MonoBehaviour
     {
         [Header("Components")]
-        public NormalNote normalNote; 
+        public NormalNote normalNote;
         public HoldStartNote holdStartNote;
         public HoldingNote holdingNote;
         public HoldEndNote holdEndNote;
+        public HoldReleaseNote holdReleaseNote;
 
         private void Awake()    // 컴포넌트 연결 안된 경우 자동으로 할당
         {
@@ -17,6 +18,7 @@ namespace SCOdyssey.Game
             if (!holdStartNote) holdStartNote = GetComponent<HoldStartNote>();
             if (!holdingNote) holdingNote = GetComponent<HoldingNote>();
             if (!holdEndNote) holdEndNote = GetComponent<HoldEndNote>();
+            if (!holdReleaseNote) holdReleaseNote = GetComponent<HoldReleaseNote>();
         }
 
         public NoteController ActivateAndGet(NoteType type)
@@ -25,6 +27,7 @@ namespace SCOdyssey.Game
             holdStartNote.enabled = false;
             holdingNote.enabled = false;
             holdEndNote.enabled = false;
+            holdReleaseNote.enabled = false;
 
             NoteController selected = null;
 
@@ -34,6 +37,7 @@ namespace SCOdyssey.Game
                 case NoteType.HoldStart: selected = holdStartNote; break;
                 case NoteType.Holding: selected = holdingNote; break;
                 case NoteType.HoldEnd: selected = holdEndNote; break;
+                case NoteType.HoldRelease: selected = holdReleaseNote; break;
                 default: selected = normalNote; break;
             }
 

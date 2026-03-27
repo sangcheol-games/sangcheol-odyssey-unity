@@ -1,26 +1,17 @@
-using UnityEngine;
-using static SCOdyssey.Domain.Service.Constants;
-
 namespace SCOdyssey.Game
 {
     public class HoldEndNote : NoteController
     {
         protected override void SetVisual()
         {
-            noteImage.enabled = true;
-            holdImage.enabled = true;
-            holdImage.fillAmount = 1f;
+            // 끝점 플래그 전용 노트: 시각 표시 없음, 누르고 있는지 판정만 담당
+            noteImage.enabled = false;
         }
 
-        protected override void Update()
+        public override void OnHit()
         {
-            base.Update();
-
-            if (currentState == NoteState.Active && trackingTimeline != null)
-            {
-                UpdateHoldFill();
-            }
-
+            if (isJudged) return;
+            DeleteNote();
         }
     }
 }

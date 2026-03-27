@@ -130,12 +130,45 @@ namespace SCOdyssey.ChartEditor.Grid
 
                     NoteType noteType = (NoteType)(noteChar - '0');
 
-                    // 화면상 왼→오 순서로 비트선 위치 계산
-                    float noteX = leftX + noteInterval * beatIdx;
+                    // LTR: beatIdx=0 → leftEndpoint, beatIdx=beat-1 → 내부 마지막 선
+                    // RTL: beatIdx=0 → 내부 첫 번째 선, beatIdx=beat-1 → rightEndpoint
+                    // RTL은 +1 오프셋으로 배열 인덱스 0~beat-1이 내부선~rightEndpoint에 매핑됨
+                    float noteX = isLTR
+                        ? leftX + noteInterval * beatIdx
+                        : leftX + noteInterval * (beatIdx + 1);
                     Vector2 notePos = new Vector2(noteX, laneY);
 
+                    // HoldStart: 같은 레인에서 HoldEnd(4)/HoldRelease(5)까지의 비트 수 탐색
+                    // EditorBarData는 물리적 화면 순서(좌→우) 저장. LTR은 앞방향 탐색, RTL은 뒤방향 탐색
+                    int holdBarBeats = 1;
+                    if (noteType == NoteType.HoldStart)
+                    {
+                        bool found = false;
+                        if (isLTR)
+                        {
+                            // LTR: beatIdx 증가 방향이 판정 진행 방향
+                            for (int j = beatIdx + 1; j < bar.beat; j++)
+                            {
+                                int fwd = bar.laneSequences[laneIdx][j] - '0';
+                                if (fwd == 4 || fwd == 5) { holdBarBeats = j - beatIdx; found = true; break; }
+                            }
+                            if (!found) holdBarBeats = bar.beat - beatIdx;
+
+                        }
+                        else
+                        {
+                            // RTL: beatIdx 감소 방향이 판정 진행 방향 (오른쪽=먼저 판정)
+                            for (int j = beatIdx - 1; j >= 0; j--)
+                            {
+                                int bwd = bar.laneSequences[laneIdx][j] - '0';
+                                if (bwd == 4 || bwd == 5) { holdBarBeats = beatIdx - j; found = true; break; }
+                            }
+                            if (!found) holdBarBeats = beatIdx + 1;
+                        }
+                    }
+
                     EditorNoteVisual noteVisual = GetNoteVisual();
-                    noteVisual.Init(noteType, notePos, beatIdx, laneNumber, isLTR, bar.beat);
+                    noteVisual.Init(noteType, notePos, beatIdx, laneNumber, isLTR, bar.beat, noteInterval, holdBarBeats);
                     activeNotes.Add(noteVisual);
                 }
             }

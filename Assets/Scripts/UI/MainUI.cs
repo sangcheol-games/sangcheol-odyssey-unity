@@ -31,17 +31,15 @@ namespace SCOdyssey
             BindButton(typeof(Buttons));
             BindImage(typeof(Images));
 
+            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerClick, OnClickAdventure);
             BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
-
-
-            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerEnter, OnClickAdventure);
-
-
+            BindEvent(GetButton((int)Buttons.Setting).gameObject, EventTriggerType.PointerClick, OnClickSetting);
         }
 
         private void OnClickAdventure()
         {
             Debug.Log("OnClickAdventure");
+            ServiceLocator.Get<IUIManager>().ShowUI<AdventureUI>();
         }
         private void OnClickOnline()
         {
@@ -50,12 +48,10 @@ namespace SCOdyssey
         private void OnClickLounge()
         {
             Debug.Log("OnClickLounge");
-            ServiceLocator.Get<IUIManager>().CloseUI(this);
-            GetImage((int)Images.Profile).color = Color.red;
         }
         private void OnClickSetting()
         {
-            Debug.Log("OnClickSetting");
+            ServiceLocator.Get<IUIManager>().ShowUI<GameSettingUI>();
         }
 
         protected override void HandleSelect(Vector2 direction)

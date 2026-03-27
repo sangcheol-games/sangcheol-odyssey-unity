@@ -22,29 +22,28 @@ namespace SCOdyssey.ChartEditor.Analysis
         }
 
         /// <summary>
-        /// AudioClip에서 onset을 감지하여 반환
+        /// 모노 float[] 샘플에서 onset을 감지하여 반환 (FMOD 호환).
+        /// EditorFMODAudio.GetMonoSamples()의 결과를 직접 전달한다.
         /// </summary>
-        /// <param name="clip">분석할 AudioClip</param>
+        /// <param name="monoSamples">모노 믹스된 PCM float[] (정규화 범위 -1~1)</param>
+        /// <param name="sampleRate">샘플레이트 (Hz)</param>
         /// <param name="sensitivity">감도 (낮을수록 더 많은 onset 감지, 기본 1.5)</param>
         /// <param name="minInterval">onset 간 최소 간격 (초, 기본 0.05)</param>
-        public static List<OnsetInfo> DetectOnsets(AudioClip clip, float sensitivity = 1.5f, float minInterval = 0.05f)
+        public static List<OnsetInfo> DetectOnsets(float[] monoSamples, int sampleRate,
+            float sensitivity = 1.5f, float minInterval = 0.05f)
         {
-            if (clip == null)
+            if (monoSamples == null || monoSamples.Length == 0)
             {
-                Debug.LogWarning("[AudioOnsetDetector] AudioClip is null");
+                Debug.LogWarning("[AudioOnsetDetector] 샘플 데이터가 없습니다.");
                 return new List<OnsetInfo>();
             }
 
-            // 모노 믹스 샘플 추출
-            float[] samples = GetMonoSamples(clip);
-            int sampleRate = clip.frequency;
-
             // 프레임별 에너지 계산
-            float[] energies = CalculateFrameEnergies(samples);
+            float[] energies = CalculateFrameEnergies(monoSamples);
 
             if (energies.Length < 3)
             {
-                Debug.LogWarning("[AudioOnsetDetector] Audio too short for analysis");
+                Debug.LogWarning("[AudioOnsetDetector] 분석하기에 음원이 너무 짧습니다.");
                 return new List<OnsetInfo>();
             }
 
@@ -65,30 +64,8 @@ namespace SCOdyssey.ChartEditor.Analysis
 
         #region 샘플 처리
 
-        /// <summary>
-        /// AudioClip에서 모노 믹스 샘플 추출
-        /// </summary>
-        private static float[] GetMonoSamples(AudioClip clip)
-        {
-            float[] rawSamples = new float[clip.samples * clip.channels];
-            clip.GetData(rawSamples, 0);
-
-            // 이미 모노면 그대로 반환
-            if (clip.channels == 1) return rawSamples;
-
-            // 스테레오 → 모노 믹스
-            float[] mono = new float[clip.samples];
-            for (int i = 0; i < clip.samples; i++)
-            {
-                float sum = 0f;
-                for (int ch = 0; ch < clip.channels; ch++)
-                {
-                    sum += rawSamples[i * clip.channels + ch];
-                }
-                mono[i] = sum / clip.channels;
-            }
-            return mono;
-        }
+        // (AudioClip 오버로드 제거: Unity 오디오 비활성화 시 GetData()가 무음 데이터를 반환할 수 있으므로
+        //  EditorFMODAudio.GetMonoSamples()를 통해 FMOD에서 직접 PCM을 추출하여 사용)
 
         #endregion
 

@@ -31,7 +31,7 @@ namespace SCOdyssey.App
             { JudgeType.Master, 0 },
             { JudgeType.Ideal, 0 },
             { JudgeType.Kind, 0 },
-            { JudgeType.Uhm, 0 }
+            { JudgeType.Umm, 0 }
         };
 
         public void Init(int totalNotes)
@@ -84,7 +84,7 @@ namespace SCOdyssey.App
                     comboBreak = true;
                     break;
 
-                case JudgeType.Uhm:
+                case JudgeType.Umm:
                     multiplier = 0.0f;
                     comboBreak = true;
                     break;
@@ -150,6 +150,9 @@ namespace SCOdyssey.App
             return (int)finalScore;
         }
 
+        // 총 노트 수 반환
+        public int GetTotalNoteCount() => totalNoteCount;
+
         // 최대 콤보 수 반환
         public int GetMaxCombo() => maxCombo;
 
@@ -165,28 +168,28 @@ namespace SCOdyssey.App
         }
 
         // 클리어 등급 판정 (Fail/Clear/FullCombo/OverMillion/AllPerfect)
-        public ClearRank GetClearRank()
+        public ClearType GetClearRank()
         {
             int finalScore = GetFinalScore();
 
             // Fail: 점수 < 700,000 (게이지 < 70%)
             if (finalScore < 700000)
-                return ClearRank.Fail;
+                return ClearType.Fail;
 
             // All Perfect: Perfect 판정만 존재
             if (judgeCounts[JudgeType.Perfect] == totalNoteCount)
-                return ClearRank.AllPerfect;
+                return ClearType.AllPerfect;
 
             // Over Million: Perfect + Master = Total
             if (judgeCounts[JudgeType.Perfect] + judgeCounts[JudgeType.Master] == totalNoteCount)
-                return ClearRank.OverMillion;
+                return ClearType.OverMillion;
 
             // Full Combo: Miss 없음 (Uhm = 0)
-            if (judgeCounts[JudgeType.Uhm] + judgeCounts[JudgeType.Kind] == 0)
-                return ClearRank.FullCombo;
+            if (judgeCounts[JudgeType.Umm] + judgeCounts[JudgeType.Kind] == 0)
+                return ClearType.FullCombo;
 
             // Clear: 기본
-            return ClearRank.Clear;
+            return ClearType.Clear;
         }
     }
 }

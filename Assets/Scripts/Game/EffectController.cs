@@ -57,8 +57,8 @@ namespace SCOdyssey.Game
                     judgeText.text = "KIND";
                     judgeText.color = Color.yellow;
                     break;
-                case JudgeType.Uhm:
-                    judgeText.text = "UHM..";
+                case JudgeType.Umm:
+                    judgeText.text = "UMM..";
                     judgeText.color = Color.red;
                     break;
                 default:

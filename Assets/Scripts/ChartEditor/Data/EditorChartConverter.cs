@@ -28,6 +28,7 @@ namespace SCOdyssey.ChartEditor.Data
             sb.AppendLine($"#DIFFICULTY {data.difficulty}");
             sb.AppendLine($"#LEVEL {data.level}");
             sb.AppendLine($"#BPM {data.bpm}");
+            sb.AppendLine($"#NOTES {data.CountTotalNotes()}");
             sb.AppendLine();
 
             // 마디 번호 순으로 정렬

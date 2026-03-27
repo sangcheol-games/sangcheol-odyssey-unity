@@ -148,7 +148,12 @@ namespace SCOdyssey.ChartEditor.Grid
             int beat = editorManager.State.currentBeat;
             float interval = laneWidth / beat;
 
-            // 가장 가까운 비트 인덱스로 스냅
+            // 가장 가까운 그리드 선 번호로 스냅 (0 = leftEndpoint, beat = rightEndpoint)
+            // [노트 배치 설계]
+            // beat=8 기준으로 그리드 선은 총 9개 (선 0~8, 선 0=leftEndpoint, 선 8=rightEndpoint)
+            // LTR(시작지점=왼쪽): 노트 가능 선 = 0~beat-1 (leftEndpoint 포함, rightEndpoint 제외)
+            // RTL(시작지점=오른쪽): 노트 가능 선 = 1~beat (rightEndpoint 포함, leftEndpoint 제외)
+            // ToggleNote에서 방향에 따라 선 번호 → 배열 인덱스(0~beat-1)로 변환함
             float relativeX = localPoint.x - leftX;
             int beatIndex = Mathf.RoundToInt(relativeX / interval);
             beatIndex = Mathf.Clamp(beatIndex, 0, beat);

@@ -1,8 +1,10 @@
 using System.Collections;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
+using SCOdyssey.UI;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -11,20 +13,22 @@ namespace SCOdyssey.App
     public class GameManager : MonoBehaviour, IGameManager
     {
         [Header("참조")]
-        public AudioSource audioSource;
-        public void SetAudioClip(AudioClip audioClip)     // GameDataLoader에서 MusicSO의 musicFile을 전달받아 설정
-        {
-            this.audioSource.clip = audioClip;
-        }
+        private IAudioManager _audioManager;
+        private IInputManager _inputManager;
         public ScoreManager scoreManager;
         public ChartManager chartManager;
         public ChartData chartData;
+
+        [Header("BGA")]
+        public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
 
 
         [Header("게임 상태")]
         private double globalStartTime;
         public bool IsGameRunning { get; private set; } = false;
-        public bool IsAudioPlaying => audioSource != null && audioSource.isPlaying;
+        public bool IsPaused { get; private set; } = false;
+        private double _pauseDspTime;
+        public bool IsAudioPlaying => _audioManager != null && _audioManager.IsPlaying;
 
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
@@ -38,16 +42,27 @@ namespace SCOdyssey.App
         private void Awake()
         {
             ServiceLocator.TryRegister<IGameManager>(this);
+            if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
+                Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
+
+            // gameCanvas가 Screen Space - Camera이면 worldCamera 설정
+            if (gameCanvas != null && Camera.main != null
+                && gameCanvas.renderMode == RenderMode.ScreenSpaceCamera)
+            {
+                gameCanvas.worldCamera = Camera.main;
+            }
         }
 
         private void Start()
         {
             // InputManager는 Managers에서 이미 생성 및 등록됨
-            if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
+            if (ServiceLocator.TryGet<IInputManager>(out _inputManager))
             {
-                inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
-                inputManager.OnLanePressed += HandleLaneInput;
-                inputManager.OnLaneReleased += HandleLaneRelease;
+                _inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
+                _inputManager.OnLanePressed += HandleLaneInput;
+                _inputManager.OnLaneReleased += HandleLaneRelease;
+                _inputManager.OnRestart += HandleRestart;
+                _inputManager.OnPause += HandlePause;
             }
             else
             {
@@ -63,47 +78,118 @@ namespace SCOdyssey.App
         {
             ServiceLocator.Remove<IGameManager>();
 
-            if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
+            if (_inputManager != null)
             {
-                inputManager.OnLanePressed -= HandleLaneInput;
-                inputManager.SwitchToUI(); 
+                _inputManager.OnLanePressed -= HandleLaneInput;
+                _inputManager.OnLaneReleased -= HandleLaneRelease;
+                _inputManager.OnRestart -= HandleRestart;
+                _inputManager.OnPause -= HandlePause;
+                _inputManager.SwitchToUI();
             }
         }
 
         public void StartGame()
         {
-            if (chartManager == null || audioSource == null || chartData == null)
+            if (chartManager == null || _audioManager == null || chartData == null)
             {
                 Debug.LogError("GameManager 초기화 실패!");
                 return;
             }
 
             chartManager.Init(chartData, this);
-            scoreManager.Init(100); // TODO: chartData에서 노트 개수 받아오기
+            scoreManager.Init(chartData.totalNotes);
 
-            globalStartTime = AudioSettings.dspTime;
+            globalStartTime = _audioManager.GetDSPTime();
+
+            // 동기점 기록: FMOD DSP 클럭(globalStartTime)과 OS 클럭을 같은 시점에 연속으로 읽어 변환 기준을 설정
+            // AudioSettings.dspTime(Unity 내장)은 FMOD 클럭과 기준점이 다르므로 사용 금지
+            _inputManager?.SetTimeSyncPoint(globalStartTime, Time.realtimeSinceStartupAsDouble);
+
             IsGameRunning = true;
         }
         
+        public void SetBGAData(string videoFileName, Sprite backgroundArt)
+        {
+            bgaController?.Init(videoFileName, backgroundArt);
+        }
+
         public void StartMusic(double delayTime)
         {
-            audioSource.PlayDelayed((float)delayTime);
+            // 노트싱크 오프셋 적용 (양수: 음악 늦게 시작, 음수: 음악 일찍 시작)
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+                offsetSec = settingsManager.Current.audioOffsetMs / 1000.0;
+
+            double dspStartTime = _audioManager.GetDSPTime() + delayTime + offsetSec;
+            _audioManager.PlayScheduled(dspStartTime);
+            bgaController?.SchedulePlay(dspStartTime);
         }
 
         public double GetCurrentTime()
         {
             if (!IsGameRunning) return 0f;
-            return AudioSettings.dspTime - globalStartTime;
+            // 일시정지 중: DSP 클록이 계속 진행해도 채보 시간은 일시정지 시점으로 고정
+            // → TimelineController, NoteController 등 GetCurrentTime() 기반 위치 계산이 모두 멈춤
+            if (IsPaused) return _pauseDspTime - globalStartTime;
+            return _audioManager.GetDSPTime() - globalStartTime;
         }
 
 
         private void Update()
         {
-            if (!IsGameRunning) return;
+            if (!IsGameRunning || IsPaused) return;
 
             chartManager.SyncTime(GetCurrentTime());
-
         }
+
+        public void Pause()
+        {
+            if (!IsGameRunning || IsPaused) return;
+            IsPaused = true;
+            _pauseDspTime = _audioManager.GetDSPTime();
+            _audioManager.Pause();
+            bgaController?.Pause();
+            _inputManager.SwitchToUI();
+            if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
+            {
+                var pauseUI = uiManager.ShowUI<PauseUI>();
+                // Two-Layer 기준: headLayer(2) 위인 3으로 고정하여 최상단 렌더링 보장.
+                if (pauseUI.TryGetComponent<Canvas>(out var pauseCanvas))
+                    pauseCanvas.sortingOrder = 3;
+            }
+        }
+
+        public void Resume()
+        {
+            if (!IsGameRunning || !IsPaused) return;
+            StartCoroutine(ResumeCountdownSequence());
+        }
+
+        private IEnumerator ResumeCountdownSequence()
+        {
+            _inputManager.SetInputActive(false); // 카운트다운 중 입력 차단
+            if (clearEffectText != null)
+            {
+                clearEffectText.gameObject.SetActive(true);
+                for (int i = 3; i >= 1; i--)
+                {
+                    clearEffectText.text = i.ToString();
+                    clearEffectText.color = Color.white;
+                    yield return new WaitForSeconds(1f);
+                }
+                clearEffectText.gameObject.SetActive(false);
+            }
+
+            // 일시정지 동안 흐른 DSP 시간만큼 globalStartTime을 보정하여 채보 위치를 유지
+            globalStartTime += _audioManager.GetDSPTime() - _pauseDspTime;
+            _audioManager.Resume();
+            bgaController?.Resume();
+            _inputManager.SetInputActive(true);
+            _inputManager.SwitchToGameplay();
+            IsPaused = false;
+        }
+
+        private void HandlePause() => Pause();
 
         public void SetChartData(ChartData data)
         {
@@ -112,17 +198,23 @@ namespace SCOdyssey.App
             // chartManager.Initialize(data); 
         }
 
-        private void HandleLaneInput(int laneIndex)
+        private void HandleLaneInput(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
-            chartManager.TryJudgeInput(laneIndex);
+            chartManager.TryJudgeInput(laneIndex, inputDspTime - globalStartTime);
         }
 
-        private void HandleLaneRelease(int laneIndex)
+        private void HandleLaneRelease(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {laneIndex} Released");
-            chartManager.TryJudgeRelease(laneIndex);
+            chartManager.TryJudgeRelease(laneIndex, inputDspTime - globalStartTime);
+        }
+
+        private void HandleRestart()
+        {
+            if (!IsGameRunning) return;
+            SceneManager.LoadScene("GameScene");
         }
 
 
@@ -133,7 +225,7 @@ namespace SCOdyssey.App
 
         public void OnNoteMissed()
         {
-            scoreManager.ProcessJudge(JudgeType.Uhm);
+            scoreManager.ProcessJudge(JudgeType.Umm);
         }
 
 
@@ -179,10 +271,7 @@ namespace SCOdyssey.App
             IsGameRunning = false;
 
             // 음악 정지
-            if (audioSource != null && audioSource.isPlaying)
-            {
-                audioSource.Stop();
-            }
+            _audioManager?.Stop();
 
             // UI 모드로 전환
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))
@@ -191,7 +280,7 @@ namespace SCOdyssey.App
             }
 
             int finalScore = scoreManager.GetFinalScore();
-            ClearRank rank = scoreManager.GetClearRank();
+            ClearType rank = scoreManager.GetClearRank();
 
             Debug.Log($"Game Finished. Score: {finalScore}, Rank: {rank}");
 
@@ -199,46 +288,45 @@ namespace SCOdyssey.App
             StartCoroutine(ShowClearSequence(rank));
         }
 
-        // 클리어 연출 표시 (2초 대기 후 텍스트 표시)
-        private IEnumerator ShowClearSequence(ClearRank rank)
+        // 클리어 연출 표시 (즉시 텍스트 표시 후 4초 대기)
+        private IEnumerator ShowClearSequence(ClearType rank)
         {
-            yield return new WaitForSeconds(2f);
-
-            // 클리어 텍스트 설정 및 표시
+            // 클리어 텍스트 설정 및 즉시 표시
             if (clearEffectText != null)
             {
                 clearEffectText.gameObject.SetActive(true);
 
                 switch (rank)
                 {
-                    case ClearRank.AllPerfect:
+                    case ClearType.AllPerfect:
                         clearEffectText.text = "ALL PERFECT";
                         clearEffectText.color = Color.cyan;
                         break;
-                    case ClearRank.OverMillion:
+                    case ClearType.OverMillion:
                         clearEffectText.text = "OVER MILLION";
                         clearEffectText.color = Color.yellow;
                         break;
-                    case ClearRank.FullCombo:
+                    case ClearType.FullCombo:
                         clearEffectText.text = "FULL COMBO";
                         clearEffectText.color = Color.green;
                         break;
-                    case ClearRank.Clear:
+                    case ClearType.Clear:
                         clearEffectText.text = "CLEAR";
                         clearEffectText.color = Color.white;
                         break;
-                    case ClearRank.Fail:
+                    case ClearType.Fail:
                         clearEffectText.text = "FAILED";
                         clearEffectText.color = Color.red;
                         break;
                 }
 
-                // 2초 표시
-                yield return new WaitForSeconds(2f);
+                // 4초 표시
+                yield return new WaitForSeconds(4f);
                 clearEffectText.gameObject.SetActive(false);
             }
 
-            // GameScene Canvas 비활성화 후 결과 화면 표시
+            // BGA 정지 후 GameScene Canvas 비활성화 및 결과 화면 표시
+            bgaController?.Stop();
             if (gameCanvas != null)
             {
                 gameCanvas.gameObject.SetActive(false);
@@ -246,21 +334,20 @@ namespace SCOdyssey.App
             ShowResultScreen();
         }
 
-        // TODO: ResultUI 결과 화면 표시 (UI 브랜치에서 구현)
+        // 결과 화면 표시
         private void ShowResultScreen()
         {
-            /*
             if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
             {
                 uiManager.ShowUI<ResultUI>().Init(
                     scoreManager.GetFinalScore(),
                     scoreManager.GetClearRank(),
                     scoreManager.GetMaxCombo(),
+                    scoreManager.GetTotalNoteCount(),
                     scoreManager.GetJudgeCounts(),
                     scoreManager.GetGaugePercent()
                 );
             }
-            */
         }
 
         // 캐시된 ChartData 반환 (다시하기용)

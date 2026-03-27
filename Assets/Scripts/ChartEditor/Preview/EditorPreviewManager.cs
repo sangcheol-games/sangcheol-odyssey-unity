@@ -9,6 +9,7 @@ namespace SCOdyssey.ChartEditor.Preview
     /// <summary>
     /// 에디터 프리뷰 재생 엔진.
     /// TimelineController + NotePrefab을 재활용하여 판정 없이 시각적 프리뷰 제공.
+    /// 오디오는 EditorFMODAudio를 통해 FMOD Low-Level API로 재생.
     /// </summary>
     public class EditorPreviewManager : MonoBehaviour
     {
@@ -130,20 +131,28 @@ namespace SCOdyssey.ChartEditor.Preview
             double startTimeOffset = startBar * barDuration;
             nextBarTime = startTimeOffset;
 
-            timeProvider.Start(startTimeOffset);
+            // EditorFMODAudio가 없거나 미로드 시 타임라인만 진행 (무음)
+            if (editorManager.fmodAudio == null || !editorManager.fmodAudio.IsLoaded)
+            {
+                Debug.LogWarning("[EditorPreview] 음원이 로드되지 않았습니다. 타임라인만 재생합니다.");
+                // DSP 시간 소스 없이 재생할 수 없으므로 조기 리턴
+                editorManager.State.isPlaying = false;
+                editorManager.State.isPaused = false;
+                return;
+            }
+
+            // FMOD DSP 클록 기반 시간 추적 시작
+            timeProvider.Start(startTimeOffset, editorManager.fmodAudio.GetDSPTime);
 
             // 음원 재생
-            if (editorManager.audioSource != null && editorManager.ChartData.audioClip != null)
-            {
-                editorManager.audioSource.clip = editorManager.ChartData.audioClip;
-                editorManager.audioSource.time = (float)startTimeOffset;
-                editorManager.audioSource.Play();
-                Debug.Log($"[EditorPreview] Audio playing: {editorManager.ChartData.audioClip.name}, time={startTimeOffset:F2}s");
-            }
-            else
-            {
-                Debug.LogWarning($"[EditorPreview] Audio not playing - audioSource={editorManager.audioSource != null}, audioClip={editorManager.ChartData.audioClip != null}");
-            }
+            // 0번 마디는 준비 단계(무음) → 음원 t=0이 채보 1번 마디 시작에 대응
+            // audioTime = chartTime - barDuration
+            // startBar=0 → audioTime=-barDuration → barDuration초 후 재생 (FMOD 딜레이 스케줄링)
+            // startBar=1 → audioTime=0 → 즉시 처음부터 재생
+            // startBar=2+ → audioTime=양수 → 해당 위치부터 즉시 재생
+            double audioTime = startTimeOffset - barDuration;
+            editorManager.fmodAudio.Play(audioTime);
+            Debug.Log($"[EditorPreview] 재생 시작. startBar={startBar}, audioTime={audioTime:F2}s");
 
             // 에디터 상태 갱신
             editorManager.State.isPlaying = true;
@@ -155,8 +164,8 @@ namespace SCOdyssey.ChartEditor.Preview
             timeProvider.Stop();
 
             // 음원 정지
-            if (editorManager != null && editorManager.audioSource != null)
-                editorManager.audioSource.Stop();
+            if (editorManager != null && editorManager.fmodAudio != null)
+                editorManager.fmodAudio.Stop();
 
             // 활성 오브젝트 풀 반환
             ClearActiveObjects();
@@ -176,15 +185,15 @@ namespace SCOdyssey.ChartEditor.Preview
             if (timeProvider.IsPaused)
             {
                 timeProvider.Resume();
-                if (editorManager.audioSource != null)
-                    editorManager.audioSource.UnPause();
+                if (editorManager.fmodAudio != null)
+                    editorManager.fmodAudio.Resume();
                 editorManager.State.isPaused = false;
             }
             else
             {
                 timeProvider.Pause();
-                if (editorManager.audioSource != null)
-                    editorManager.audioSource.Pause();
+                if (editorManager.fmodAudio != null)
+                    editorManager.fmodAudio.Pause();
                 editorManager.State.isPaused = true;
             }
         }
@@ -235,14 +244,14 @@ namespace SCOdyssey.ChartEditor.Preview
             timelineObj.transform.SetParent(editorManager.noteParent, false);
 
             // 타임라인 Y 위치 설정 (해당 그룹의 레인 위치 기반)
-            RectTransform timelineRT = timelineObj.GetComponent<RectTransform>();
             int timelineIndex = groupID; // 0=상단, 1=하단
-            // ChartManager의 timelineTransforms와 동일하게 위치 설정
+            // ChartManager와 동일하게 월드 좌표 사용 (anchoredPosition은 부모 좌표계에 종속되어 불일치 발생 가능)
             if (editorManager.laneTransforms.Length > timelineIndex * 2)
             {
-                float y = (editorManager.laneTransforms[timelineIndex * 2].anchoredPosition.y
-                         + editorManager.laneTransforms[timelineIndex * 2 + 1].anchoredPosition.y) / 2f;
-                timelineRT.anchoredPosition = new Vector2(timelineRT.anchoredPosition.x, y);
+                float worldY = (editorManager.laneTransforms[timelineIndex * 2].position.y
+                              + editorManager.laneTransforms[timelineIndex * 2 + 1].position.y) / 2f;
+                Vector3 worldPos = timelineObj.transform.position;
+                timelineObj.transform.position = new Vector3(worldPos.x, worldY, worldPos.z);
             }
 
             TimelineController controller = timelineObj.GetComponent<TimelineController>();
@@ -265,7 +274,11 @@ namespace SCOdyssey.ChartEditor.Preview
                     barDuration,
                     startX,
                     endX,
-                    (tc) => ReturnToPool(timelinePool, tc.gameObject),
+                    (tc) => {
+                        // 자연 반환 시 activeTimelineObjects에서도 제거 (double-enqueue 방지)
+                        activeTimelineObjects.Remove(tc.gameObject);
+                        ReturnToPool(timelinePool, tc.gameObject);
+                    },
                     timeProvider.GetCurrentTime   // 에디터 시간 소스 주입
                 );
             }
@@ -363,13 +376,18 @@ namespace SCOdyssey.ChartEditor.Preview
 
         private void ClearActiveObjects()
         {
-            foreach (var obj in activeTimelineObjects)
+            // 원본 리스트를 먼저 Clear하고 복사본을 순회
+            // → Deactivate → onReturn → activeTimelineObjects.Remove() 호출 시 이미 빈 리스트라 예외 없음
+            var timelinesToClear = new List<GameObject>(activeTimelineObjects);
+            activeTimelineObjects.Clear();
+
+            foreach (var obj in timelinesToClear)
             {
                 if (obj != null)
                 {
                     // TimelineController 정지
-                    var tc = obj.GetComponent<TimelineController>();
-                    if (tc != null) tc.Deactivate();
+                    if (obj.TryGetComponent<TimelineController>(out var tc))
+                        tc.Deactivate();
                     else
                     {
                         obj.SetActive(false);
@@ -377,7 +395,6 @@ namespace SCOdyssey.ChartEditor.Preview
                     }
                 }
             }
-            activeTimelineObjects.Clear();
 
             foreach (var obj in activeNoteObjects)
             {

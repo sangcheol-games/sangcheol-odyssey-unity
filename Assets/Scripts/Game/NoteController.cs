@@ -1,4 +1,6 @@
 using System;
+using SCOdyssey.Core;
+using SCOdyssey.App;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
@@ -11,9 +13,10 @@ namespace SCOdyssey.Game
         protected Action<NoteController> onReturn;
 
         protected Image noteImage;
-        protected Image holdImage;
         protected float holdWidth = 0f;
+        protected bool isLTR;
         protected bool isJudged = false;
+        protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
         protected TimelineController trackingTimeline;    // 감시할 타임라인
         protected RectTransform rectTransform;
@@ -21,12 +24,8 @@ namespace SCOdyssey.Game
         protected virtual void Awake()
         {
             rectTransform = GetComponent<RectTransform>();
-            if (noteImage == null || holdImage == null)     // 이미지 컴포넌트 자동 할당
-            {
-                Image[] childs = GetComponentsInChildren<Image>();
-                holdImage = childs[0];
-                noteImage = childs[1];
-            }
+            if (noteImage == null)
+                noteImage = GetComponentInChildren<Image>();
         }
 
         public virtual void Init(NoteData noteData, Vector2 position, bool isLTR, float holdWidth, Action<NoteController> returnCallback)
@@ -35,10 +34,8 @@ namespace SCOdyssey.Game
             this.onReturn = returnCallback;
             this.rectTransform.anchoredPosition = position;
             this.isJudged = false;
-
-            if (!isLTR) holdImage.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
-            else holdImage.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
-            
+            this.isHoldRemaining = false;
+            this.isLTR = isLTR;
             this.holdWidth = holdWidth;
 
             trackingTimeline = null;
@@ -58,15 +55,20 @@ namespace SCOdyssey.Game
                     c.a = 0f;
                     break;
                 case NoteState.Ghost:
-                    c.a = 0.05f;
+                    float ghostOpacity = 0.2f;
+                    if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
+                        ghostOpacity = sm.Current.noteOpacity;
+                    c.a = ghostOpacity;
                     break;
                 case NoteState.Active:
                     c.a = 1f;
                     break;
             }
             noteImage.color = c;
-            holdImage.color = c;
+            ApplyAlpha(c.a);
         }
+
+        protected virtual void ApplyAlpha(float alpha) { }
 
         protected abstract void SetVisual();
 
@@ -93,13 +95,15 @@ namespace SCOdyssey.Game
 
             bool isPassed = false;
 
+            const float TIMELINE_OFFSET = 20f; // 판정선이 충분히 지나간 후 ghost로 전환하도록 여유 공간 설정
+
             if (trackingTimeline.isLTR)
             {
-                if (timelineX > noteX + 150f) isPassed = true;    // 여유 공간 임시값 20f. 캐릭터 스프라이트 적용 후 조정 필요 
+                if (timelineX > noteX + TIMELINE_OFFSET) isPassed = true;
             }
             else
             {
-                if (timelineX < noteX - 150f) isPassed = true;
+                if (timelineX < noteX - TIMELINE_OFFSET) isPassed = true;
             }
 
             if (isPassed)
@@ -107,31 +111,6 @@ namespace SCOdyssey.Game
                 SetState(NoteState.Ghost); // 판정선이 지나갔으니 고스트로 전환
                 trackingTimeline = null; // 더 이상 감시 안 함
             }
-        }
-
-        protected void UpdateHoldFill()
-        {
-            float timelineX = trackingTimeline.rectTransform.anchoredPosition.x;
-            float holdEndX = rectTransform.anchoredPosition.x;
-
-            float passedDistance = 0f;
-
-            if (trackingTimeline.isLTR)
-            {
-                if (timelineX > holdEndX - holdWidth)
-                    passedDistance = timelineX - holdEndX + holdWidth;
-            }
-            else
-            {
-                if (timelineX < holdEndX + holdWidth)
-                    passedDistance = holdEndX + holdWidth - timelineX;
-            }
-
-            passedDistance = Mathf.Clamp(passedDistance, 0f, holdWidth);
-
-            float fillRatio = 1f - (passedDistance / holdWidth);
-
-            holdImage.fillAmount = fillRatio;
         }
 
         public virtual void OnMiss()

@@ -1,5 +1,6 @@
 using SCOdyssey.Game;
 using UnityEngine;
+using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
 
@@ -7,11 +8,12 @@ namespace SCOdyssey.App
 {
     public interface IGameManager
     {
-        void SetAudioClip(AudioClip audioClip);    // GameDataLoader에서 MusicSO의 musicFile을 전달받아 설정
+        void SetBGAData(string videoFileName, Sprite backgroundArt);
 
         void StartGame();
         double GetCurrentTime();
         bool IsGameRunning { get; }
+        bool IsPaused { get; }
         bool IsAudioPlaying { get; }  // 오디오 재생 중인지 확인
 
         void StartMusic(double delay);
@@ -21,6 +23,9 @@ namespace SCOdyssey.App
 
         void OnNoteJudged(JudgeType judgeType);
         void OnNoteMissed();
+
+        void Pause();
+        void Resume();
 
         void OnGameFinished();
     }

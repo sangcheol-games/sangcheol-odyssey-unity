@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
+using SCOdyssey.Core;
 using TMPro;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
@@ -22,6 +23,12 @@ namespace SCOdyssey.Game
         [Header("노트 풀링")]
         public GameObject notePrefab;
         private Queue<GameObject> notePool = new Queue<GameObject>();
+
+        [Header("레이어 분리")]
+        public RectTransform holdLayer;     // HoldBar용 Canvas (Inspector 할당)
+        public RectTransform headLayer;     // NoteHead용 Canvas (Inspector 할당)
+        public GameObject holdBarPrefab;    // holdImage만 있는 별도 프리팹 (Inspector 할당)
+        private Queue<GameObject> holdBarPool = new Queue<GameObject>();
 
         [Header("이펙트 풀링")]
         public GameObject effectPrefab;
@@ -57,6 +64,7 @@ namespace SCOdyssey.Game
         private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
 
         private bool[] isLaneHolding = { false, false, false, false }; // 각 레인별 롱노트 홀딩 상태 추적
+        private double?[] bufferedInput = new double?[4]; // 마디 전환 직전 선입력 버퍼 (index: laneIndex - 1)
         
         public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[4];
 
@@ -404,7 +412,7 @@ namespace SCOdyssey.Game
                 foreach (var noteData in lane.Notes)
                 {
                     GameObject note = GetNoteFromPool();
-                    note.transform.SetParent(noteParent, false);
+                    note.transform.SetParent(headLayer, false);
 
                     NoteAdapter noteAdapter = note.GetComponent<NoteAdapter>();
 
@@ -415,19 +423,59 @@ namespace SCOdyssey.Game
                         laneRT.anchoredPosition.y
                     );
 
-                    noteController.Init(
-                        noteData,
-                        spawnPos,
-                        lane.isLTR,
-                        noteInterval,
-                        (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
-                    );
+                    // HoldStart는 holdBarBeats * noteInterval로 실제 홀드바 길이 계산
+                    float holdWidth = noteData.noteType == NoteType.HoldStart
+                        ? noteInterval * (noteData.holdBarBeats ?? 1)
+                        : noteInterval;
+
+                    if (noteData.noteType == NoteType.HoldStart)
+                    {
+                        GameObject holdBar = GetFromPool(holdBarPool, holdBarPrefab);
+                        holdBar.transform.SetParent(holdLayer, false);
+                        ((HoldStartNote)noteController).SetHoldBar(holdBar);
+                        noteController.Init(
+                            noteData,
+                            spawnPos,
+                            lane.isLTR,
+                            holdWidth,
+                            (returnedNote) =>
+                            {
+                                ReturnToPool(holdBarPool, holdBar);
+                                ReturnNoteToPool(returnedNote.gameObject);
+                            }
+                        );
+                    }
+                    else
+                    {
+                        noteController.Init(
+                            noteData,
+                            spawnPos,
+                            lane.isLTR,
+                            holdWidth,
+                            (returnedNote) => { ReturnNoteToPool(returnedNote.gameObject); }
+                        );
+                    }
 
                     if (isConflict && currentTimeline != null)
                     {
-                        // 같은 레인 충돌: 숨겨진 상태로 생성하고 판정선 감시 붙임
-                        noteController.TrackTimeline(currentTimeline);
-                        noteController.SetState(NoteState.Hidden);
+                        // 같은 레인 충돌: 노트가 현재 타임라인의 endpoint에 위치하는지 확인
+                        // endpoint 노트는 판정선이 절대 지나칠 수 없어 Hidden 유지 시 Active로 직행하므로 즉시 Ghost 표시
+                        float noteX = spawnPos.x;
+                        bool atEndpoint = currentIsLTR
+                            ? Mathf.Approximately(noteX, rightEndpoint.anchoredPosition.x)  // LTR: rightEndpoint
+                            : Mathf.Approximately(noteX, leftEndpoint.anchoredPosition.x);  // RTL: leftEndpoint
+
+                        if (!atEndpoint)
+                        {
+                            // endpoint가 아님: 판정선 감시로 Ghost 전환
+                            noteController.TrackTimeline(currentTimeline);
+                            noteController.SetState(NoteState.Hidden);
+                        }
+                        else
+                        {
+                            // endpoint에 위치: 즉시 Ghost로 표시
+                            noteController.SetState(NoteState.Ghost);
+                        }
                     }
                     else
                     {
@@ -450,7 +498,9 @@ namespace SCOdyssey.Game
                     NoteController note = ghostNotes[i].Dequeue();
                     note.SetState(NoteState.Active);
 
-                    if (note.noteData.noteType == NoteType.Holding || note.noteData.noteType == NoteType.HoldEnd)
+                    // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
+                    // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
+                    if (note.noteData.noteType == NoteType.HoldStart)
                     {
                         int groupID = GetTrackGroupID(i);
                         if (activeTimelines.ContainsKey(groupID))
@@ -460,28 +510,39 @@ namespace SCOdyssey.Game
                     }
 
                     activeNotes[i].Enqueue(note);
+                    FlushBufferedInput(i); // 선입력이 있으면 즉시 재판정
                 }
             }
         }
-        
+
         #endregion
 
 
         #region Judgement
-        public void TryJudgeInput(int laneIndex)
+        public void TryJudgeInput(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
             isLaneHolding[listIndex] = true;
 
             var queue = activeNotes[listIndex];
-            if (queue.Count == 0) return;
+            if (queue.Count == 0)
+            {
+                // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
+                bufferedInput[listIndex] = inputGameTime;
+                return;
+            }
 
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
 
-            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
+                offsetSec = sm.Current.judgmentOffset * 0.003;
 
-            if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
+            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
+            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - offsetSec);
+
+            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
                 Debug.Log("판정 범위 밖 입력");
                 return;
@@ -493,10 +554,26 @@ namespace SCOdyssey.Game
             else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
             else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
             else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
-            else if (timeDiff <= JUDGE_UHM) result = JudgeType.Uhm;
+            else if (timeDiff <= JUDGE_UMM) result = JudgeType.Umm;
 
             ApplyJudgment(targetNote, listIndex, result);
 
+        }
+
+        /// <summary>
+        /// 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
+        /// press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
+        /// </summary>
+        private void FlushBufferedInput(int listIndex)
+        {
+            if (!bufferedInput[listIndex].HasValue) return;
+
+            double inputTime = bufferedInput[listIndex].Value;
+            bufferedInput[listIndex] = null;
+
+            if (!isLaneHolding[listIndex]) return; // 이미 손을 뗀 경우 폐기
+
+            TryJudgeInput(listIndex + 1, inputTime);
         }
 
         private void CheckHoldingBody(int listIndex)
@@ -507,9 +584,15 @@ namespace SCOdyssey.Game
             //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
 
             NoteController targetNote = queue.Peek();
-            if (targetNote.noteData.noteType != NoteType.Holding) return;
+            // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
+            if (targetNote.noteData.noteType != NoteType.Holding &&
+                targetNote.noteData.noteType != NoteType.HoldEnd) return;
 
-            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
+                offsetSec = sm.Current.judgmentOffset * 0.003;
+
+            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
 
             if (timeDiff < JUDGE_PERFECT)
             {
@@ -520,7 +603,7 @@ namespace SCOdyssey.Game
         }
 
 
-        public void TryJudgeRelease(int laneIndex)
+        public void TryJudgeRelease(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;
             isLaneHolding[listIndex] = false;
@@ -529,12 +612,15 @@ namespace SCOdyssey.Game
             if (queue.Count == 0) return;
 
             NoteController targetNote = queue.Peek();
-            if (targetNote.noteData.noteType != NoteType.HoldEnd) return; // 홀딩 중인 노트가 없으면 무시
+            if (targetNote.noteData.noteType != NoteType.HoldRelease) return; // 릴리즈 판정 노트가 없으면 무시
 
-            double timeDiff = Math.Abs(targetNote.noteData.time - gameManager.GetCurrentTime());
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var sm2))
+                offsetSec = sm2.Current.judgmentOffset * 0.003;
 
+            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - offsetSec);
 
-            if (timeDiff > JUDGE_UHM)   // 판정 범위 밖
+            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
                 Debug.Log("판정 범위 밖 입력");
                 return;
@@ -546,7 +632,7 @@ namespace SCOdyssey.Game
             else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
             else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
             else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
-            else if (timeDiff <= JUDGE_UHM) result = JudgeType.Uhm;
+            else if (timeDiff <= JUDGE_UMM) result = JudgeType.Umm;
 
             ApplyJudgment(targetNote, listIndex, result);
         }
@@ -572,7 +658,7 @@ namespace SCOdyssey.Game
 
             NoteController targetNote = activeNotes[listIndex].Peek();
 
-            if (currentTime > targetNote.noteData.time + JUDGE_UHM)
+            if (currentTime > targetNote.noteData.time + JUDGE_UMM)
             {
                 activeNotes[listIndex].Dequeue();
                 targetNote.OnMiss();
@@ -580,7 +666,7 @@ namespace SCOdyssey.Game
                 gameManager.OnNoteMissed();
 
                 GameObject effect = GetEffectFromPool();
-                effect.GetComponent<EffectController>().Setup(JudgeType.Uhm,
+                effect.GetComponent<EffectController>().Setup(JudgeType.Umm,
                     targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
             }
         }

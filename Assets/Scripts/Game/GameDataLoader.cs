@@ -29,21 +29,30 @@ namespace SCOdyssey.Game
                 Debug.LogError("[GameDataLoader] No selected music!");
                 yield break;
             }
-            Debug.Log($"[GameDataLoader] Loading Music: {music.title[Language.JP]}");
+            Debug.Log($"[GameDataLoader] Loading Music: {music.name}");
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
-            // 오디오 클립 로딩
-            if (music.musicFile != null)
+            // FMOD 오디오 로딩
+            if (!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
             {
-                gameManager.SetAudioClip(music.musicFile);
+                Debug.LogError("[GameDataLoader] IAudioManager not found in ServiceLocator!");
+                yield break;
+            }
+
+            if (!string.IsNullOrEmpty(music.audioFilePath))
+            {
+                audioManager.LoadAudio(music.audioFilePath);
+                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
+                while (!audioManager.IsLoaded) yield return null;
             }
             else
             {
-                Debug.LogWarning("[GameDataLoader] musicFile is null!");
+                Debug.LogWarning("[GameDataLoader] audioFilePath is empty!");
             }
 
-            // TODO: Load Resource(배경, 비디오 등)
+            // BGA 및 배경아트 로딩
+            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
 
             yield return LoadChart(music);
 
@@ -53,9 +62,12 @@ namespace SCOdyssey.Game
 
         private IEnumerator LoadChart(MusicSO music)
         {
-            if (music.chartFile == null)
+            var musicManager = ServiceLocator.Get<IMusicManager>();
+            Difficulty difficulty = musicManager.GetCurrentDifficulty();
+
+            if (!music.chartFile.TryGetValue(difficulty, out TextAsset chart) || chart == null)
             {
-                Debug.LogError("Null Exception: Chart file missing");
+                Debug.LogError($"[GameDataLoader] Chart file missing for difficulty: {difficulty}");
                 yield break;
             }
 
@@ -70,7 +82,7 @@ namespace SCOdyssey.Game
                 yield break;
             }
 
-            string chartText = music.chartFile.text;
+            string chartText = chart.text;
             int bpm = music.bpm;
 
             Debug.Log("Parsing Chart Data...");

@@ -6,6 +6,7 @@ namespace SCOdyssey.Game
     public class ChartData
     {
         public int bpm;
+        public int totalNotes;
         private List<LaneData> chart;
 
         public ChartData()

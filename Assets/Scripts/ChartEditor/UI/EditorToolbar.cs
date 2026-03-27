@@ -43,10 +43,12 @@ namespace SCOdyssey.ChartEditor.UI
         public Button btnNoteHoldStart;
         public Button btnNoteHolding;
         public Button btnNoteHoldEnd;
+        public Button btnNoteHoldRelease;
 
         [Header("방향선택")]
         public Button btnDirection;
-        private bool isDirectionMode = false;
+        // isDirectionMode는 editorManager.State.currentTool 기준으로 판단
+        private bool IsDirectionMode => editorManager != null && editorManager.State.currentTool == EditorTool.DirectionSelect;
 
         [Header("재생")]
         public Button btnPlay;
@@ -76,6 +78,7 @@ namespace SCOdyssey.ChartEditor.UI
             {
                 editorManager.OnBarChanged += OnBarChanged;
                 editorManager.OnBeatChanged += OnBeatChanged;
+                editorManager.OnToolChanged += OnToolChangedHandler;
             }
         }
 
@@ -85,6 +88,7 @@ namespace SCOdyssey.ChartEditor.UI
             {
                 editorManager.OnBarChanged -= OnBarChanged;
                 editorManager.OnBeatChanged -= OnBeatChanged;
+                editorManager.OnToolChanged -= OnToolChangedHandler;
             }
         }
 
@@ -131,6 +135,8 @@ namespace SCOdyssey.ChartEditor.UI
                 btnNoteHolding.onClick.AddListener(() => SelectNoteType(NoteType.Holding));
             if (btnNoteHoldEnd != null)
                 btnNoteHoldEnd.onClick.AddListener(() => SelectNoteType(NoteType.HoldEnd));
+            if (btnNoteHoldRelease != null)
+                btnNoteHoldRelease.onClick.AddListener(() => SelectNoteType(NoteType.HoldRelease));
 
             // 방향선택
             if (btnDirection != null)
@@ -221,15 +227,8 @@ namespace SCOdyssey.ChartEditor.UI
 
         private void SelectNoteType(NoteType type)
         {
-            editorManager.State.selectedNoteType = type;
-            editorManager.State.currentTool = EditorTool.NoteInsert;
-
-            // 방향 모드 해제
-            isDirectionMode = false;
-            UpdateDirectionButtonVisual();
-
+            editorManager.SelectNoteType(type);  // OnToolChanged 이벤트로 화면 갱신
             CloseAllPanels();
-            UpdateToolDisplay();
         }
 
         #endregion
@@ -238,30 +237,27 @@ namespace SCOdyssey.ChartEditor.UI
 
         private void ToggleDirectionMode()
         {
-            isDirectionMode = !isDirectionMode;
-
-            if (isDirectionMode)
-            {
-                editorManager.State.currentTool = EditorTool.DirectionSelect;
-            }
-            else
-            {
-                // 이전에 노트삽입 모드였다면 복원, 아니면 None
-                editorManager.State.currentTool = EditorTool.None;
-            }
-
-            UpdateDirectionButtonVisual();
-            UpdateToolDisplay();
+            editorManager.ToggleDirectionMode();  // OnToolChanged 이벤트로 화면 갱신
+            CloseAllPanels();
         }
 
         private void UpdateDirectionButtonVisual()
         {
             if (btnDirectionImage != null)
             {
-                btnDirectionImage.color = isDirectionMode
+                btnDirectionImage.color = IsDirectionMode
                     ? new Color(0.3f, 0.7f, 1f, 1f) // 활성화: 파란색
                     : Color.white;                     // 비활성화: 흰색
             }
+        }
+
+        /// <summary>
+        /// 도구 변경 이벤트 핸들러 (키보드 단축키 포함)
+        /// </summary>
+        private void OnToolChangedHandler()
+        {
+            UpdateDirectionButtonVisual();
+            UpdateToolDisplay();
         }
 
         #endregion
@@ -325,10 +321,11 @@ namespace SCOdyssey.ChartEditor.UI
         {
             return type switch
             {
-                NoteType.Normal => "일반",
-                NoteType.HoldStart => "홀드시작",
-                NoteType.Holding => "홀딩",
-                NoteType.HoldEnd => "홀드끝",
+                NoteType.Normal      => "일반",
+                NoteType.HoldStart   => "홀드시작",
+                NoteType.Holding     => "홀딩",
+                NoteType.HoldEnd     => "홀드끝",
+                NoteType.HoldRelease => "홀드릴리즈",
                 _ => ""
             };
         }

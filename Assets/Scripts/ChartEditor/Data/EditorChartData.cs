@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.ChartEditor.Data
@@ -17,7 +16,7 @@ namespace SCOdyssey.ChartEditor.Data
         public int level = 1;
         public int bpm = 120;
 
-        public AudioClip audioClip;     // 음원 파일
+        public string audioFilePath;    // FMOD 재생 + onset 분석용 절대 경로 (null = 미로드)
         public string filePath;         // 현재 저장 경로 (null = 미저장)
 
         // barNumber → EditorBarData
@@ -84,7 +83,7 @@ namespace SCOdyssey.ChartEditor.Data
             difficulty = Difficulty.Normal;
             level = 1;
             bpm = 120;
-            audioClip = null;
+            audioFilePath = null;
             filePath = null;
             // 0번 마디는 항상 존재
             bars[0] = new EditorBarData(0);
@@ -104,6 +103,26 @@ namespace SCOdyssey.ChartEditor.Data
         public Dictionary<int, EditorBarData> GetAllBars()
         {
             return bars;
+        }
+
+        /// <summary>
+        /// 전체 채보의 총 노트 수 계산 (NoteType != None인 모든 노트)
+        /// </summary>
+        public int CountTotalNotes()
+        {
+            int count = 0;
+            foreach (var bar in bars.Values)
+            {
+                for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+                {
+                    for (int i = 0; i < bar.beat; i++)
+                    {
+                        if (bar.laneSequences[laneIdx][i] != '0')
+                            count++;
+                    }
+                }
+            }
+            return count;
         }
     }
 }
