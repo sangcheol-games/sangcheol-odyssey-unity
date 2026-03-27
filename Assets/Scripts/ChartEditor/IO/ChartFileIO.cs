@@ -66,7 +66,7 @@ namespace SCOdyssey.ChartEditor.IO
         }
 
         /// <summary>
-        /// 파일 저장 다이얼로그 (Unity Editor 전용, 빌드 시 기본 경로 사용)
+        /// 파일 저장 다이얼로그
         /// </summary>
         public static string ShowSaveDialog(string defaultName = "chart.txt")
         {
@@ -79,14 +79,19 @@ namespace SCOdyssey.ChartEditor.IO
             );
             return string.IsNullOrEmpty(path) ? null : path;
 #else
-            // 빌드 환경: 기본 경로에 저장
             EnsureDefaultDirectory();
-            return Path.Combine(DefaultChartDirectory, defaultName);
+            string path = SFB.StandaloneFileBrowser.SaveFilePanel(
+                "채보 저장",
+                DefaultChartDirectory,
+                defaultName,
+                "txt"
+            );
+            return string.IsNullOrEmpty(path) ? null : path;
 #endif
         }
 
         /// <summary>
-        /// 파일 열기 다이얼로그 (Unity Editor 전용)
+        /// 파일 열기 다이얼로그
         /// </summary>
         public static string ShowOpenDialog()
         {
@@ -98,13 +103,19 @@ namespace SCOdyssey.ChartEditor.IO
             );
             return string.IsNullOrEmpty(path) ? null : path;
 #else
-            Debug.LogWarning("[ChartFileIO] File dialog not supported in build. Use default path.");
-            return null;
+            EnsureDefaultDirectory();
+            string[] paths = SFB.StandaloneFileBrowser.OpenFilePanel(
+                "채보 불러오기",
+                DefaultChartDirectory,
+                "txt",
+                false
+            );
+            return (paths != null && paths.Length > 0) ? paths[0] : null;
 #endif
         }
 
         /// <summary>
-        /// 음원 파일 열기 다이얼로그 (Unity Editor 전용)
+        /// 음원 파일 열기 다이얼로그
         /// </summary>
         public static string ShowAudioOpenDialog()
         {
@@ -116,17 +127,26 @@ namespace SCOdyssey.ChartEditor.IO
             );
             return string.IsNullOrEmpty(path) ? null : path;
 #else
-            Debug.LogWarning("[ChartFileIO] Audio file dialog not supported in build.");
-            return null;
+            EnsureDefaultDirectory();
+            SFB.ExtensionFilter[] filters =
+            {
+                new SFB.ExtensionFilter("음원 파일", "wav", "mp3", "ogg"),
+                new SFB.ExtensionFilter("모든 파일", "*"),
+            };
+            string[] paths = SFB.StandaloneFileBrowser.OpenFilePanel(
+                "음원 파일 불러오기",
+                DefaultAudioDirectory,
+                filters,
+                false
+            );
+            return (paths != null && paths.Length > 0) ? paths[0] : null;
 #endif
         }
 
         private static void EnsureDefaultDirectory()
         {
             if (!Directory.Exists(DefaultChartDirectory))
-            {
                 Directory.CreateDirectory(DefaultChartDirectory);
-            }
         }
     }
 }
