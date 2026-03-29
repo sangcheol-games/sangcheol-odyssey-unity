@@ -1,5 +1,7 @@
 ﻿<Solution>
+  <Project Path="com.rlabrecque.steamworks.net.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="com.rlabrecque.steamworks.net.editor.csproj" />
   <Project Path="Sirenix.OdinInspector.Modules.UnityLocalization.Editor.csproj" />
   <Project Path="FMODUnityResonanceEditor.csproj" />
   <Project Path="FMODUnityEditor.csproj" />
