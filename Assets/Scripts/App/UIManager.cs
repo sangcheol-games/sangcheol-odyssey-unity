@@ -43,14 +43,17 @@ namespace SCOdyssey.App
 
         // 씬 전환 후 @UI_Root의 Canvas worldCamera를 새 씬의 Camera.main으로 갱신
         // (@UI_Root는 DontDestroyOnLoad이므로 씬 전환 시 worldCamera가 null이 됨)
+        // @UI_Root 아래에는 UIManager가 생성한 UI만 존재하므로 조건 없이 모든 Canvas를 갱신
         private void RefreshCamera()
         {
             if (Camera.main == null) return;
             foreach (Transform child in Root.transform)
             {
-                var canvas = child.GetComponent<Canvas>();
-                if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
+                if (child.TryGetComponent<Canvas>(out var canvas))
+                {
+                    canvas.renderMode  = RenderMode.ScreenSpaceCamera;
                     canvas.worldCamera = Camera.main;
+                }
             }
         }
 
