@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<objects serializationModel="Studio.02.02.00">
+	<object class="Workspace" id="{c9ebd9ee-3b0f-47e5-9aec-e3886175bca1}">
+		<property name="builtBanksOutputDirectory">
+			<value>D:/Unity/sangcheol-odyssey-unity/FMODBanks</value>
+		</property>
+		<relationship name="masterEventFolder">
+			<destination>{76c71a81-6841-4a37-87d5-3dd40d8a9ae7}</destination>
+		</relationship>
+		<relationship name="masterTagFolder">
+			<destination>{d51eb660-6d47-4722-93ef-043f37560b4b}</destination>
+		</relationship>
+		<relationship name="masterEffectPresetFolder">
+			<destination>{383d350a-5fa8-496b-90cd-d8bfea0a5cfb}</destination>
+		</relationship>
+		<relationship name="masterParameterPresetFolder">
+			<destination>{4515cf94-ab2a-48d9-bf5d-5c84d4e0ef72}</destination>
+		</relationship>
+		<relationship name="masterBankFolder">
+			<destination>{54be7f7f-0748-4b6d-9e5c-bea1b145c7d6}</destination>
+		</relationship>
+		<relationship name="masterSandboxFolder">
+			<destination>{a68ccecb-117f-44a4-bcff-bcd620d30c0c}</destination>
+		</relationship>
+		<relationship name="masterAssetFolder">
+			<destination>{ea6926bc-7dba-420e-be22-6db45212fd3c}</destination>
+		</relationship>
+		<relationship name="mixer">
+			<destination>{7c600173-58af-4c58-8507-656979bf5ebd}</destination>
+		</relationship>
+		<relationship name="profilerSessionFolder">
+			<destination>{6d44cd11-d33d-4c5a-bcad-85b73075781e}</destination>
+		</relationship>
+		<relationship name="platforms">
+			<destination>{db95f210-f772-40f4-b283-862bd70cc35c}</destination>
+		</relationship>
+	</object>
+</objects>
