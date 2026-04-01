@@ -63,5 +63,11 @@ namespace SCOdyssey.Domain.Service
             C,      // 70만점 이상
             F       // 70만점 미만
         }
+
+        public enum AnimationType
+        {
+            SpriteSheet,
+            Spine
+        }
     }
 }

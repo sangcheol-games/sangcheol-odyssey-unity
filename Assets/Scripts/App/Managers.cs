@@ -1,3 +1,4 @@
+using SCOdyssey.App.Interfaces;
 using SCOdyssey.Core;
 using UnityEngine;
 
@@ -41,6 +42,9 @@ namespace SCOdyssey.App
 
             var musicManager = new MusicManager();
             ServiceLocator.TryRegister<IMusicManager>(musicManager);
+
+            var characterManager = new CharacterManager();
+            ServiceLocator.TryRegister<ICharacterManager>(characterManager);
 
             // FMODAudioManager는 MonoBehaviour이므로 AddComponent로 생성 (DontDestroyOnLoad 유지)
             var fmodAudio = gameObject.AddComponent<FMODAudioManager>();
