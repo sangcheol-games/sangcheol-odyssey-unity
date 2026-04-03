@@ -13357,6 +13357,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   editorManager: {fileID: 1487012881}
+  gridRenderer: {fileID: 1487012880}
 --- !u!114 &1487012880
 MonoBehaviour:
   m_ObjectHideFlags: 0

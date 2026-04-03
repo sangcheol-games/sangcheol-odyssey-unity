@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SCOdyssey.ChartEditor.Data;
+using SCOdyssey.ChartEditor.Grid;
 using SCOdyssey.Game;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
@@ -15,6 +16,7 @@ namespace SCOdyssey.ChartEditor.Preview
     {
         [Header("참조")]
         public ChartEditorManager editorManager;
+        public EditorGridRenderer gridRenderer;
 
         // 시간 관리
         private EditorTimeProvider timeProvider;
@@ -159,6 +161,10 @@ namespace SCOdyssey.ChartEditor.Preview
             // 에디터 상태 갱신
             editorManager.State.isPlaying = true;
             editorManager.State.isPaused = false;
+
+            // 그리드 노트 비주얼 숨김
+            if (gridRenderer != null)
+                gridRenderer.SetNotesVisible(false);
         }
 
         public void StopPreview()
@@ -178,6 +184,10 @@ namespace SCOdyssey.ChartEditor.Preview
                 editorManager.State.isPlaying = false;
                 editorManager.State.isPaused = false;
             }
+
+            // 그리드 노트 비주얼 복원
+            if (gridRenderer != null)
+                gridRenderer.SetNotesVisible(true);
         }
 
         private void TogglePause()

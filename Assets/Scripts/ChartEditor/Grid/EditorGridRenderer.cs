@@ -50,6 +50,18 @@ namespace SCOdyssey.ChartEditor.Grid
         }
 
         /// <summary>
+        /// 그리드 노트 비주얼 표시 여부 설정 (프리뷰 중 숨김용)
+        /// </summary>
+        public void SetNotesVisible(bool visible)
+        {
+            foreach (var note in activeNotes)
+            {
+                if (note != null)
+                    note.gameObject.SetActive(visible);
+            }
+        }
+
+        /// <summary>
         /// 현재 마디의 그리드와 노트를 새로고침
         /// </summary>
         public void Refresh()
