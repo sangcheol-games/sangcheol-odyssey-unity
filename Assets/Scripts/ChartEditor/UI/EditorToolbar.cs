@@ -50,6 +50,9 @@ namespace SCOdyssey.ChartEditor.UI
         // isDirectionMode는 editorManager.State.currentTool 기준으로 판단
         private bool IsDirectionMode => editorManager != null && editorManager.State.currentTool == EditorTool.DirectionSelect;
 
+        [Header("빠른저장")]
+        public Button btnQuickSave;
+
         [Header("재생")]
         public Button btnPlay;
         public GameObject playDropdownPanel;
@@ -141,6 +144,10 @@ namespace SCOdyssey.ChartEditor.UI
             // 방향선택
             if (btnDirection != null)
                 btnDirection.onClick.AddListener(ToggleDirectionMode);
+
+            // 빠른저장
+            if (btnQuickSave != null)
+                btnQuickSave.onClick.AddListener(() => editorManager.QuickSave());
 
             // 재생
             if (btnPlay != null)
