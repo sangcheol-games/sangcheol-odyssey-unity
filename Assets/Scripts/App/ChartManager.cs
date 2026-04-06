@@ -638,13 +638,26 @@ namespace SCOdyssey.Game
         }
 
 
+        private NotePosition GetNotePosition(int listIndex)
+        {
+            // listIndex 0,1 → group 0 (Bottom), listIndex 2,3 → group 1 (Top)
+            return listIndex <= 1 ? NotePosition.Bottom : NotePosition.Top;
+        }
+
         private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
         {
             Debug.Log($"Note Judged: {type}");
             activeNotes[listIndex].Dequeue();
             targetNote.OnHit();
 
-            gameManager.OnNoteJudged(type);
+            NotePosition pos = GetNotePosition(listIndex);
+            gameManager.OnNoteJudged(type, pos);
+
+            // 홀드 시작/종료 이벤트 발화
+            if (targetNote.noteData.noteType == NoteType.HoldStart)
+                gameManager.OnHoldStart(pos);
+            else if (targetNote.noteData.noteType == NoteType.HoldRelease)
+                gameManager.OnHoldEnd(pos);
 
             GameObject effect = GetEffectFromPool();
             effect.GetComponent<EffectController>().Setup(type,

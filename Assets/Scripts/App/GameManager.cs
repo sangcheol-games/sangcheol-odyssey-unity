@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
@@ -21,6 +22,11 @@ namespace SCOdyssey.App
 
         [Header("BGA")]
         public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
+
+        // 캐릭터 애니메이터 구독용 이벤트
+        public event Action<JudgeType, NotePosition> OnNoteJudgedEvent;
+        public event Action<NotePosition> OnHoldStartEvent;
+        public event Action<NotePosition> OnHoldEndEvent;
 
 
         [Header("게임 상태")]
@@ -218,14 +224,25 @@ namespace SCOdyssey.App
         }
 
 
-        public void OnNoteJudged(JudgeType judgeType)
+        public void OnNoteJudged(JudgeType judgeType, NotePosition pos)
         {
             scoreManager.ProcessJudge(judgeType);
+            OnNoteJudgedEvent?.Invoke(judgeType, pos);
         }
 
         public void OnNoteMissed()
         {
             scoreManager.ProcessJudge(JudgeType.Umm);
+        }
+
+        public void OnHoldStart(NotePosition pos)
+        {
+            OnHoldStartEvent?.Invoke(pos);
+        }
+
+        public void OnHoldEnd(NotePosition pos)
+        {
+            OnHoldEndEvent?.Invoke(pos);
         }
 
 

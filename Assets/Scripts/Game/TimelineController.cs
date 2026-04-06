@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using NUnit.Framework;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using UnityEngine;
@@ -14,7 +13,7 @@ namespace SCOdyssey.Game
         private CanvasGroup canvasGroup;
 
         [SerializeField]
-        private GameObject characterImage;
+        private CharacterAnimator _characterAnimator;
 
         private double startTime;      // 마디 시작 시간 (판정선 출발 시간)
         private double duration;       // 마디 길이 (이동에 걸리는 시간)
@@ -47,16 +46,8 @@ namespace SCOdyssey.Game
             this.onReturn = returnCallback;
             this.timeProvider = timeProvider;
 
-            if (startX < endX)
-            {
-                isLTR = true;
-                characterImage.transform.rotation = Quaternion.Euler(0, 0, 0);
-            }
-            else
-            {
-                isLTR = false;
-                characterImage.transform.rotation = Quaternion.Euler(0, 180, 0);
-            }
+            isLTR = startX < endX;
+            _characterAnimator?.Init(isLTR);
 
 
             rectTransform.anchoredPosition = new Vector2(startX, rectTransform.anchoredPosition.y);

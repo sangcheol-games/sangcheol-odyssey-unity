@@ -64,6 +64,24 @@ namespace SCOdyssey.Domain.Service
             F       // 70만점 미만
         }
 
+        public enum NotePosition
+        {
+            Top,
+            Middle,
+            Bottom
+        }
+
+        public enum CharacterState
+        {
+            Idle,
+            Hit0, Hit1, Hit2, Hit3,
+            Top, Middle, Bottom,
+            Fall,                               // 낙하 전환 상태 (레인 없음, Hit 불가)
+            TopHold, MiddleHold, BottomHold,
+            TopHitWhileBottomHold,              // 아래 홀드 중 위 히트 (bottomY 유지)
+            BottomHitWhileTopHold               // 위 홀드 중 아래 히트 (topY 유지)
+        }
+
         public enum AnimationType
         {
             SpriteSheet,
