@@ -1,4 +1,3 @@
-using Spine;
 using Spine.Unity;
 using UnityEngine;
 using SCOdyssey.Domain.Entity;
@@ -14,7 +13,6 @@ namespace SCOdyssey.Game
     {
         private SkeletonAnimation _skeletonAnimation;
         private Spine.AnimationState _animationState;
-        private Skeleton _skeleton;
 
         public void Initialize(GameObject spriteRoot, CharacterSO so)
         {
@@ -32,8 +30,7 @@ namespace SCOdyssey.Game
             _skeletonAnimation.Initialize(true);    // skeletonDataAsset 교체 후 강제 재초기화
 
             _animationState = _skeletonAnimation.AnimationState;
-            _skeleton        = _skeletonAnimation.Skeleton;
-
+            
             var meshRenderer = spriteRoot.GetComponent<MeshRenderer>();
             if (meshRenderer != null)
                 meshRenderer.sortingOrder = 3;
@@ -91,10 +88,5 @@ namespace SCOdyssey.Game
             }
         }
 
-        public void SetDirection(bool isLTR)
-        {
-            if (_skeleton == null) return;
-            _skeleton.ScaleX = isLTR ? 1f : -1f;
-        }
     }
 }

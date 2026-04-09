@@ -47,7 +47,10 @@ namespace SCOdyssey.Game
             this.timeProvider = timeProvider;
 
             isLTR = startX < endX;
-            _characterAnimator?.Init(isLTR);
+            if (_characterAnimator != null)
+                _characterAnimator.transform.rotation = isLTR
+                    ? Quaternion.Euler(0, 0, 0)
+                    : Quaternion.Euler(0, 180, 0);
 
 
             rectTransform.anchoredPosition = new Vector2(startX, rectTransform.anchoredPosition.y);

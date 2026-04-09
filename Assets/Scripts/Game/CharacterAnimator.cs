@@ -93,14 +93,6 @@ namespace SCOdyssey.Game
             SetState(CharacterState.Idle);
         }
 
-        // ─────────────────────────────────────────────
-        // 방향 설정 (TimelineController에서 호출)
-        // ─────────────────────────────────────────────
-
-        public void Init(bool isLTR)
-        {
-            _handler?.SetDirection(isLTR);
-        }
 
         // ─────────────────────────────────────────────
         // 이벤트 핸들러

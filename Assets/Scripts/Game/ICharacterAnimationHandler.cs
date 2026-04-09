@@ -8,6 +8,5 @@ namespace SCOdyssey.Game
     {
         void Initialize(GameObject spriteRoot, CharacterSO so);
         void SetState(CharacterState state);
-        void SetDirection(bool isLTR);
     }
 }
