@@ -34,6 +34,10 @@ namespace SCOdyssey.Game
             _animationState = _skeletonAnimation.AnimationState;
             _skeleton        = _skeletonAnimation.Skeleton;
 
+            var meshRenderer = spriteRoot.GetComponent<MeshRenderer>();
+            if (meshRenderer != null)
+                meshRenderer.sortingOrder = 3;
+
             _animationState.SetAnimation(0, nameof(CharacterState.Idle), true);
         }
 
