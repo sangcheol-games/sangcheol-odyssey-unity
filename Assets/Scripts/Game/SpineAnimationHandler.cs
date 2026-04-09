@@ -1,3 +1,5 @@
+using Spine;
+using Spine.Unity;
 using UnityEngine;
 using SCOdyssey.Domain.Entity;
 using static SCOdyssey.Domain.Service.Constants;
@@ -5,24 +7,90 @@ using static SCOdyssey.Domain.Service.Constants;
 namespace SCOdyssey.Game
 {
     /// <summary>
-    /// Spine 애니메이션 핸들러 — Spine SDK 설치 후 구현 예정
+    /// Spine 4.2 기반 캐릭터 애니메이션 핸들러.
+    /// 상태 이름은 CharacterState.ToString()과 정확히 일치해야 함.
     /// </summary>
     public class SpineAnimationHandler : ICharacterAnimationHandler
     {
+        private SkeletonAnimation _skeletonAnimation;
+        private Spine.AnimationState _animationState;
+        private Skeleton _skeleton;
+
         public void Initialize(GameObject spriteRoot, CharacterSO so)
         {
-            // TODO: Spine SDK 설치 후 SkeletonAnimation 컴포넌트 초기화
-            Debug.LogWarning("[SpineAnimationHandler] Spine SDK가 설치되지 않아 초기화할 수 없습니다.");
+            if (so is not SpineCharacterSO spineSO || spineSO.skeletonDataAsset == null)
+            {
+                Debug.LogError("[SpineAnimationHandler] SpineCharacterSO 또는 skeletonDataAsset이 없습니다.");
+                return;
+            }
+
+            _skeletonAnimation = spriteRoot.GetComponent<SkeletonAnimation>();
+            if (_skeletonAnimation == null)
+                _skeletonAnimation = spriteRoot.AddComponent<SkeletonAnimation>();
+
+            _skeletonAnimation.skeletonDataAsset = spineSO.skeletonDataAsset;
+            _skeletonAnimation.Initialize(true);    // skeletonDataAsset 교체 후 강제 재초기화
+
+            _animationState = _skeletonAnimation.AnimationState;
+            _skeleton        = _skeletonAnimation.Skeleton;
+
+            _animationState.SetAnimation(0, nameof(CharacterState.Idle), true);
         }
 
         public void SetState(CharacterState state)
         {
-            // TODO: Spine 애니메이션 트랙에 state 이름으로 애니메이션 설정
+            if (_animationState == null) return;
+
+            string name = state.ToString();
+
+            switch (state)
+            {
+                // ── 루프 상태 ──────────────────────────────
+                case CharacterState.Idle:
+                case CharacterState.TopHold:
+                case CharacterState.MiddleHold:
+                case CharacterState.BottomHold:
+                    _animationState.SetAnimation(0, name, true);
+                    break;
+
+                // ── 원샷 → Idle ────────────────────────────
+                case CharacterState.Hit0:
+                case CharacterState.Hit1:
+                case CharacterState.Hit2:
+                case CharacterState.Hit3:
+                case CharacterState.Bottom:
+                case CharacterState.Fall:
+                    _animationState.SetAnimation(0, name, false);
+                    _animationState.AddAnimation(0, nameof(CharacterState.Idle), true, 0f);
+                    break;
+
+                // ── 원샷 → Fall → Idle ─────────────────────
+                // (FallTimer coroutine이 SetState(Fall)을 호출하면 큐가 덮어써짐 — 정상 동작)
+                case CharacterState.Top:
+                case CharacterState.Middle:
+                    _animationState.SetAnimation(0, name, false);
+                    _animationState.AddAnimation(0, nameof(CharacterState.Fall), false, 0f);
+                    _animationState.AddAnimation(0, nameof(CharacterState.Idle), true, 0f);
+                    break;
+
+                // ── 원샷 → BottomHold ──────────────────────
+                case CharacterState.TopHitWhileBottomHold:
+                    _animationState.SetAnimation(0, name, false);
+                    _animationState.AddAnimation(0, nameof(CharacterState.BottomHold), true, 0f);
+                    break;
+
+                // ── 원샷 → TopHold ─────────────────────────
+                case CharacterState.BottomHitWhileTopHold:
+                    _animationState.SetAnimation(0, name, false);
+                    _animationState.AddAnimation(0, nameof(CharacterState.TopHold), true, 0f);
+                    break;
+            }
         }
 
         public void SetDirection(bool isLTR)
         {
-            // TODO: Spine 스켈레톤 scale.x 반전
+            if (_skeleton == null) return;
+            _skeleton.ScaleX = isLTR ? 1f : -1f;
         }
     }
 }
