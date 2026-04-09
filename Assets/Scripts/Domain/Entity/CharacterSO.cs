@@ -1,13 +1,7 @@
-using UnityEngine;
-using static SCOdyssey.Domain.Service.Constants;
-
 namespace SCOdyssey.Domain.Entity
 {
-    [CreateAssetMenu(menuName = "Skins/CharacterSO", fileName = "CharacterSO_")]
-    public class CharacterSO : SkinSO
-    {
-        [Header("Animation")]
-        public AnimationType animationType;                     // SpriteSheet | Spine
-        public RuntimeAnimatorController animatorController;    // SpriteSheet용
-    }
+    /// <summary>
+    /// 캐릭터 스킨 공통 베이스. 애니메이션 방식은 서브클래스로 분리.
+    /// </summary>
+    public abstract class CharacterSO : SkinSO { }
 }

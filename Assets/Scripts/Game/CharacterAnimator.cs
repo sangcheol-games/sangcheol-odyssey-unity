@@ -85,7 +85,7 @@ namespace SCOdyssey.Game
 
         public void LoadCharacter(CharacterSO so)
         {
-            _handler = so.animationType == AnimationType.SpriteSheet
+            _handler = so is SpriteSheetCharacterSO
                 ? (ICharacterAnimationHandler)new SpriteSheetAnimationHandler()
                 : new SpineAnimationHandler();
 

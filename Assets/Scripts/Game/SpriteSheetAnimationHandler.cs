@@ -17,8 +17,8 @@ namespace SCOdyssey.Game
 
             _spriteTransform = spriteRoot.transform;
 
-            if (so.animatorController != null)
-                _animator.runtimeAnimatorController = so.animatorController;
+            if (so is SpriteSheetCharacterSO spriteSheetSO && spriteSheetSO.animatorController != null)
+                _animator.runtimeAnimatorController = spriteSheetSO.animatorController;
         }
 
         public void SetState(CharacterState state)

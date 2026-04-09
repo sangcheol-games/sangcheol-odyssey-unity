@@ -82,10 +82,5 @@ namespace SCOdyssey.Domain.Service
             BottomHitWhileTopHold               // 위 홀드 중 아래 히트 (topY 유지)
         }
 
-        public enum AnimationType
-        {
-            SpriteSheet,
-            Spine
-        }
     }
 }
