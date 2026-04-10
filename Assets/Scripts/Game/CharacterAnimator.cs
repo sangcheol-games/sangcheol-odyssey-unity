@@ -17,9 +17,9 @@ namespace SCOdyssey.Game
         [SerializeField] private GameObject _spriteRoot;   // Animator + Sprite 컴포넌트가 있는 자식 오브젝트
 
         [Header("Y Positions")]
-        [SerializeField] private float _topY = 60f;
-        [SerializeField] private float _bottomY = -60f;
-        [SerializeField] private float _centerY = 0f;
+        [SerializeField] private float _topY = 120f;
+        [SerializeField] private float _bottomY = 0f;
+        [SerializeField] private float _centerY = 60f;
 
         [Header("Fall Settings")]
         [SerializeField] private float _topFloatDuration = 0.5f;  // topY 유지 시간
@@ -234,6 +234,7 @@ namespace SCOdyssey.Game
 
         private void StartFallTimer()
         {
+            if (!gameObject.activeInHierarchy) return;
             ResetFallTimer();
             _fallCoroutine = StartCoroutine(FallAfterDelay());
         }
