@@ -18,8 +18,8 @@ namespace SCOdyssey.Game
 
         [Header("Y Positions")]
         [SerializeField] private float _topY = 120f;
-        [SerializeField] private float _bottomY = 0f;
-        [SerializeField] private float _centerY = 60f;
+        [SerializeField] private float _bottomY = -120f;
+        [SerializeField] private float _centerY = 0f;
 
         [Header("Fall Settings")]
         [SerializeField] private float _topFloatDuration = 0.5f;  // topY 유지 시간
@@ -31,8 +31,7 @@ namespace SCOdyssey.Game
         private bool _isBottomHolding;
         private int _lastHitVariant = -1;
 
-        // Y 이동
-        private float _targetY;
+        // Fall 코루틴
         private Coroutine _fallCoroutine;
 
         // 애니메이션 핸들러
@@ -44,11 +43,6 @@ namespace SCOdyssey.Game
         // ─────────────────────────────────────────────
         // 초기화
         // ─────────────────────────────────────────────
-
-        private void Awake()
-        {
-            _targetY = _bottomY;
-        }
 
         private void Start()
         {
@@ -93,7 +87,6 @@ namespace SCOdyssey.Game
             SetState(CharacterState.Idle);
         }
 
-
         // ─────────────────────────────────────────────
         // 이벤트 핸들러
         // ─────────────────────────────────────────────
@@ -105,7 +98,7 @@ namespace SCOdyssey.Game
 
         private void OnHoldStart(NotePosition pos)
         {
-            ResetFallTimer();
+            ResetFall();
             if (pos == NotePosition.Top)    _isTopHolding    = true;
             if (pos == NotePosition.Bottom) _isBottomHolding = true;
             UpdateHoldState();
@@ -127,9 +120,9 @@ namespace SCOdyssey.Game
             // 아래 홀드 중 위 히트
             if (pos == NotePosition.Top && _isBottomHolding)
             {
-                ResetFallTimer();
+                ResetFall();
                 SetState(CharacterState.TopHitWhileBottomHold);
-                // bottomY 유지 (_targetY 변경 없음)
+                // Y 유지 (bottomY)
                 _currentState = CharacterState.TopHitWhileBottomHold;
                 return;
             }
@@ -137,9 +130,9 @@ namespace SCOdyssey.Game
             // 위 홀드 중 아래 히트
             if (pos == NotePosition.Bottom && _isTopHolding)
             {
-                ResetFallTimer();
+                ResetFall();
                 SetState(CharacterState.BottomHitWhileTopHold);
-                // topY 유지 (_targetY 변경 없음)
+                // Y 유지 (topY)
                 _currentState = CharacterState.BottomHitWhileTopHold;
                 return;
             }
@@ -147,10 +140,10 @@ namespace SCOdyssey.Game
             // 동시 히트 (Middle)
             if (pos == NotePosition.Middle)
             {
-                _targetY = _centerY;
+                SetPosition(_centerY);
                 SetState(CharacterState.Middle);
                 _currentState = CharacterState.Middle;
-                StartFallTimer();  // Middle 애니메이션 후 Fall → bottomY 복귀
+                StartFallTimer();
                 return;
             }
 
@@ -166,8 +159,8 @@ namespace SCOdyssey.Game
                 }
                 else
                 {
-                    // 이동 타격 (Fall 포함, 재점프)
-                    _targetY = _topY;
+                    // 이동 타격
+                    SetPosition(_topY);
                     SetState(CharacterState.Top);
                     StartFallTimer();
                 }
@@ -178,7 +171,7 @@ namespace SCOdyssey.Game
             // Bottom 히트
             if (pos == NotePosition.Bottom)
             {
-                ResetFallTimer();
+                ResetFall();
                 NotePosition? lane = GetLaneFromState(_currentState);
                 if (lane == NotePosition.Bottom)
                 {
@@ -187,8 +180,8 @@ namespace SCOdyssey.Game
                 }
                 else
                 {
-                    // 이동 타격 (Fall 포함 → 착지 타격)
-                    _targetY = _bottomY;
+                    // 이동 타격
+                    SetPosition(_bottomY);
                     SetState(CharacterState.Bottom);
                 }
                 _currentState = CharacterState.Bottom;
@@ -199,47 +192,57 @@ namespace SCOdyssey.Game
         {
             if (_isTopHolding && _isBottomHolding)
             {
-                ResetFallTimer();
-                _targetY = _centerY;
+                ResetFall();
+                SetPosition(_centerY);
                 SetState(CharacterState.MiddleHold);
                 _currentState = CharacterState.MiddleHold;
             }
             else if (_isTopHolding)
             {
-                ResetFallTimer();
-                _targetY = _topY;
+                ResetFall();
+                SetPosition(_topY);
                 SetState(CharacterState.TopHold);
                 _currentState = CharacterState.TopHold;
             }
             else if (_isBottomHolding)
             {
-                ResetFallTimer();
-                _targetY = _bottomY;
+                ResetFall();
+                SetPosition(_bottomY);
                 SetState(CharacterState.BottomHold);
                 _currentState = CharacterState.BottomHold;
             }
             else
             {
-                // 홀드 전부 종료 → Fall 하강 후 Idle 복귀
-                // (topY/centerY에서 직접 Idle 재생 시 달리기 하강 연출 방지)
-                _targetY = _bottomY;
-                SetState(CharacterState.Fall);
-                _currentState = CharacterState.Fall;
+                // 홀드 전부 종료 → 즉시 Fall 시작 (딜레이 없이 lerp 하강)
+                StartFall();
             }
         }
 
         // ─────────────────────────────────────────────
-        // topY 유지 → 자연 낙하
+        // Fall 코루틴
         // ─────────────────────────────────────────────
 
+        /// <summary>
+        /// Top/Middle 히트 후 _topFloatDuration 대기 → Fall 시작.
+        /// </summary>
         private void StartFallTimer()
         {
             if (!gameObject.activeInHierarchy) return;
-            ResetFallTimer();
+            ResetFall();
             _fallCoroutine = StartCoroutine(FallAfterDelay());
         }
 
-        private void ResetFallTimer()
+        /// <summary>
+        /// 즉시 Fall 시작 (Hold 종료 시 사용).
+        /// </summary>
+        private void StartFall()
+        {
+            if (!gameObject.activeInHierarchy) return;
+            ResetFall();
+            _fallCoroutine = StartCoroutine(DoFall());
+        }
+
+        private void ResetFall()
         {
             if (_fallCoroutine != null)
             {
@@ -251,9 +254,26 @@ namespace SCOdyssey.Game
         private IEnumerator FallAfterDelay()
         {
             yield return new WaitForSeconds(_topFloatDuration);
-            _targetY = _bottomY;
+            yield return DoFall();
+        }
+
+        /// <summary>
+        /// Fall 상태로 전이 후 bottomY까지 lerp 하강.
+        /// </summary>
+        private IEnumerator DoFall()
+        {
             SetState(CharacterState.Fall);
             _currentState = CharacterState.Fall;
+
+            while (!Mathf.Approximately(transform.localPosition.y, _bottomY))
+            {
+                Vector3 pos = transform.localPosition;
+                pos.y = Mathf.MoveTowards(pos.y, _bottomY, _fallSpeed * Time.deltaTime);
+                transform.localPosition = pos;
+                yield return null;
+            }
+
+            SetPosition(_bottomY);
             _fallCoroutine = null;
         }
 
@@ -262,36 +282,38 @@ namespace SCOdyssey.Game
         // ─────────────────────────────────────────────
 
         /// <summary>
+        /// 즉시 Y 위치 스냅. Fall 이외의 모든 상태 전이에 사용.
+        /// </summary>
+        private void SetPosition(float y)
+        {
+            Vector3 pos = transform.localPosition;
+            pos.y = y;
+            transform.localPosition = pos;
+        }
+
+        /// <summary>
         /// 현재 상태로부터 레인을 추론. Fall은 어느 레인에도 속하지 않아 null 반환.
         /// </summary>
-        private NotePosition? GetLaneFromState(CharacterState s)
+        private NotePosition? GetLaneFromState(CharacterState s) => s switch
         {
-            switch (s)
-            {
-                case CharacterState.Top:
-                case CharacterState.TopHold:
-                case CharacterState.BottomHitWhileTopHold:
-                    return NotePosition.Top;
+            CharacterState.Top or
+            CharacterState.TopHold or
+            CharacterState.BottomHitWhileTopHold     => NotePosition.Top,
 
-                case CharacterState.Middle:
-                case CharacterState.MiddleHold:
-                    return NotePosition.Middle;
+            CharacterState.Middle or
+            CharacterState.MiddleHold                => NotePosition.Middle,
 
-                case CharacterState.Idle:
-                case CharacterState.Bottom:
-                case CharacterState.BottomHold:
-                case CharacterState.Hit0:
-                case CharacterState.Hit1:
-                case CharacterState.Hit2:
-                case CharacterState.Hit3:
-                case CharacterState.TopHitWhileBottomHold:
-                    return NotePosition.Bottom;
+            CharacterState.Idle or
+            CharacterState.Bottom or
+            CharacterState.BottomHold or
+            CharacterState.Hit0 or
+            CharacterState.Hit1 or
+            CharacterState.Hit2 or
+            CharacterState.Hit3 or
+            CharacterState.TopHitWhileBottomHold     => NotePosition.Bottom,
 
-                case CharacterState.Fall:
-                default:
-                    return null;  // 레인 없음 → 항상 이동 타격
-            }
-        }
+            _                                        => null   // Fall — 레인 없음
+        };
 
         /// <summary>
         /// Hit0~3 중 직전 variant를 제외하고 랜덤 선택
@@ -311,17 +333,6 @@ namespace SCOdyssey.Game
         private void SetState(CharacterState state)
         {
             _handler?.SetState(state);
-        }
-
-        // ─────────────────────────────────────────────
-        // Root Y 위치 업데이트
-        // ─────────────────────────────────────────────
-
-        private void Update()
-        {
-            Vector3 pos = transform.localPosition;
-            pos.y = Mathf.MoveTowards(pos.y, _targetY, _fallSpeed * Time.deltaTime);
-            transform.localPosition = pos;
         }
     }
 }

@@ -343,11 +343,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _spriteRoot: {fileID: 6631095657328188711}
-  _topY: 60
-  _bottomY: -60
+  _topY: 120
+  _bottomY: -120
   _centerY: 0
   _topFloatDuration: 0.5
-  _fallSpeed: 300
+  _fallSpeed: 1000
 --- !u!1 &6631095657328188711
 GameObject:
   m_ObjectHideFlags: 0
