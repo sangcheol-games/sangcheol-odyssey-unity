@@ -1,52 +1,50 @@
-using System.Collections;
 using UnityEngine;
+using SCOdyssey.App;
 using SCOdyssey.App.Interfaces;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
 using static SCOdyssey.Domain.Service.Constants;
-using SCOdyssey.App;
 
 namespace SCOdyssey.Game
 {
     /// <summary>
-    /// 뮤즈대시 스타일 캐릭터 상태 머신 + Root Y 위치 제어 + 애니메이션 핸들러 위임
+    /// 캐릭터 상태 머신. 그룹 단위 입력/판정 이벤트를 받아 Y 위치와 애니메이션을 결정한다.
+    /// - 입력(OnLaneInput): Y 이동 + Top/Middle/Bottom 또는 Attack(같은 레인 재입력)
+    /// - 판정(OnNoteJudged): Attack 덮어쓰기(Hit0~3/Hit_Kind/Hit_Umm) 또는 전용 크로스 모션
+    /// - 홀드(OnHoldStart/End): *Hold 상태 고정
+    /// 이동 애니메이션은 히트가 덮어쓰지 않는다.
     /// </summary>
     public class CharacterAnimator : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] private GameObject _spriteRoot;   // Animator + Sprite 컴포넌트가 있는 자식 오브젝트
+        [SerializeField] private GameObject _spriteRoot;
 
         [Header("Y Positions")]
         [SerializeField] private float _topY = 120f;
         [SerializeField] private float _bottomY = -120f;
         [SerializeField] private float _centerY = 0f;
 
-        [Header("Fall Settings")]
-        [SerializeField] private float _topFloatDuration = 0.5f;  // topY 유지 시간
-        [SerializeField] private float _fallSpeed = 300f;          // bottomY 복귀 속도 (units/sec)
+        private enum LanePos { Top, Middle, Bottom }
 
-        // 상태
-        private CharacterState _currentState = CharacterState.Idle;
-        private bool _isTopHolding;
-        private bool _isBottomHolding;
+        private int _groupID;
+        private LanePos _pos = LanePos.Bottom;
+        private CharacterState _currentAnim = CharacterState.Idle;
+        private bool _topHold, _bottomHold;
         private int _lastHitVariant = -1;
 
-        // Fall 코루틴
-        private Coroutine _fallCoroutine;
+        // 동일 프레임 내 Top/Bottom 동시 입력을 Middle로 승격하기 위한 버퍼
+        private int _lastInputFrame = -1;
+        private NotePosition _lastInputPos;
 
-        // 애니메이션 핸들러
         private ICharacterAnimationHandler _handler;
-
-        // 이벤트 구독용
         private IGameManager _gameManager;
 
         // ─────────────────────────────────────────────
-        // 초기화
+        // Lifecycle
         // ─────────────────────────────────────────────
 
         private void Start()
         {
-            // CharacterManager에서 현재 캐릭터 로드
             if (ServiceLocator.TryGet<ICharacterManager>(out var characterManager))
             {
                 var skin = characterManager.GetCurrentSkin();
@@ -54,12 +52,13 @@ namespace SCOdyssey.Game
                     LoadCharacter(skin);
             }
 
-            // 게임 이벤트 구독
             if (ServiceLocator.TryGet<IGameManager>(out _gameManager))
             {
-                _gameManager.OnNoteJudgedEvent += OnNoteJudgedHandler;
-                _gameManager.OnHoldStartEvent  += OnHoldStart;
-                _gameManager.OnHoldEndEvent    += OnHoldEnd;
+                _gameManager.OnLaneInputEvent    += OnLaneInputEvent;
+                _gameManager.OnNoteJudgedEvent   += OnNoteJudgedEvent;
+                _gameManager.OnHoldStartEvent    += OnHoldStartEvent;
+                _gameManager.OnHoldEndEvent      += OnHoldEndEvent;
+                _gameManager.OnHoldReleaseEvent  += OnHoldReleaseEvent;
             }
         }
 
@@ -67,15 +66,19 @@ namespace SCOdyssey.Game
         {
             if (_gameManager != null)
             {
-                _gameManager.OnNoteJudgedEvent -= OnNoteJudgedHandler;
-                _gameManager.OnHoldStartEvent  -= OnHoldStart;
-                _gameManager.OnHoldEndEvent    -= OnHoldEnd;
+                _gameManager.OnLaneInputEvent    -= OnLaneInputEvent;
+                _gameManager.OnNoteJudgedEvent   -= OnNoteJudgedEvent;
+                _gameManager.OnHoldStartEvent    -= OnHoldStartEvent;
+                _gameManager.OnHoldEndEvent      -= OnHoldEndEvent;
+                _gameManager.OnHoldReleaseEvent  -= OnHoldReleaseEvent;
             }
         }
 
         // ─────────────────────────────────────────────
-        // 캐릭터 교체
+        // Public API
         // ─────────────────────────────────────────────
+
+        public void SetGroupID(int groupID) => _groupID = groupID;
 
         public void LoadCharacter(CharacterSO so)
         {
@@ -84,255 +87,206 @@ namespace SCOdyssey.Game
                 : new SpineAnimationHandler();
 
             _handler.Initialize(_spriteRoot, so);
-            SetState(CharacterState.Idle);
+            Play(CharacterState.Idle);
         }
 
         // ─────────────────────────────────────────────
-        // 이벤트 핸들러
+        // Event routers (groupID 필터)
         // ─────────────────────────────────────────────
 
-        private void OnNoteJudgedHandler(JudgeType judgeType, NotePosition pos)
+        private void OnLaneInputEvent(NotePosition pos, int groupID)
         {
-            OnNoteHit(pos);
+            if (groupID != _groupID) return;
+
+            Debug.Log($"[CA g{_groupID}] OnLaneInput pos={pos} frame={Time.frameCount} lastFrame={_lastInputFrame} lastPos={_lastInputPos} topHold={_topHold} bottomHold={_bottomHold} _pos={_pos} anim={_currentAnim}");
+
+            // 같은 프레임 내 반대 레인 입력 → Middle 승격
+            // (ChartManager가 TryJudgeInput에서 동기 발화하므로 두 입력은 같은 frameCount를 공유)
+            if (Time.frameCount == _lastInputFrame
+                && _lastInputPos != NotePosition.Middle
+                && pos != _lastInputPos)
+            {
+                HandleLaneInput(NotePosition.Middle);
+                _lastInputPos = NotePosition.Middle;
+                return;
+            }
+
+            _lastInputFrame = Time.frameCount;
+            _lastInputPos = pos;
+            HandleLaneInput(pos);
         }
 
-        private void OnHoldStart(NotePosition pos)
+        private void OnNoteJudgedEvent(JudgeType judge, NotePosition pos, int groupID)
         {
-            ResetFall();
-            if (pos == NotePosition.Top)    _isTopHolding    = true;
-            if (pos == NotePosition.Bottom) _isBottomHolding = true;
-            UpdateHoldState();
+            if (groupID != _groupID) return;
+            HandleNoteJudged(judge, pos);
         }
 
-        private void OnHoldEnd(NotePosition pos)
+        private void OnHoldStartEvent(NotePosition pos, int groupID)
         {
-            if (pos == NotePosition.Top)    _isTopHolding    = false;
-            if (pos == NotePosition.Bottom) _isBottomHolding = false;
-            UpdateHoldState();
+            if (groupID != _groupID) return;
+
+            // 이미 해당 레인 홀드 상태면 재진입 금지 (애니메이션 재시작 방지)
+            // Holding 틱 판정이 연속으로 OnHoldStart를 발화해도 상태/애니메이션 유지
+            bool changed = false;
+            if (pos == NotePosition.Top    && !_topHold)    { _topHold    = true; changed = true; }
+            if (pos == NotePosition.Bottom && !_bottomHold) { _bottomHold = true; changed = true; }
+
+            Debug.Log($"[CA g{_groupID}] HoldStart pos={pos} changed={changed} topHold={_topHold} bottomHold={_bottomHold}");
+            if (changed) UpdateHoldState();
+        }
+
+        private void OnHoldEndEvent(NotePosition pos, int groupID)
+        {
+            // 홀드 완주 성공 피드백 전용 (상태 해제는 OnHoldRelease 담당)
+            if (groupID != _groupID) return;
+            Debug.Log($"[CA g{_groupID}] HoldEnd pos={pos} (feedback only)");
+        }
+
+        private void OnHoldReleaseEvent(NotePosition pos, int groupID)
+        {
+            if (groupID != _groupID) return;
+
+            bool changed = false;
+            if (pos == NotePosition.Top    && _topHold)    { _topHold    = false; changed = true; }
+            if (pos == NotePosition.Bottom && _bottomHold) { _bottomHold = false; changed = true; }
+
+            Debug.Log($"[CA g{_groupID}] HoldRelease pos={pos} changed={changed} topHold={_topHold} bottomHold={_bottomHold}");
+            if (changed) UpdateHoldState();
         }
 
         // ─────────────────────────────────────────────
-        // 상태 전이 로직
+        // Handlers
         // ─────────────────────────────────────────────
 
-        private void OnNoteHit(NotePosition pos)
+        private void HandleLaneInput(NotePosition notePos)
         {
-            // 아래 홀드 중 위 히트
-            if (pos == NotePosition.Top && _isBottomHolding)
+            if (_topHold || _bottomHold)
             {
-                ResetFall();
-                SetState(CharacterState.TopHitWhileBottomHold);
-                // Y 유지 (bottomY)
-                _currentState = CharacterState.TopHitWhileBottomHold;
+                Debug.Log($"[CA g{_groupID}] HandleLaneInput BLOCKED by hold (topHold={_topHold} bottomHold={_bottomHold})");
                 return;
             }
 
-            // 위 홀드 중 아래 히트
-            if (pos == NotePosition.Bottom && _isTopHolding)
+            LanePos target = ToLanePos(notePos);
+            if (target == _pos)
             {
-                ResetFall();
-                SetState(CharacterState.BottomHitWhileTopHold);
-                // Y 유지 (topY)
-                _currentState = CharacterState.BottomHitWhileTopHold;
+                Debug.Log($"[CA g{_groupID}] HandleLaneInput SAME pos={target} → Attack");
+                Play(CharacterState.Attack);
                 return;
             }
 
-            // 동시 히트 (Middle)
-            if (pos == NotePosition.Middle)
+            Debug.Log($"[CA g{_groupID}] HandleLaneInput MOVE {_pos} → {target}, Y={YOf(target)}");
+            _pos = target;
+            SnapY(YOf(target));
+            Play(StateOf(target));
+        }
+
+        private void HandleNoteJudged(JudgeType judge, NotePosition notePos)
+        {
+            // 홀드 중 반대편 히트: 전용 크로스 모션 (Hit 덮어쓰기 없음)
+            if (_bottomHold && notePos == NotePosition.Top)
             {
-                SetPosition(_centerY);
-                SetState(CharacterState.Middle);
-                _currentState = CharacterState.Middle;
-                StartFallTimer();
+                Play(CharacterState.TopHitWhileBottomHold);
+                return;
+            }
+            if (_topHold && notePos == NotePosition.Bottom)
+            {
+                Play(CharacterState.BottomHitWhileTopHold);
                 return;
             }
 
-            // Top 히트
-            if (pos == NotePosition.Top)
-            {
-                NotePosition? lane = GetLaneFromState(_currentState);
-                if (lane == NotePosition.Top)
-                {
-                    // 제자리 타격 — Y 변경 없음
-                    SetState(PickHitVariant());
-                    StartFallTimer();  // 타이머 리셋
-                }
-                else
-                {
-                    // 이동 타격
-                    SetPosition(_topY);
-                    SetState(CharacterState.Top);
-                    StartFallTimer();
-                }
-                _currentState = CharacterState.Top;
-                return;
-            }
+            // 이동 애니메이션 보존: 방금 OnLaneInput이 Top/Middle/Bottom을 재생한 경우 유지
+            if (IsMovementAnim(_currentAnim)) return;
 
-            // Bottom 히트
-            if (pos == NotePosition.Bottom)
+            // Attack 덮어쓰기: 판정 종류에 따라 히트 애니메이션
+            if (_currentAnim == CharacterState.Attack)
             {
-                ResetFall();
-                NotePosition? lane = GetLaneFromState(_currentState);
-                if (lane == NotePosition.Bottom)
+                Play(judge switch
                 {
-                    // 제자리 타격 — Y 변경 없음
-                    SetState(PickHitVariant());
-                }
-                else
-                {
-                    // 이동 타격
-                    SetPosition(_bottomY);
-                    SetState(CharacterState.Bottom);
-                }
-                _currentState = CharacterState.Bottom;
+                    JudgeType.Kind => CharacterState.Hit_Kind,
+                    JudgeType.Umm  => CharacterState.Hit_Umm,
+                    _              => PickHitVariant(),
+                });
             }
         }
 
         private void UpdateHoldState()
         {
-            if (_isTopHolding && _isBottomHolding)
+            if (_topHold && _bottomHold)
             {
-                ResetFall();
-                SetPosition(_centerY);
-                SetState(CharacterState.MiddleHold);
-                _currentState = CharacterState.MiddleHold;
+                _pos = LanePos.Middle;
+                SnapY(_centerY);
+                Play(CharacterState.MiddleHold);
             }
-            else if (_isTopHolding)
+            else if (_topHold)
             {
-                ResetFall();
-                SetPosition(_topY);
-                SetState(CharacterState.TopHold);
-                _currentState = CharacterState.TopHold;
+                _pos = LanePos.Top;
+                SnapY(_topY);
+                Play(CharacterState.TopHold);
             }
-            else if (_isBottomHolding)
+            else if (_bottomHold)
             {
-                ResetFall();
-                SetPosition(_bottomY);
-                SetState(CharacterState.BottomHold);
-                _currentState = CharacterState.BottomHold;
+                _pos = LanePos.Bottom;
+                SnapY(_bottomY);
+                Play(CharacterState.BottomHold);
             }
             else
             {
-                // 홀드 전부 종료 → 즉시 Fall 시작 (딜레이 없이 lerp 하강)
-                StartFall();
+                // 전부 해제 → 현재 위치의 포지션 상태로 복귀 (Fall 없음)
+                Play(StateOf(_pos));
             }
         }
 
         // ─────────────────────────────────────────────
-        // Fall 코루틴
+        // Helpers
         // ─────────────────────────────────────────────
 
-        /// <summary>
-        /// Top/Middle 히트 후 _topFloatDuration 대기 → Fall 시작.
-        /// </summary>
-        private void StartFallTimer()
+        private void Play(CharacterState state)
         {
-            if (!gameObject.activeInHierarchy) return;
-            ResetFall();
-            _fallCoroutine = StartCoroutine(FallAfterDelay());
+            _currentAnim = state;
+            _handler?.SetState(state);
         }
 
-        /// <summary>
-        /// 즉시 Fall 시작 (Hold 종료 시 사용).
-        /// </summary>
-        private void StartFall()
+        private void SnapY(float y)
         {
-            if (!gameObject.activeInHierarchy) return;
-            ResetFall();
-            _fallCoroutine = StartCoroutine(DoFall());
+            if (_spriteRoot == null) return;
+            Vector3 p = _spriteRoot.transform.localPosition;
+            p.y = y;
+            _spriteRoot.transform.localPosition = p;
         }
 
-        private void ResetFall()
+        private LanePos ToLanePos(NotePosition np) => np switch
         {
-            if (_fallCoroutine != null)
-            {
-                StopCoroutine(_fallCoroutine);
-                _fallCoroutine = null;
-            }
-        }
-
-        private IEnumerator FallAfterDelay()
-        {
-            yield return new WaitForSeconds(_topFloatDuration);
-            yield return DoFall();
-        }
-
-        /// <summary>
-        /// Fall 상태로 전이 후 bottomY까지 lerp 하강.
-        /// </summary>
-        private IEnumerator DoFall()
-        {
-            SetState(CharacterState.Fall);
-            _currentState = CharacterState.Fall;
-
-            while (!Mathf.Approximately(transform.localPosition.y, _bottomY))
-            {
-                Vector3 pos = transform.localPosition;
-                pos.y = Mathf.MoveTowards(pos.y, _bottomY, _fallSpeed * Time.deltaTime);
-                transform.localPosition = pos;
-                yield return null;
-            }
-
-            SetPosition(_bottomY);
-            _fallCoroutine = null;
-        }
-
-        // ─────────────────────────────────────────────
-        // 헬퍼
-        // ─────────────────────────────────────────────
-
-        /// <summary>
-        /// 즉시 Y 위치 스냅. Fall 이외의 모든 상태 전이에 사용.
-        /// </summary>
-        private void SetPosition(float y)
-        {
-            Vector3 pos = transform.localPosition;
-            pos.y = y;
-            transform.localPosition = pos;
-        }
-
-        /// <summary>
-        /// 현재 상태로부터 레인을 추론. Fall은 어느 레인에도 속하지 않아 null 반환.
-        /// </summary>
-        private NotePosition? GetLaneFromState(CharacterState s) => s switch
-        {
-            CharacterState.Top or
-            CharacterState.TopHold or
-            CharacterState.BottomHitWhileTopHold     => NotePosition.Top,
-
-            CharacterState.Middle or
-            CharacterState.MiddleHold                => NotePosition.Middle,
-
-            CharacterState.Idle or
-            CharacterState.Bottom or
-            CharacterState.BottomHold or
-            CharacterState.Hit0 or
-            CharacterState.Hit1 or
-            CharacterState.Hit2 or
-            CharacterState.Hit3 or
-            CharacterState.TopHitWhileBottomHold     => NotePosition.Bottom,
-
-            _                                        => null   // Fall — 레인 없음
+            NotePosition.Top    => LanePos.Top,
+            NotePosition.Middle => LanePos.Middle,
+            _                   => LanePos.Bottom,
         };
 
-        /// <summary>
-        /// Hit0~3 중 직전 variant를 제외하고 랜덤 선택
-        /// </summary>
+        private float YOf(LanePos p) => p switch
+        {
+            LanePos.Top    => _topY,
+            LanePos.Middle => _centerY,
+            _              => _bottomY,
+        };
+
+        private CharacterState StateOf(LanePos p) => p switch
+        {
+            LanePos.Top    => CharacterState.Top,
+            LanePos.Middle => CharacterState.Middle,
+            _              => CharacterState.Bottom,
+        };
+
+        private static bool IsMovementAnim(CharacterState s) =>
+            s == CharacterState.Top ||
+            s == CharacterState.Middle ||
+            s == CharacterState.Bottom;
+
         private CharacterState PickHitVariant()
         {
             int pick;
-            do
-            {
-                pick = Random.Range(0, 4);
-            } while (pick == _lastHitVariant);
-
+            do { pick = Random.Range(0, 4); } while (pick == _lastHitVariant);
             _lastHitVariant = pick;
             return (CharacterState)(CharacterState.Hit0 + pick);
-        }
-
-        private void SetState(CharacterState state)
-        {
-            _handler?.SetState(state);
         }
     }
 }

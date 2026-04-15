@@ -210,7 +210,8 @@ namespace SCOdyssey.Game
                         barDuration,
                         startX,
                         endX,
-                        (timeline) => { ReturnTimelineToPool(timeline.gameObject); }
+                        (timeline) => { ReturnTimelineToPool(timeline.gameObject); },
+                        groupID: groupID
                     );
                 }
                 else
@@ -333,7 +334,8 @@ namespace SCOdyssey.Game
                         barDuration,
                         startX,
                         endX,
-                        (timeline) => { ReturnTimelineToPool(timeline.gameObject); }
+                        (timeline) => { ReturnTimelineToPool(timeline.gameObject); },
+                        groupID: groupID
                     );
 
                     preloadedTimelines.Add(groupID, timeline);
@@ -524,6 +526,9 @@ namespace SCOdyssey.Game
             int listIndex = laneIndex - 1;  // 인덱스 보정
             isLaneHolding[listIndex] = true;
 
+            // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
+            gameManager.OnLaneInput(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
+
             var queue = activeNotes[listIndex];
             if (queue.Count == 0)
             {
@@ -544,7 +549,7 @@ namespace SCOdyssey.Game
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
-                Debug.Log("판정 범위 밖 입력");
+                //Debug.Log("판정 범위 밖 입력");
                 return;
             }
 
@@ -608,6 +613,9 @@ namespace SCOdyssey.Game
             int listIndex = laneIndex - 1;
             isLaneHolding[listIndex] = false;
 
+            // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
+            gameManager.OnHoldRelease(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
+
             var queue = activeNotes[listIndex];
             if (queue.Count == 0) return;
 
@@ -640,24 +648,31 @@ namespace SCOdyssey.Game
 
         private NotePosition GetNotePosition(int listIndex)
         {
-            // listIndex 0,1 → group 0 (Bottom), listIndex 2,3 → group 1 (Top)
-            return listIndex <= 1 ? NotePosition.Bottom : NotePosition.Top;
+            // 각 그룹 내 첫 번째 레인(짝수 인덱스) = Top, 두 번째(홀수) = Bottom
+            return listIndex % 2 == 0 ? NotePosition.Top : NotePosition.Bottom;
         }
 
         private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
         {
-            Debug.Log($"Note Judged: {type}");
+            //Debug.Log($"Note Judged: {type}");
             activeNotes[listIndex].Dequeue();
             targetNote.OnHit();
 
             NotePosition pos = GetNotePosition(listIndex);
-            gameManager.OnNoteJudged(type, pos);
+            int groupID = GetTrackGroupID(listIndex);
+            gameManager.OnNoteJudged(type, pos, groupID);
 
-            // 홀드 시작/종료 이벤트 발화
-            if (targetNote.noteData.noteType == NoteType.HoldStart)
-                gameManager.OnHoldStart(pos);
-            else if (targetNote.noteData.noteType == NoteType.HoldRelease)
-                gameManager.OnHoldEnd(pos);
+            // 홀드 관련 이벤트 발화
+            // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
+            // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
+            // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
+            var nt = targetNote.noteData.noteType;
+            if (nt == NoteType.HoldStart || nt == NoteType.Holding)
+                gameManager.OnHoldStart(pos, groupID);
+            else if (nt == NoteType.HoldEnd)
+                gameManager.OnHoldEnd(pos, groupID);
+            else if (nt == NoteType.HoldRelease)
+                gameManager.OnHoldRelease(pos, groupID);
 
             GameObject effect = GetEffectFromPool();
             effect.GetComponent<EffectController>().Setup(type,

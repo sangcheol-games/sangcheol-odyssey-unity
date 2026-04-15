@@ -37,7 +37,7 @@ namespace SCOdyssey.Game
 
         }
 
-        public void Init(double startTime, double duration, float startX, float endX, Action<TimelineController> returnCallback, Func<double> timeProvider = null)
+        public void Init(double startTime, double duration, float startX, float endX, Action<TimelineController> returnCallback, int groupID = 0, Func<double> timeProvider = null)
         {
             this.startTime = startTime;
             this.duration = duration;
@@ -48,9 +48,12 @@ namespace SCOdyssey.Game
 
             isLTR = startX < endX;
             if (_characterAnimator != null)
+            {
+                _characterAnimator.SetGroupID(groupID);
                 _characterAnimator.transform.rotation = isLTR
                     ? Quaternion.Euler(0, 0, 0)
                     : Quaternion.Euler(0, 180, 0);
+            }
 
 
             rectTransform.anchoredPosition = new Vector2(startX, rectTransform.anchoredPosition.y);

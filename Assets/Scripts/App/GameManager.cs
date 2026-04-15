@@ -24,9 +24,11 @@ namespace SCOdyssey.App
         public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
 
         // 캐릭터 애니메이터 구독용 이벤트
-        public event Action<JudgeType, NotePosition> OnNoteJudgedEvent;
-        public event Action<NotePosition> OnHoldStartEvent;
-        public event Action<NotePosition> OnHoldEndEvent;
+        public event Action<JudgeType, NotePosition, int> OnNoteJudgedEvent;
+        public event Action<NotePosition, int> OnHoldStartEvent;
+        public event Action<NotePosition, int> OnHoldEndEvent;
+        public event Action<NotePosition, int> OnHoldReleaseEvent;
+        public event Action<NotePosition, int> OnLaneInputEvent;
 
 
         [Header("게임 상태")]
@@ -224,10 +226,10 @@ namespace SCOdyssey.App
         }
 
 
-        public void OnNoteJudged(JudgeType judgeType, NotePosition pos)
+        public void OnNoteJudged(JudgeType judgeType, NotePosition pos, int groupID)
         {
             scoreManager.ProcessJudge(judgeType);
-            OnNoteJudgedEvent?.Invoke(judgeType, pos);
+            OnNoteJudgedEvent?.Invoke(judgeType, pos, groupID);
         }
 
         public void OnNoteMissed()
@@ -235,14 +237,24 @@ namespace SCOdyssey.App
             scoreManager.ProcessJudge(JudgeType.Umm);
         }
 
-        public void OnHoldStart(NotePosition pos)
+        public void OnHoldStart(NotePosition pos, int groupID)
         {
-            OnHoldStartEvent?.Invoke(pos);
+            OnHoldStartEvent?.Invoke(pos, groupID);
         }
 
-        public void OnHoldEnd(NotePosition pos)
+        public void OnHoldEnd(NotePosition pos, int groupID)
         {
-            OnHoldEndEvent?.Invoke(pos);
+            OnHoldEndEvent?.Invoke(pos, groupID);
+        }
+
+        public void OnHoldRelease(NotePosition pos, int groupID)
+        {
+            OnHoldReleaseEvent?.Invoke(pos, groupID);
+        }
+
+        public void OnLaneInput(NotePosition pos, int groupID)
+        {
+            OnLaneInputEvent?.Invoke(pos, groupID);
         }
 
 

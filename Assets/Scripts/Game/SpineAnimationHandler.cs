@@ -59,18 +59,13 @@ namespace SCOdyssey.Game
                 case CharacterState.Hit1:
                 case CharacterState.Hit2:
                 case CharacterState.Hit3:
-                case CharacterState.Bottom:
-                case CharacterState.Fall:
-                    _animationState.SetAnimation(0, name, false);
-                    _animationState.AddAnimation(0, nameof(CharacterState.Idle), true, 0f);
-                    break;
-
-                // ── 원샷 → Fall → Idle ─────────────────────
-                // (FallTimer coroutine이 SetState(Fall)을 호출하면 큐가 덮어써짐 — 정상 동작)
+                case CharacterState.Hit_Kind:
+                case CharacterState.Hit_Umm:
+                case CharacterState.Attack:
                 case CharacterState.Top:
                 case CharacterState.Middle:
+                case CharacterState.Bottom:
                     _animationState.SetAnimation(0, name, false);
-                    _animationState.AddAnimation(0, nameof(CharacterState.Fall), false, 0f);
                     _animationState.AddAnimation(0, nameof(CharacterState.Idle), true, 0f);
                     break;
 
