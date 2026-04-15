@@ -279,7 +279,8 @@ namespace SCOdyssey.ChartEditor.Preview
                         activeTimelineObjects.Remove(tc.gameObject);
                         ReturnToPool(timelinePool, tc.gameObject);
                     },
-                    timeProvider.GetCurrentTime   // 에디터 시간 소스 주입
+                    groupID: groupID,
+                    timeProvider: timeProvider.GetCurrentTime   // 에디터 시간 소스 주입
                 );
             }
 
