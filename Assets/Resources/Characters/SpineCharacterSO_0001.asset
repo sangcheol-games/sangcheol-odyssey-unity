@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d2d3c50a8286e1d4eba942067f71a167, type: 3}
+  m_Name: SpineCharacterSO_0001
+  m_EditorClassIdentifier: Assembly-CSharp::SCOdyssey.Domain.Entity.SpineCharacterSO
+  id: 1
+  skinName: Sangcheol
+  thumbnailSprite: {fileID: 4653932814348791077, guid: cf189fef93788294282534bb6c00d0fd, type: 3}
+  skeletonDataAsset: {fileID: 11400000, guid: 4f035b3a4e103c94f88ff806f5a45b56, type: 2}

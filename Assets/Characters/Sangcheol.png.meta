@@ -1,0 +1,1703 @@
+fileFormatVersion: 2
+guid: 5343651190184cd46bc700ea29e5c28f
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 5792240530858049506
+    second: Sangcheol_0
+  - first:
+      213: -2826183410509402525
+    second: Sangcheol_1
+  - first:
+      213: 6489391224183612054
+    second: Sangcheol_2
+  - first:
+      213: 4322601530470783098
+    second: Sangcheol_3
+  - first:
+      213: -2136813971500047940
+    second: Sangcheol_4
+  - first:
+      213: 6062043821079023295
+    second: Sangcheol_5
+  - first:
+      213: -415037107764127520
+    second: Sangcheol_6
+  - first:
+      213: -6963883856379237478
+    second: Sangcheol_7
+  - first:
+      213: -4554523007001491189
+    second: Sangcheol_8
+  - first:
+      213: -1176327477002884241
+    second: Sangcheol_9
+  - first:
+      213: 3204392924194178930
+    second: Sangcheol_10
+  - first:
+      213: 7465573082013208079
+    second: Sangcheol_11
+  - first:
+      213: 5139971547694708286
+    second: Sangcheol_12
+  - first:
+      213: -4889683066981652707
+    second: Sangcheol_13
+  - first:
+      213: 1481336333661268180
+    second: Sangcheol_14
+  - first:
+      213: 2425970170779445402
+    second: Sangcheol_15
+  - first:
+      213: 1058519449353394099
+    second: Sangcheol_16
+  - first:
+      213: -8375151564156261512
+    second: Sangcheol_17
+  - first:
+      213: -6406085024550945964
+    second: Sangcheol_18
+  - first:
+      213: -7445637178401528672
+    second: Sangcheol_19
+  - first:
+      213: -8382852455107415572
+    second: Sangcheol_20
+  - first:
+      213: 1238604398003375292
+    second: Sangcheol_21
+  - first:
+      213: -1977303855407831210
+    second: Sangcheol_22
+  - first:
+      213: -4319913750327927891
+    second: Sangcheol_23
+  - first:
+      213: -7709736991247187790
+    second: Sangcheol_24
+  - first:
+      213: -7002058243611670841
+    second: Sangcheol_25
+  - first:
+      213: -7611006366421891021
+    second: Sangcheol_26
+  - first:
+      213: -5022994349868830041
+    second: Sangcheol_27
+  - first:
+      213: -3444724388030223937
+    second: Sangcheol_28
+  - first:
+      213: -5407735389466885173
+    second: Sangcheol_29
+  - first:
+      213: 263798290295233594
+    second: Sangcheol_30
+  - first:
+      213: 7013078088451553541
+    second: Sangcheol_31
+  - first:
+      213: -9088055457472211383
+    second: Sangcheol_32
+  - first:
+      213: 7234462309184834222
+    second: Sangcheol_33
+  - first:
+      213: -3163105488402836844
+    second: Sangcheol_34
+  - first:
+      213: 5531461928131327544
+    second: Sangcheol_35
+  - first:
+      213: 6486722241910625777
+    second: Sangcheol_36
+  - first:
+      213: 3804699622784037908
+    second: Sangcheol_37
+  - first:
+      213: -2301299631976977472
+    second: Sangcheol_38
+  - first:
+      213: 4245941609215484291
+    second: Sangcheol_39
+  - first:
+      213: -774014871192336760
+    second: Sangcheol_40
+  - first:
+      213: 271105916855138476
+    second: Sangcheol_41
+  - first:
+      213: 5002885606027612845
+    second: Sangcheol_42
+  - first:
+      213: 6219767228954809476
+    second: Sangcheol_43
+  - first:
+      213: -8068963144154572247
+    second: Sangcheol_44
+  - first:
+      213: 7623268336960025440
+    second: Sangcheol_45
+  - first:
+      213: 8169827624782651498
+    second: Sangcheol_46
+  - first:
+      213: -5887487031602366972
+    second: Sangcheol_47
+  - first:
+      213: -8325361077894951786
+    second: Sangcheol_48
+  - first:
+      213: -3606504266473941643
+    second: Sangcheol_49
+  - first:
+      213: -4269247935945873602
+    second: Sangcheol_50
+  - first:
+      213: -5169997774265255583
+    second: Sangcheol_51
+  - first:
+      213: 5382659712088715402
+    second: Sangcheol_52
+  - first:
+      213: -8072291046607896910
+    second: Sangcheol_53
+  - first:
+      213: -3861161687454525340
+    second: Sangcheol_54
+  - first:
+      213: -6004379391750620629
+    second: Sangcheol_55
+  - first:
+      213: 337556349438401287
+    second: Sangcheol_56
+  - first:
+      213: -3060292655104844524
+    second: Sangcheol_57
+  - first:
+      213: 8160288291040472139
+    second: Sangcheol_58
+  - first:
+      213: -7901741670245135911
+    second: Sangcheol_59
+  - first:
+      213: -5191387393210394246
+    second: Sangcheol_60
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 0
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 0
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 0
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Sangcheol_0
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 997
+        width: 46
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2eff96ff21c226050800000000000000
+      internalID: 5792240530858049506
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_1
+      rect:
+        serializedVersion: 2
+        x: 462
+        y: 877
+        width: 193
+        height: 138
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 36e2c72792167c8d0800000000000000
+      internalID: -2826183410509402525
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_2
+      rect:
+        serializedVersion: 2
+        x: 655
+        y: 877
+        width: 216
+        height: 127
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6926006afe2fe0a50800000000000000
+      internalID: 6489391224183612054
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_3
+      rect:
+        serializedVersion: 2
+        x: 871
+        y: 877
+        width: 128
+        height: 128
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a7855499037fcfb30800000000000000
+      internalID: 4322601530470783098
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_4
+      rect:
+        serializedVersion: 2
+        x: 999
+        y: 1003
+        width: 31
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cb1e5a5a3038852e0800000000000000
+      internalID: -2136813971500047940
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_5
+      rect:
+        serializedVersion: 2
+        x: 1028
+        y: 978
+        width: 69
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fbe4448bcb4b02450800000000000000
+      internalID: 6062043821079023295
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_6
+      rect:
+        serializedVersion: 2
+        x: 1313
+        y: 928
+        width: 102
+        height: 87
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e81d1f03fd7d3af0800000000000000
+      internalID: -415037107764127520
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_7
+      rect:
+        serializedVersion: 2
+        x: 1415
+        y: 917
+        width: 68
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9b207367805b5f90800000000000000
+      internalID: -6963883856379237478
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_8
+      rect:
+        serializedVersion: 2
+        x: 1517
+        y: 973
+        width: 91
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b09055eb4751bc0c0800000000000000
+      internalID: -4554523007001491189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_9
+      rect:
+        serializedVersion: 2
+        x: 1614
+        y: 976
+        width: 38
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f6b26b16468dcafe0800000000000000
+      internalID: -1176327477002884241
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_10
+      rect:
+        serializedVersion: 2
+        x: 1741
+        y: 991
+        width: 105
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2778e5f036a487c20800000000000000
+      internalID: 3204392924194178930
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_11
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 827
+        width: 232
+        height: 170
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f0e8d1ee92b0b9760800000000000000
+      internalID: 7465573082013208079
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_12
+      rect:
+        serializedVersion: 2
+        x: 233
+        y: 832
+        width: 229
+        height: 156
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3635ffc3e8d45740800000000000000
+      internalID: 5139971547694708286
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_13
+      rect:
+        serializedVersion: 2
+        x: 999
+        y: 872
+        width: 101
+        height: 89
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d17e050482b542cb0800000000000000
+      internalID: -4889683066981652707
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_14
+      rect:
+        serializedVersion: 2
+        x: 1114
+        y: 848
+        width: 199
+        height: 126
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4d862c80c83ce8410800000000000000
+      internalID: 1481336333661268180
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_15
+      rect:
+        serializedVersion: 2
+        x: 1483
+        y: 877
+        width: 131
+        height: 86
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a98a0095407caa120800000000000000
+      internalID: 2425970170779445402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_16
+      rect:
+        serializedVersion: 2
+        x: 1614
+        y: 877
+        width: 108
+        height: 99
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3b71d86b4dd90be00800000000000000
+      internalID: 1058519449353394099
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_17
+      rect:
+        serializedVersion: 2
+        x: 1722
+        y: 917
+        width: 127
+        height: 43
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 87ba86e960c75cb80800000000000000
+      internalID: -8375151564156261512
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_18
+      rect:
+        serializedVersion: 2
+        x: 1790
+        y: 955
+        width: 45
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 45bf0be6c930917a0800000000000000
+      internalID: -6406085024550945964
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_19
+      rect:
+        serializedVersion: 2
+        x: 1849
+        y: 928
+        width: 86
+        height: 73
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0a46fe65f68cba890800000000000000
+      internalID: -7445637178401528672
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_20
+      rect:
+        serializedVersion: 2
+        x: 1935
+        y: 928
+        width: 77
+        height: 65
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce1bfc83b102aab80800000000000000
+      internalID: -8382852455107415572
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_21
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 1
+        width: 562
+        height: 829
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cbc4a383328603110800000000000000
+      internalID: 1238604398003375292
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_22
+      rect:
+        serializedVersion: 2
+        x: 462
+        y: 827
+        width: 80
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 657e765ae943f84e0800000000000000
+      internalID: -1977303855407831210
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_23
+      rect:
+        serializedVersion: 2
+        x: 563
+        y: 535
+        width: 349
+        height: 342
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dabd06bf4559c04c0800000000000000
+      internalID: -4319913750327927891
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_24
+      rect:
+        serializedVersion: 2
+        x: 912
+        y: 599
+        width: 202
+        height: 273
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2b0c50ded03810590800000000000000
+      internalID: -7709736991247187790
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_25
+      rect:
+        serializedVersion: 2
+        x: 1114
+        y: 599
+        width: 200
+        height: 248
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c64eec3021b3de90800000000000000
+      internalID: -7002058243611670841
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_26
+      rect:
+        serializedVersion: 2
+        x: 1314
+        y: 824
+        width: 88
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 338cf2ad806406690800000000000000
+      internalID: -7611006366421891021
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_27
+      rect:
+        serializedVersion: 2
+        x: 1423
+        y: 785
+        width: 89
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a23643704dba4ab0800000000000000
+      internalID: -5022994349868830041
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_28
+      rect:
+        serializedVersion: 2
+        x: 1539
+        y: 761
+        width: 183
+        height: 116
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb965568b61e130d0800000000000000
+      internalID: -3444724388030223937
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_29
+      rect:
+        serializedVersion: 2
+        x: 1722
+        y: 773
+        width: 157
+        height: 144
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bc3848f805dd3f4b0800000000000000
+      internalID: -5407735389466885173
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_30
+      rect:
+        serializedVersion: 2
+        x: 1879
+        y: 773
+        width: 133
+        height: 155
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3c1769b52339a300800000000000000
+      internalID: 263798290295233594
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_31
+      rect:
+        serializedVersion: 2
+        x: 1314
+        y: 596
+        width: 109
+        height: 228
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 509fa345d55735160800000000000000
+      internalID: 7013078088451553541
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_32
+      rect:
+        serializedVersion: 2
+        x: 1423
+        y: 596
+        width: 116
+        height: 189
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 946915646bdb0e180800000000000000
+      internalID: -9088055457472211383
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_33
+      rect:
+        serializedVersion: 2
+        x: 1539
+        y: 612
+        width: 186
+        height: 149
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eaa0aefe329f56460800000000000000
+      internalID: 7234462309184834222
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_34
+      rect:
+        serializedVersion: 2
+        x: 1725
+        y: 626
+        width: 185
+        height: 147
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 49219a031546a14d0800000000000000
+      internalID: -3163105488402836844
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_35
+      rect:
+        serializedVersion: 2
+        x: 1910
+        y: 626
+        width: 107
+        height: 74
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8367dd21153b3cc40800000000000000
+      internalID: 5531461928131327544
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_36
+      rect:
+        serializedVersion: 2
+        x: 1951
+        y: 688
+        width: 80
+        height: 75
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f555b9c287750a50800000000000000
+      internalID: 6486722241910625777
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_37
+      rect:
+        serializedVersion: 2
+        x: 563
+        y: 1
+        width: 420
+        height: 534
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 414fa1516220dc430800000000000000
+      internalID: 3804699622784037908
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_38
+      rect:
+        serializedVersion: 2
+        x: 912
+        y: 535
+        width: 65
+        height: 53
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0cb66427d242010e0800000000000000
+      internalID: -2301299631976977472
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_39
+      rect:
+        serializedVersion: 2
+        x: 983
+        y: 375
+        width: 225
+        height: 224
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 381e65ac56d9cea30800000000000000
+      internalID: 4245941609215484291
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_40
+      rect:
+        serializedVersion: 2
+        x: 1287
+        y: 375
+        width: 154
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 88606b753952245f0800000000000000
+      internalID: -774014871192336760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_41
+      rect:
+        serializedVersion: 2
+        x: 1443
+        y: 349
+        width: 156
+        height: 229
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca838ae156923c300800000000000000
+      internalID: 271105916855138476
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_42
+      rect:
+        serializedVersion: 2
+        x: 1599
+        y: 527
+        width: 204
+        height: 85
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: da2d037c3f1dd6540800000000000000
+      internalID: 5002885606027612845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_43
+      rect:
+        serializedVersion: 2
+        x: 1803
+        y: 519
+        width: 133
+        height: 107
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 484977b475d015650800000000000000
+      internalID: 6219767228954809476
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_44
+      rect:
+        serializedVersion: 2
+        x: 1936
+        y: 519
+        width: 44
+        height: 59
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 92a92f685c8450090800000000000000
+      internalID: -8068963144154572247
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_45
+      rect:
+        serializedVersion: 2
+        x: 1599
+        y: 349
+        width: 174
+        height: 178
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0633cf3a92a4bc960800000000000000
+      internalID: 7623268336960025440
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_46
+      rect:
+        serializedVersion: 2
+        x: 1773
+        y: 349
+        width: 150
+        height: 170
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a60e75b60fe016170800000000000000
+      internalID: 8169827624782651498
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_47
+      rect:
+        serializedVersion: 2
+        x: 1923
+        y: 461
+        width: 46
+        height: 58
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4063f9decb17b4ea0800000000000000
+      internalID: -5887487031602366972
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_48
+      rect:
+        serializedVersion: 2
+        x: 1923
+        y: 426
+        width: 80
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 69c45359530667c80800000000000000
+      internalID: -8325361077894951786
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_49
+      rect:
+        serializedVersion: 2
+        x: 1931
+        y: 413
+        width: 88
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 575d3eb4a7f13fdc0800000000000000
+      internalID: -3606504266473941643
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_50
+      rect:
+        serializedVersion: 2
+        x: 983
+        y: 1
+        width: 444
+        height: 374
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3760e72f9590c4c0800000000000000
+      internalID: -4269247935945873602
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_51
+      rect:
+        serializedVersion: 2
+        x: 1923
+        y: 323
+        width: 101
+        height: 53
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 169fb578a6a7048b0800000000000000
+      internalID: -5169997774265255583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_52
+      rect:
+        serializedVersion: 2
+        x: 1928
+        y: 359
+        width: 29
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a80bad55d7c03ba40800000000000000
+      internalID: 5382659712088715402
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_53
+      rect:
+        serializedVersion: 2
+        x: 1427
+        y: 1
+        width: 382
+        height: 348
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2bebe5bdf0679ff80800000000000000
+      internalID: -8072291046607896910
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_54
+      rect:
+        serializedVersion: 2
+        x: 1809
+        y: 318
+        width: 50
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 468dcee07e56a6ac0800000000000000
+      internalID: -3861161687454525340
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_55
+      rect:
+        serializedVersion: 2
+        x: 1809
+        y: 1
+        width: 162
+        height: 317
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2a370a71c82caca0800000000000000
+      internalID: -6004379391750620629
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_56
+      rect:
+        serializedVersion: 2
+        x: 1981
+        y: 239
+        width: 35
+        height: 84
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 70b14fb16bd3fa400800000000000000
+      internalID: 337556349438401287
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_57
+      rect:
+        serializedVersion: 2
+        x: 1971
+        y: 246
+        width: 19
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 41d1db75b08a785d0800000000000000
+      internalID: -3060292655104844524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_58
+      rect:
+        serializedVersion: 2
+        x: 1971
+        y: 181
+        width: 17
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b4c2f3437fa2f3170800000000000000
+      internalID: 8160288291040472139
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_59
+      rect:
+        serializedVersion: 2
+        x: 1983
+        y: 122
+        width: 34
+        height: 117
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d9032ee0df575290800000000000000
+      internalID: -7901741670245135911
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Sangcheol_60
+      rect:
+        serializedVersion: 2
+        x: 1971
+        y: 1
+        width: 47
+        height: 121
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a79d048cbac74f7b0800000000000000
+      internalID: -5191387393210394246
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Sangcheol_0: 5792240530858049506
+      Sangcheol_1: -2826183410509402525
+      Sangcheol_10: 3204392924194178930
+      Sangcheol_11: 7465573082013208079
+      Sangcheol_12: 5139971547694708286
+      Sangcheol_13: -4889683066981652707
+      Sangcheol_14: 1481336333661268180
+      Sangcheol_15: 2425970170779445402
+      Sangcheol_16: 1058519449353394099
+      Sangcheol_17: -8375151564156261512
+      Sangcheol_18: -6406085024550945964
+      Sangcheol_19: -7445637178401528672
+      Sangcheol_2: 6489391224183612054
+      Sangcheol_20: -8382852455107415572
+      Sangcheol_21: 1238604398003375292
+      Sangcheol_22: -1977303855407831210
+      Sangcheol_23: -4319913750327927891
+      Sangcheol_24: -7709736991247187790
+      Sangcheol_25: -7002058243611670841
+      Sangcheol_26: -7611006366421891021
+      Sangcheol_27: -5022994349868830041
+      Sangcheol_28: -3444724388030223937
+      Sangcheol_29: -5407735389466885173
+      Sangcheol_3: 4322601530470783098
+      Sangcheol_30: 263798290295233594
+      Sangcheol_31: 7013078088451553541
+      Sangcheol_32: -9088055457472211383
+      Sangcheol_33: 7234462309184834222
+      Sangcheol_34: -3163105488402836844
+      Sangcheol_35: 5531461928131327544
+      Sangcheol_36: 6486722241910625777
+      Sangcheol_37: 3804699622784037908
+      Sangcheol_38: -2301299631976977472
+      Sangcheol_39: 4245941609215484291
+      Sangcheol_4: -2136813971500047940
+      Sangcheol_40: -774014871192336760
+      Sangcheol_41: 271105916855138476
+      Sangcheol_42: 5002885606027612845
+      Sangcheol_43: 6219767228954809476
+      Sangcheol_44: -8068963144154572247
+      Sangcheol_45: 7623268336960025440
+      Sangcheol_46: 8169827624782651498
+      Sangcheol_47: -5887487031602366972
+      Sangcheol_48: -8325361077894951786
+      Sangcheol_49: -3606504266473941643
+      Sangcheol_5: 6062043821079023295
+      Sangcheol_50: -4269247935945873602
+      Sangcheol_51: -5169997774265255583
+      Sangcheol_52: 5382659712088715402
+      Sangcheol_53: -8072291046607896910
+      Sangcheol_54: -3861161687454525340
+      Sangcheol_55: -6004379391750620629
+      Sangcheol_56: 337556349438401287
+      Sangcheol_57: -3060292655104844524
+      Sangcheol_58: 8160288291040472139
+      Sangcheol_59: -7901741670245135911
+      Sangcheol_6: -415037107764127520
+      Sangcheol_60: -5191387393210394246
+      Sangcheol_7: -6963883856379237478
+      Sangcheol_8: -4554523007001491189
+      Sangcheol_9: -1176327477002884241
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
