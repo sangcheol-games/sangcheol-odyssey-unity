@@ -18,6 +18,7 @@ namespace SCOdyssey.Game
 
         private double currentTime;
 
+        private bool m_showPerfect;
 
 
         [Header("노트 풀링")]
@@ -78,8 +79,6 @@ namespace SCOdyssey.Game
         void Awake()
         {
             //chartData = GameManager.chartData;
-
-            judgeEffectAction = EffectPerfectDisable;
         }
 
         public void Init(ChartData chartData, IGameManager gameManager)
@@ -89,10 +88,7 @@ namespace SCOdyssey.Game
             currentBarNumber = 0;
 
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
-            {
-                if (settingsManager.Current.showPerfect)
-                    judgeEffectAction = EffectPerfectEnable;
-            }
+                m_showPerfect = settingsManager.Current.showPerfect;
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
@@ -684,7 +680,10 @@ namespace SCOdyssey.Game
             else if (nt == NoteType.HoldRelease)
                 gameManager.OnHoldRelease(pos, groupID);
 
-            judgeEffectAction?.Invoke(type, targetNote);
+            if (!m_showPerfect && type == JudgeType.Perfect)
+                EffectJudgement(JudgeType.Master, targetNote);
+            else
+                EffectJudgement(type, targetNote);
         }
         
         private void CheckMissedNotes(int listIndex, double currentTime)
@@ -700,26 +699,14 @@ namespace SCOdyssey.Game
 
                 gameManager.OnNoteMissed();
 
-                judgeEffectAction?.Invoke(JudgeType.Umm, targetNote);
+                EffectJudgement(JudgeType.Umm, targetNote);
             }
         }
 
         #endregion
 
-        // showPerfect On
-        private void EffectPerfectEnable(JudgeType type, NoteController targetNote)
+        private void EffectJudgement(JudgeType type, NoteController targetNote)
         {
-            GameObject effect = GetEffectFromPool();
-            effect.GetComponent<EffectController>().Setup(type,
-                targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
-        }
-
-        // showPerfect Off
-        private void EffectPerfectDisable(JudgeType type, NoteController targetNote)
-        {
-            if (type == JudgeType.Perfect)
-                type = JudgeType.Master;
-
             GameObject effect = GetEffectFromPool();
             effect.GetComponent<EffectController>().Setup(type,
                 targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
