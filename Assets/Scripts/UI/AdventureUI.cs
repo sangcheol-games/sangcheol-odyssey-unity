@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -71,6 +72,8 @@ namespace SCOdyssey.UI
 
             selectedIndex = 0;
             RefreshList();
+
+            StartCoroutine(PlayPreviewAudio());
         }
 
         /// <summary>
@@ -105,16 +108,27 @@ namespace SCOdyssey.UI
             uiManager.CloseUI(this);
         }
 
-        private void PlayPreviewAudio()
+        private IEnumerator PlayPreviewAudio()
         {
-            var audioFilePath = selectedMusic.previewAudioFilePath;
-            if(string.IsNullOrEmpty(audioFilePath)) return;
-
             var audioManager = ServiceLocator.Get<IAudioManager>();
+            if(audioManager.IsPlaying) audioManager.Stop();
 
-            // TODO. ...
-            // audioManager.LoadAudio(selectedAudioFile);
-            // audioManager.PlayScheduled(0);
+            var audioFilePath = selectedMusic.previewAudioFilePath;
+
+            if(string.IsNullOrEmpty(audioFilePath))
+            {
+                Debug.LogWarning("[AdventureUI] previewAudioFilePath is empty!");
+                yield break;
+            }
+            else
+            {
+                audioManager.LoadAudio(audioFilePath);
+                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
+                while(!audioManager.IsLoaded) yield return null;
+
+                var dspStartTime = audioManager.GetDSPTime();
+                audioManager.PlayScheduled(dspStartTime);
+            }
         }
 
         protected override void HandleSelect(Vector2 direction)
@@ -143,7 +157,7 @@ namespace SCOdyssey.UI
             RefreshList();
 
             if(isMusicChanged)
-                PlayPreviewAudio();
+                StartCoroutine(PlayPreviewAudio());
         }
 
         protected override void HandleSubmit()
