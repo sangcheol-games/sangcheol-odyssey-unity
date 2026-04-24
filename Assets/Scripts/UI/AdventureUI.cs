@@ -18,6 +18,7 @@ namespace SCOdyssey.UI
         private Transform musicListContainer;
 
         private int selectedIndex;
+        private MusicSO selectedMusic => musicList[selectedIndex];
         private Difficulty selectedDifficulty = Difficulty.Easy;
 
         private enum Images
@@ -86,7 +87,6 @@ namespace SCOdyssey.UI
             }
 
             // 곡 앨범아트 갱신
-            var selectedMusic = musicList[selectedIndex];
             GetImage((int)Images.AlbumArt).sprite = selectedMusic.albumArt;
         }
 
@@ -105,30 +105,45 @@ namespace SCOdyssey.UI
             uiManager.CloseUI(this);
         }
 
+        private void PlayPreviewAudio()
+        {
+            var audioFilePath = selectedMusic.previewAudioFilePath;
+            if(string.IsNullOrEmpty(audioFilePath)) return;
+
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+
+            // TODO. ...
+            // audioManager.LoadAudio(selectedAudioFile);
+            // audioManager.PlayScheduled(0);
+        }
+
         protected override void HandleSelect(Vector2 direction)
         {
             if (musicList == null || musicList.Count == 0) return;
 
             // 상하: 곡 선택 이동 (원형 큐)
+            var isMusicChanged = direction.y != 0;
             if (direction.y > 0)
                 selectedIndex = WrapIndex(selectedIndex - 1);
             else if (direction.y < 0)
                 selectedIndex = WrapIndex(selectedIndex + 1);
 
             // 좌우: 난이도 선택 (level -1인 난이도는 스킵)
-            var music = musicList[selectedIndex];
             if (direction.x > 0)
             {
                 for (Difficulty d = selectedDifficulty + 1; d <= Difficulty.Extreme; d++)
-                    if (IsAvailable(music, d)) { selectedDifficulty = d; break; }
+                    if (IsAvailable(selectedMusic, d)) { selectedDifficulty = d; break; }
             }
             else if (direction.x < 0)
             {
                 for (Difficulty d = selectedDifficulty - 1; d >= Difficulty.Easy; d--)
-                    if (IsAvailable(music, d)) { selectedDifficulty = d; break; }
+                    if (IsAvailable(selectedMusic, d)) { selectedDifficulty = d; break; }
             }
 
             RefreshList();
+
+            if(isMusicChanged)
+                PlayPreviewAudio();
         }
 
         protected override void HandleSubmit()
@@ -136,10 +151,10 @@ namespace SCOdyssey.UI
             if (musicList == null || musicList.Count == 0) return;
 
             // 준비되지 않은 난이도는 선택 불가
-            if (!IsAvailable(musicList[selectedIndex], selectedDifficulty)) return;
+            if (!IsAvailable(selectedMusic, selectedDifficulty)) return;
 
             var musicManager = ServiceLocator.Get<IMusicManager>();
-            musicManager.SelectMusic(musicList[selectedIndex]);
+            musicManager.SelectMusic(selectedMusic);
             musicManager.SelectDifficulty(selectedDifficulty);
 
             SceneManager.LoadScene("GameScene");
