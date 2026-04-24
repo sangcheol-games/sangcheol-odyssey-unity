@@ -72,10 +72,14 @@ namespace SCOdyssey.Game
         private bool[] isCountdownActive = new bool[4];
 
 
+        private Action<JudgeType, NoteController> judgeEffectAction;
+
 
         void Awake()
         {
             //chartData = GameManager.chartData;
+
+            judgeEffectAction = EffectPerfectDisable;
         }
 
         public void Init(ChartData chartData, IGameManager gameManager)
@@ -83,6 +87,12 @@ namespace SCOdyssey.Game
             this.gameManager = gameManager;
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
+
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+            {
+                if (settingsManager.Current.showPerfect)
+                    judgeEffectAction = EffectPerfectEnable;
+            }
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
@@ -674,10 +684,7 @@ namespace SCOdyssey.Game
             else if (nt == NoteType.HoldRelease)
                 gameManager.OnHoldRelease(pos, groupID);
 
-            GameObject effect = GetEffectFromPool();
-            effect.GetComponent<EffectController>().Setup(type,
-                targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
-
+            judgeEffectAction?.Invoke(type, targetNote);
         }
         
         private void CheckMissedNotes(int listIndex, double currentTime)
@@ -693,16 +700,30 @@ namespace SCOdyssey.Game
 
                 gameManager.OnNoteMissed();
 
-                GameObject effect = GetEffectFromPool();
-                effect.GetComponent<EffectController>().Setup(JudgeType.Umm,
-                    targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
+                judgeEffectAction?.Invoke(JudgeType.Umm, targetNote);
             }
         }
 
         #endregion
 
+        // showPerfect On
+        private void EffectPerfectEnable(JudgeType type, NoteController targetNote)
+        {
+            GameObject effect = GetEffectFromPool();
+            effect.GetComponent<EffectController>().Setup(type,
+                targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
+        }
 
+        // showPerfect Off
+        private void EffectPerfectDisable(JudgeType type, NoteController targetNote)
+        {
+            if (type == JudgeType.Perfect)
+                type = JudgeType.Master;
 
+            GameObject effect = GetEffectFromPool();
+            effect.GetComponent<EffectController>().Setup(type,
+                targetNote.GetComponent<RectTransform>().anchoredPosition, (returnedEffect) => { ReturnEffectToPool(returnedEffect.gameObject); });
+        }
 
         #region ObjectPooling
         private GameObject GetFromPool(Queue<GameObject> pool, GameObject prefab)
