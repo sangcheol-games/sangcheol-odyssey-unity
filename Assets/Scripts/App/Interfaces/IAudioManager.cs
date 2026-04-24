@@ -17,8 +17,8 @@ namespace SCOdyssey.App
 
     public interface IAudioManager
     {
-        void LoadAudio(string filePath);         // StreamingAssets/Music/ 기준 파일명
-        void PlayScheduled(double dspStartTime); // sample-accurate 재생 예약
+        void LoadAudio(string filePath, bool loopHint=false);         // StreamingAssets/Music/ 기준 파일명
+        void PlayScheduled(double dspStartTime, bool loopPlay=false); // sample-accurate 재생 예약
         void Stop();
         void Pause();
         void Resume();

@@ -43,6 +43,22 @@ namespace SCOdyssey.UI
             Init();
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+
+            StartCoroutine(PlayPreviewAudio());
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+
+            // stop preview audio when ui change
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            audioManager.Stop();
+        }
+
         private void Init()
         {
             var musicManager = ServiceLocator.Get<IMusicManager>();
@@ -72,8 +88,6 @@ namespace SCOdyssey.UI
 
             selectedIndex = 0;
             RefreshList();
-
-            StartCoroutine(PlayPreviewAudio());
         }
 
         /// <summary>
@@ -122,12 +136,12 @@ namespace SCOdyssey.UI
             }
             else
             {
-                audioManager.LoadAudio(audioFilePath);
+                audioManager.LoadAudio(audioFilePath, loopHint: true);
                 // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
                 while(!audioManager.IsLoaded) yield return null;
 
                 var dspStartTime = audioManager.GetDSPTime();
-                audioManager.PlayScheduled(dspStartTime);
+                audioManager.PlayScheduled(dspStartTime, loopPlay: true);
             }
         }
 
