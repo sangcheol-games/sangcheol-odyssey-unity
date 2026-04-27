@@ -150,6 +150,12 @@ namespace SCOdyssey.App
             chartManager.SyncTime(GetCurrentTime());
         }
 
+        private void OnApplicationFocus(bool focus)
+        {
+            if (!focus)
+                Pause();
+        }
+
         public void Pause()
         {
             if (!IsGameRunning || IsPaused) return;
