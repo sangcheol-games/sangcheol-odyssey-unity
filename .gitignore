@@ -119,3 +119,6 @@ fmod_editor.log
 
 # Claude
 .claude/*
+
+# macOS Finder
+.DS_Store

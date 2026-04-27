@@ -107,8 +107,9 @@ namespace SCOdyssey.App
         /// <summary>
         /// FMOD CREATESTREAM + NONBLOCKING으로 오디오 파일 로드.
         /// filePath: StreamingAssets/Music/ 기준 파일명 (예: "song_0001.ogg")
+        /// loopHint: Audio Asset의 기본 성격이 단일 재생인지 루프 재생인지.
         /// </summary>
-        public void LoadAudio(string filePath)
+        public void LoadAudio(string filePath, bool loopHint)
         {
             // 이전 사운드 해제
             if (_sound.hasHandle())
@@ -126,9 +127,10 @@ namespace SCOdyssey.App
             FMOD.CREATESOUNDEXINFO exInfo = new FMOD.CREATESOUNDEXINFO();
             exInfo.cbsize = Marshal.SizeOf(exInfo);
 
+            var loopFlag = loopHint ? FMOD.MODE.LOOP_NORMAL : FMOD.MODE.DEFAULT;
             FMOD.RESULT result = RuntimeManager.CoreSystem.createSound(
                 fullPath,
-                FMOD.MODE.CREATESTREAM | FMOD.MODE.NONBLOCKING,
+                FMOD.MODE.CREATESTREAM | FMOD.MODE.NONBLOCKING | loopFlag,
                 ref exInfo,
                 out _sound);
 
@@ -145,8 +147,9 @@ namespace SCOdyssey.App
         /// <summary>
         /// DSP 클록 기반 sample-accurate 재생 예약.
         /// dspStartTime: GetDSPTime() + delaySeconds
+        /// loopPlay: 단일 재생인지 루프 재생인지
         /// </summary>
-        public void PlayScheduled(double dspStartTime)
+        public void PlayScheduled(double dspStartTime, bool loopPlay)
         {
             if (!_isLoaded)
             {
@@ -162,6 +165,8 @@ namespace SCOdyssey.App
             // 일시정지 상태로 재생 시작 후 정확한 클록에 딜레이 설정
             RuntimeManager.CoreSystem.playSound(_sound, _bgmGroup, true, out _channel);
             _channel.setDelay(startDspClock, 0, false);
+            // -1 for inf, 0 for 1 loop, N for N+1 loop
+            _channel.setLoopCount(loopPlay ? -1 : 0);
             _channel.setPaused(false);
 
             Debug.Log($"[FMODAudioManager] 재생 예약 완료. DSP 클록: {startDspClock}");
