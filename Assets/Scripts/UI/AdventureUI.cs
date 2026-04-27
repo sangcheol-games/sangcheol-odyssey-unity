@@ -6,6 +6,7 @@ using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
 using static SCOdyssey.Domain.Service.Constants;
+using Unity.VisualScripting;
 
 namespace SCOdyssey.UI
 {
@@ -88,6 +89,7 @@ namespace SCOdyssey.UI
 
             selectedIndex = 0;
             RefreshList();
+            OnSelectedMusicChanged();
         }
 
         /// <summary>
@@ -102,9 +104,6 @@ namespace SCOdyssey.UI
                 int dataIndex = WrapIndex(selectedIndex - CENTER_INDEX + i);
                 slots[i].SetData(musicList[dataIndex], i == CENTER_INDEX, selectedDifficulty);
             }
-
-            // 곡 앨범아트 갱신
-            GetImage((int)Images.AlbumArt).sprite = selectedMusic.albumArt;
         }
 
         /// <summary>
@@ -120,6 +119,14 @@ namespace SCOdyssey.UI
         {
             var uiManager = ServiceLocator.Get<IUIManager>();
             uiManager.CloseUI(this);
+        }
+
+        private void OnSelectedMusicChanged()
+        {
+            // 곡 앨범아트 갱신
+            GetImage((int)Images.AlbumArt).sprite = selectedMusic.albumArt;
+
+            StartCoroutine(PlayPreviewAudio());
         }
 
         private IEnumerator PlayPreviewAudio()
@@ -171,7 +178,7 @@ namespace SCOdyssey.UI
             RefreshList();
 
             if(isMusicChanged)
-                StartCoroutine(PlayPreviewAudio());
+                OnSelectedMusicChanged();
         }
 
         protected override void HandleSubmit()
