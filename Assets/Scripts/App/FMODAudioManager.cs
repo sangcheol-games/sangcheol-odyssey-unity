@@ -450,7 +450,7 @@ namespace SCOdyssey.App
 
         private void PlaySFX(ref ManageSFX sfx)
         {
-            RuntimeManager.CoreSystem.playSound(sfx.sound, _hitSoundGroup, true, out sfx.channel);
+            RuntimeManager.CoreSystem.playSound(sfx.sound, _hitSoundGroup, false, out sfx.channel);
         }
     }
 }
