@@ -51,6 +51,7 @@ namespace SCOdyssey.App
 
         private const int HIT_SOUND_SIZE = 5;
 
+        // Path: StreamingAssets/SFX/
         private static readonly string SFX_Perfect_Filename = "SFX_Perfect.wav";
         private static readonly string SFX_Master_Filename = "SFX_Master.wav";
         private static readonly string SFX_Ideal_Filename = "SFX_Ideal.wav";
