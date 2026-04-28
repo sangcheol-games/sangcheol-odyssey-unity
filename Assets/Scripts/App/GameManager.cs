@@ -37,6 +37,7 @@ namespace SCOdyssey.App
         public bool IsPaused { get; private set; } = false;
         private double _pauseDspTime;
         public bool IsAudioPlaying => _audioManager != null && _audioManager.IsPlaying;
+        private bool m_showPerfect;
 
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
@@ -52,6 +53,9 @@ namespace SCOdyssey.App
             ServiceLocator.TryRegister<IGameManager>(this);
             if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
                 Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
+
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+                m_showPerfect = settingsManager.Current.showPerfect;
 
             // gameCanvas가 Screen Space - Camera이면 worldCamera 설정
             if (gameCanvas != null && Camera.main != null
@@ -236,11 +240,18 @@ namespace SCOdyssey.App
         {
             scoreManager.ProcessJudge(judgeType);
             OnNoteJudgedEvent?.Invoke(judgeType, pos, groupID);
+
+            if (!m_showPerfect && judgeType == JudgeType.Perfect)
+                _audioManager.PlayHitSound(JudgeType.Master);
+            else
+                _audioManager.PlayHitSound(judgeType);
         }
 
         public void OnNoteMissed()
         {
             scoreManager.ProcessJudge(JudgeType.Umm);
+
+            _audioManager.PlayHitSound(JudgeType.Umm);
         }
 
         public void OnHoldStart(NotePosition pos, int groupID)

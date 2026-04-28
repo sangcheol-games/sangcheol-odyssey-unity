@@ -1,3 +1,5 @@
+using SCOdyssey.Domain.Service;
+
 namespace SCOdyssey.App
 {
     // 출력 드라이버 타입 - ASIO 추후 지원 예정
@@ -22,6 +24,7 @@ namespace SCOdyssey.App
         void Stop();
         void Pause();
         void Resume();
+        void PlayHitSound(Constants.JudgeType type);
         double GetDSPTime();   // AudioSettings.dspTime 대체 (double 정밀도 필수)
         bool IsPlaying { get; }
         bool IsLoaded { get; } // GameDataLoader의 로딩 대기용
