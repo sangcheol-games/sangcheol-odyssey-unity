@@ -38,7 +38,7 @@ namespace SCOdyssey.ChartEditor.Data
 
             foreach (var bar in sortedBars)
             {
-                for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+                for (int laneIdx = 0; laneIdx < LANE_COUNT; laneIdx++)
                 {
                     int laneNumber = laneIdx + 1;
 
@@ -225,7 +225,7 @@ namespace SCOdyssey.ChartEditor.Data
                 EditorBarData bar = data.GetBar(barNum);
                 if (bar == null) continue;
 
-                for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+                for (int laneIdx = 0; laneIdx < LANE_COUNT; laneIdx++)
                 {
                     int laneNumber = laneIdx + 1;
                     if (!bar.IsDirectionSet(laneNumber)) continue;

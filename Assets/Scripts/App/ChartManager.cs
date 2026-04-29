@@ -48,7 +48,7 @@ namespace SCOdyssey.Game
         [Header("레인 & 스크롤")]
         public RectTransform leftEndpoint;
         public RectTransform rightEndpoint;
-        public RectTransform[] laneTransforms = new RectTransform[4]; // 4개 레인의 기준 위치 (씬에 배치된 4개의 LaneObject 할당)
+        public RectTransform[] laneTransforms = new RectTransform[LANE_COUNT]; // 4개 레인의 기준 위치 (씬에 배치된 4개의 LaneObject 할당)
 
 
 
@@ -61,16 +61,16 @@ namespace SCOdyssey.Game
         private double currentBarEndTime = 0f; // 현재 마디의 종료 시간
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
-        private Queue<NoteController>[] activeNotes = new Queue<NoteController>[4]; // 각 레인별 활성화된 노트 큐
-        private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[4]; // 각 레인별 고스트 노트 큐
+        private Queue<NoteController>[] activeNotes = new Queue<NoteController>[LANE_COUNT]; // 각 레인별 활성화된 노트 큐
+        private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[LANE_COUNT]; // 각 레인별 고스트 노트 큐
 
         private bool[] isLaneHolding = { false, false, false, false }; // 각 레인별 롱노트 홀딩 상태 추적
-        private double?[] bufferedInput = new double?[4]; // 마디 전환 직전 선입력 버퍼 (index: laneIndex - 1)
+        private double?[] bufferedInput = new double?[LANE_COUNT]; // 마디 전환 직전 선입력 버퍼 (index: laneIndex - 1)
         
-        public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[4];
+        public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[LANE_COUNT];
 
-        private double[] countdownTargetTimes = new double[4];
-        private bool[] isCountdownActive = new bool[4];
+        private double[] countdownTargetTimes = new double[LANE_COUNT];
+        private bool[] isCountdownActive = new bool[LANE_COUNT];
 
 
         private Action<JudgeType, NoteController> judgeEffectAction;
@@ -103,7 +103,7 @@ namespace SCOdyssey.Game
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
             currentBarEndTime = 0f + barDuration;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 activeNotes[i] = new Queue<NoteController>();
                 ghostNotes[i] = new Queue<NoteController>();
@@ -129,7 +129,7 @@ namespace SCOdyssey.Game
                 CheckGameClear();
             }
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 CheckMissedNotes(i, currentTime);
                 if (isLaneHolding[i]) CheckHoldingBody(i);
@@ -147,7 +147,7 @@ namespace SCOdyssey.Game
             if (remainingChart.Count > 0) return;
             if (nextBarLanes.Count > 0) return;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 if (activeNotes[i].Count > 0) return;
                 if (ghostNotes[i].Count > 0) return;
@@ -259,7 +259,7 @@ namespace SCOdyssey.Game
         {
             double beatDuration = barDuration / 4.0d; 
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 if (!isCountdownActive[i]) continue;
 
@@ -504,7 +504,7 @@ namespace SCOdyssey.Game
         private void ActivateGhostNotes()
         {
             if (ghostNotes == null) return;
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 while (ghostNotes[i].Count > 0)
                 {

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SCOdyssey.ChartEditor.Data;
 using UnityEngine;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.ChartEditor.Analysis
 {
@@ -130,9 +131,9 @@ namespace SCOdyssey.ChartEditor.Analysis
         /// </summary>
         private static int GetNextValidLane(EditorBarData bar, int beatIndex, int beatResolution, ref int laneCounter)
         {
-            for (int attempt = 0; attempt < 4; attempt++)
+            for (int attempt = 0; attempt < LANE_COUNT; attempt++)
             {
-                int laneIndex = laneCounter % 4;
+                int laneIndex = laneCounter % LANE_COUNT;
                 int laneNumber = laneIndex + 1;
                 laneCounter++;
 

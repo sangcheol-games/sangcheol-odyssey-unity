@@ -3,6 +3,9 @@ namespace SCOdyssey.Domain.Service
 {
     public static class Constants
     {
+        public const int LANE_COUNT = 4;
+
+
         public const float JUDGE_PERFECT = 0.021f;
         public const float JUDGE_MASTER = 0.042f;
         public const float JUDGE_IDEAL = 0.084f;
