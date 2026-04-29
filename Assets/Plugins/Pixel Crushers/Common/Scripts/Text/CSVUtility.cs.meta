@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: bf0e2a508b7635147976dcb215ff8f4d
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 11672
+  packageName: Dialogue System for Unity
+  packageVersion: 2.2.69
+  assetPath: Assets/Plugins/Pixel Crushers/Common/Scripts/Text/CSVUtility.cs
+  uploadId: 897442

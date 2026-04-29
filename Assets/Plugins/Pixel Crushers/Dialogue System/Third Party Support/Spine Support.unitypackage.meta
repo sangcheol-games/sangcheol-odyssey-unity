@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 44688b79fc3aa6a44b5c47a92a453722
+timeCreated: 1559148300
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 11672
+  packageName: Dialogue System for Unity
+  packageVersion: 2.2.69
+  assetPath: Assets/Plugins/Pixel Crushers/Dialogue System/Third Party Support/Spine
+    Support.unitypackage
+  uploadId: 897442

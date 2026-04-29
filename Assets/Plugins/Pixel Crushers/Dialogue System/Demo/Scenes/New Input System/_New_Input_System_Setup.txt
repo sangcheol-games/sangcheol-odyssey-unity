@@ -1,0 +1,11 @@
+Input System Package - Demo Instructions
+
+Note: If you're using the evaluation version, it's precompiled with support 
+for the legacy Input Manager (Old) for compatibility with users on older 
+Unity versions so you must set Edit > Project Settings > Player Settings >
+Other Settings > Active Input Handling to Both or Input Manager (Old).
+Once you update to the full Asset Store version, you'll be able to switch
+to Input System Package (New).
+
+If you're using the Asset Store version, select menu item Tools > Pixel Crushers > 
+Dialogue System > Welcome Window. Make sure the USE_NEW_INPUT checkbox is ticked.

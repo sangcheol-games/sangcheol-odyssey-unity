@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5db5e6540b70aa44a8b8f0be7cbc03a4
+timeCreated: 1533133123
+licenseType: Store
+DefaultImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 11672
+  packageName: Dialogue System for Unity
+  packageVersion: 2.2.69
+  assetPath: Assets/Plugins/Pixel Crushers/Dialogue System/Scripts/DialogueSystemAssemblyDefinitions.unitypackage
+  uploadId: 897442
