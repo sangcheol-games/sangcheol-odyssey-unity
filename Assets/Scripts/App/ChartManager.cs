@@ -560,15 +560,7 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            JudgeType result = JudgeType.Perfect;
-
-            if (timeDiff <= JUDGE_PERFECT) result = JudgeType.Perfect;
-            else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
-            else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
-            else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
-            else if (timeDiff <= JUDGE_UMM) result = JudgeType.Umm;
-
-            ApplyJudgment(targetNote, listIndex, result);
+            ApplyJudgment(targetNote, listIndex, GetJudgeType(timeDiff));
 
         }
 
@@ -633,15 +625,16 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            JudgeType result = JudgeType.Perfect;
+            ApplyJudgment(targetNote, listIndex, GetJudgeType(timeDiff));
+        }
 
-            if (timeDiff <= JUDGE_PERFECT) result = JudgeType.Perfect;
-            else if (timeDiff <= JUDGE_MASTER) result = JudgeType.Master;
-            else if (timeDiff <= JUDGE_IDEAL) result = JudgeType.Ideal;
-            else if (timeDiff <= JUDGE_KIND) result = JudgeType.Kind;
-            else if (timeDiff <= JUDGE_UMM) result = JudgeType.Umm;
-
-            ApplyJudgment(targetNote, listIndex, result);
+        private static JudgeType GetJudgeType(double timeDiff)
+        {
+            if (timeDiff <= JUDGE_PERFECT) return JudgeType.Perfect;
+            if (timeDiff <= JUDGE_MASTER)  return JudgeType.Master;
+            if (timeDiff <= JUDGE_IDEAL)   return JudgeType.Ideal;
+            if (timeDiff <= JUDGE_KIND)    return JudgeType.Kind;
+            return JudgeType.Umm;
         }
 
 
