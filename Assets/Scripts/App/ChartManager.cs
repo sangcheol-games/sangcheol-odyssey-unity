@@ -77,6 +77,10 @@ namespace SCOdyssey.Game
 
         private double _judgmentOffsetSec;
 
+        private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();
+        private readonly Dictionary<int, bool> _nextGroupDirBuffer = new Dictionary<int, bool>();
+        private readonly List<int> _groupsToRemoveBuffer = new List<int>();
+
 
         void Awake()
         {
@@ -192,27 +196,27 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            HashSet<int> nextGroups = new HashSet<int>();
-            Dictionary<int, bool> nextGroupDirection = new Dictionary<int, bool>();
+            _nextGroupsBuffer.Clear();
+            _nextGroupDirBuffer.Clear();
 
             foreach (var lane in nextBarLanes)
             {
                 int groupID = GetTrackGroupID(lane.line - 1);
-                nextGroups.Add(groupID);
-                nextGroupDirection[groupID] = lane.isLTR;
+                _nextGroupsBuffer.Add(groupID);
+                _nextGroupDirBuffer[groupID] = lane.isLTR;
             }
 
-            List<int> groupsToRemove = new List<int>(); // 제거할 그룹 ID 목록
+            _groupsToRemoveBuffer.Clear();
 
             foreach (var kvp in activeTimelines)
             {
                 int groupID = kvp.Key;
                 TimelineController timeline = kvp.Value;
 
-                if (nextGroups.Contains(groupID) && timeline.isLTR != nextGroupDirection[groupID])
+                if (_nextGroupsBuffer.Contains(groupID) && timeline.isLTR != _nextGroupDirBuffer[groupID])
                 {
                     // 재활용
-                    bool isLTR = nextGroupDirection[groupID];
+                    bool isLTR = _nextGroupDirBuffer[groupID];
                     float startX, endX;
                     GetTimelinePositions(isLTR, out startX, out endX);
 
@@ -227,11 +231,11 @@ namespace SCOdyssey.Game
                 }
                 else
                 {
-                    groupsToRemove.Add(groupID);    // 여기서 바로 제거하면 컬렉션 변경 오류 발생
+                    _groupsToRemoveBuffer.Add(groupID);
                 }
             }
 
-            foreach (int id in groupsToRemove) activeTimelines.Remove(id);  // 반복문 종료 후 제거
+            foreach (int id in _groupsToRemoveBuffer) activeTimelines.Remove(id);
 
             ActivateTimelines();
             ActivateGhostNotes();
@@ -306,26 +310,26 @@ namespace SCOdyssey.Game
 
         private void PreloadTimelines()
         {
-            HashSet<int> nextGroups = new HashSet<int>();
-            Dictionary<int, bool> nextGroupDirection = new Dictionary<int, bool>();
+            _nextGroupsBuffer.Clear();
+            _nextGroupDirBuffer.Clear();
 
             foreach (var laneData in nextBarLanes)
             {
                 int groupID = GetTrackGroupID(laneData.line - 1);
-                if (!nextGroups.Contains(groupID))
+                if (!_nextGroupsBuffer.Contains(groupID))
                 {
-                    nextGroups.Add(groupID);
-                    nextGroupDirection[groupID] = laneData.isLTR;
+                    _nextGroupsBuffer.Add(groupID);
+                    _nextGroupDirBuffer[groupID] = laneData.isLTR;
                 }
             }
 
             double nextStartTime = currentBarNumber * barDuration;
 
-            foreach (int groupID in nextGroups)
+            foreach (int groupID in _nextGroupsBuffer)
             {
                 bool isReused = false;
                 if (activeTimelines.TryGetValue(groupID, out var existing) &&
-                    existing.isLTR != nextGroupDirection[groupID])
+                    existing.isLTR != _nextGroupDirBuffer[groupID])
                 {
                     isReused = true;
                 }
@@ -336,7 +340,7 @@ namespace SCOdyssey.Game
                     timeline.transform.SetParent(timelineParent, false);
                     timeline.transform.position = timelineTransforms[groupID].position;
 
-                    bool isLTR = nextGroupDirection[groupID];
+                    bool isLTR = _nextGroupDirBuffer[groupID];
                     float startX, endX;
                     GetTimelinePositions(isLTR, out startX, out endX);
 
@@ -352,7 +356,7 @@ namespace SCOdyssey.Game
                     preloadedTimelines.Add(groupID, timeline);
                 }
 
-                int uiIndex = (groupID * 2) + (nextGroupDirection[groupID] ? 0 : 1);
+                int uiIndex = (groupID * 2) + (_nextGroupDirBuffer[groupID] ? 0 : 1);
                 ActivateCountdown(uiIndex, nextStartTime);
             }
 
