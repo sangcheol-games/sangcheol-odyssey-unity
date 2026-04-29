@@ -61,16 +61,19 @@ namespace SCOdyssey.Game
         private double currentBarEndTime = 0f; // 현재 마디의 종료 시간
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
-        private Queue<NoteController>[] activeNotes = new Queue<NoteController>[LANE_COUNT]; // 각 레인별 활성화된 노트 큐
-        private Queue<NoteController>[] ghostNotes = new Queue<NoteController>[LANE_COUNT]; // 각 레인별 고스트 노트 큐
-
-        private bool[] isLaneHolding = { false, false, false, false }; // 각 레인별 롱노트 홀딩 상태 추적
-        private double?[] bufferedInput = new double?[LANE_COUNT]; // 마디 전환 직전 선입력 버퍼 (index: laneIndex - 1)
-        
         public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[LANE_COUNT];
 
-        private double[] countdownTargetTimes = new double[LANE_COUNT];
-        private bool[] isCountdownActive = new bool[LANE_COUNT];
+        private LaneState[] _lanes;
+
+        private class LaneState
+        {
+            public readonly Queue<NoteController> activeNotes = new Queue<NoteController>();
+            public readonly Queue<NoteController> ghostNotes = new Queue<NoteController>();
+            public bool isHolding;
+            public double? bufferedInput;
+            public double countdownTargetTime;
+            public bool isCountdownActive;
+        }
 
 
         private Action<JudgeType, NoteController> judgeEffectAction;
@@ -84,7 +87,9 @@ namespace SCOdyssey.Game
 
         void Awake()
         {
-            //chartData = GameManager.chartData;
+            _lanes = new LaneState[LANE_COUNT];
+            for (int i = 0; i < LANE_COUNT; i++)
+                _lanes[i] = new LaneState();
         }
 
         public void Init(ChartData chartData, IGameManager gameManager)
@@ -105,11 +110,13 @@ namespace SCOdyssey.Game
 
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                activeNotes[i] = new Queue<NoteController>();
-                ghostNotes[i] = new Queue<NoteController>();
+                _lanes[i].activeNotes.Clear();
+                _lanes[i].ghostNotes.Clear();
+                _lanes[i].isHolding = false;
+                _lanes[i].bufferedInput = null;
+                _lanes[i].isCountdownActive = false;
 
                 countdownTexts[i].gameObject.SetActive(false);
-                isCountdownActive[i] = false;
                 countdownTexts[i].text = "";
             }
 
@@ -132,7 +139,7 @@ namespace SCOdyssey.Game
             for (int i = 0; i < LANE_COUNT; i++)
             {
                 CheckMissedNotes(i, currentTime);
-                if (isLaneHolding[i]) CheckHoldingBody(i);
+                if (_lanes[i].isHolding) CheckHoldingBody(i);
             }
             
             UpdateCountdowns();
@@ -149,8 +156,8 @@ namespace SCOdyssey.Game
 
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                if (activeNotes[i].Count > 0) return;
-                if (ghostNotes[i].Count > 0) return;
+                if (_lanes[i].activeNotes.Count > 0) return;
+                if (_lanes[i].ghostNotes.Count > 0) return;
             }
 
             // 음악이 아직 재생 중이면 대기
@@ -261,14 +268,14 @@ namespace SCOdyssey.Game
 
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                if (!isCountdownActive[i]) continue;
+                if (!_lanes[i].isCountdownActive) continue;
 
-                double timeDiff = countdownTargetTimes[i] - currentTime;
+                double timeDiff = _lanes[i].countdownTargetTime - currentTime;
 
                 if (timeDiff <= 0)
                 {
                     countdownTexts[i].gameObject.SetActive(false);
-                    isCountdownActive[i] = false;
+                    _lanes[i].isCountdownActive = false;
                     continue;
                 }
 
@@ -293,13 +300,13 @@ namespace SCOdyssey.Game
         
         private void ActivateCountdown(int index, double targetTime)
         {
-            if (isCountdownActive[index] && Math.Abs(countdownTargetTimes[index] - targetTime) < 0.01d) return;
+            if (_lanes[index].isCountdownActive && Math.Abs(_lanes[index].countdownTargetTime - targetTime) < 0.01d) return;
 
             countdownTexts[index].gameObject.SetActive(true);
             countdownTexts[index].text = "";
 
-            countdownTargetTimes[index] = targetTime;
-            isCountdownActive[index] = true;
+            _lanes[index].countdownTargetTime = targetTime;
+            _lanes[index].isCountdownActive = true;
         }
 
 
@@ -496,19 +503,18 @@ namespace SCOdyssey.Game
                         noteController.SetState(NoteState.Ghost);
                     }
 
-                    ghostNotes[lane.line - 1].Enqueue(noteController);
+                    _lanes[lane.line - 1].ghostNotes.Enqueue(noteController);
                 }
             }
         }
 
         private void ActivateGhostNotes()
         {
-            if (ghostNotes == null) return;
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                while (ghostNotes[i].Count > 0)
+                while (_lanes[i].ghostNotes.Count > 0)
                 {
-                    NoteController note = ghostNotes[i].Dequeue();
+                    NoteController note = _lanes[i].ghostNotes.Dequeue();
                     note.SetState(NoteState.Active);
 
                     // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
@@ -522,8 +528,8 @@ namespace SCOdyssey.Game
                         }
                     }
 
-                    activeNotes[i].Enqueue(note);
-                    FlushBufferedInput(i); // 선입력이 있으면 즉시 재판정
+                    _lanes[i].activeNotes.Enqueue(note);
+                    FlushBufferedInput(i);
                 }
             }
         }
@@ -535,16 +541,16 @@ namespace SCOdyssey.Game
         public void TryJudgeInput(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
-            isLaneHolding[listIndex] = true;
+            _lanes[listIndex].isHolding = true;
 
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
             gameManager.OnLaneInput(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
 
-            var queue = activeNotes[listIndex];
+            var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0)
             {
                 // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
-                bufferedInput[listIndex] = inputGameTime;
+                _lanes[listIndex].bufferedInput = inputGameTime;
                 return;
             }
 
@@ -570,19 +576,19 @@ namespace SCOdyssey.Game
         /// </summary>
         private void FlushBufferedInput(int listIndex)
         {
-            if (!bufferedInput[listIndex].HasValue) return;
+            if (!_lanes[listIndex].bufferedInput.HasValue) return;
 
-            double inputTime = bufferedInput[listIndex].Value;
-            bufferedInput[listIndex] = null;
+            double inputTime = _lanes[listIndex].bufferedInput.Value;
+            _lanes[listIndex].bufferedInput = null;
 
-            if (!isLaneHolding[listIndex]) return; // 이미 손을 뗀 경우 폐기
+            if (!_lanes[listIndex].isHolding) return; // 이미 손을 뗀 경우 폐기
 
             TryJudgeInput(listIndex + 1, inputTime);
         }
 
         private void CheckHoldingBody(int listIndex)
         {
-            var queue = activeNotes[listIndex];
+            var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0) return;
 
             //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
@@ -606,12 +612,12 @@ namespace SCOdyssey.Game
         public void TryJudgeRelease(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;
-            isLaneHolding[listIndex] = false;
+            _lanes[listIndex].isHolding = false;
 
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
             gameManager.OnHoldRelease(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
 
-            var queue = activeNotes[listIndex];
+            var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0) return;
 
             NoteController targetNote = queue.Peek();
@@ -647,7 +653,7 @@ namespace SCOdyssey.Game
         private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
         {
             //Debug.Log($"Note Judged: {type}");
-            activeNotes[listIndex].Dequeue();
+            _lanes[listIndex].activeNotes.Dequeue();
             targetNote.OnHit();
 
             NotePosition pos = GetNotePosition(listIndex);
@@ -674,13 +680,13 @@ namespace SCOdyssey.Game
         
         private void CheckMissedNotes(int listIndex, double currentTime)
         {
-            if (activeNotes[listIndex].Count == 0) return;
+            if (_lanes[listIndex].activeNotes.Count == 0) return;
 
-            NoteController targetNote = activeNotes[listIndex].Peek();
+            NoteController targetNote = _lanes[listIndex].activeNotes.Peek();
 
             if (currentTime > targetNote.noteData.time + JUDGE_UMM)
             {
-                activeNotes[listIndex].Dequeue();
+                _lanes[listIndex].activeNotes.Dequeue();
                 targetNote.OnMiss();
 
                 gameManager.OnNoteMissed();
