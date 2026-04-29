@@ -115,7 +115,7 @@ namespace SCOdyssey.ChartEditor.Grid
             float laneWidth = rightX - leftX;
             float noteInterval = laneWidth / bar.beat;
 
-            for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+            for (int laneIdx = 0; laneIdx < LANE_COUNT; laneIdx++)
             {
                 int laneNumber = laneIdx + 1;
                 if (!bar.IsDirectionSet(laneNumber)) continue;
