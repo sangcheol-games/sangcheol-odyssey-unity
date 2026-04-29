@@ -75,6 +75,8 @@ namespace SCOdyssey.Game
 
         private Action<JudgeType, NoteController> judgeEffectAction;
 
+        private double _judgmentOffsetSec;
+
 
         void Awake()
         {
@@ -88,7 +90,10 @@ namespace SCOdyssey.Game
             currentBarNumber = 0;
 
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+            {
                 m_showPerfect = settingsManager.Current.showPerfect;
+                _judgmentOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
+            }
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
@@ -546,12 +551,8 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
 
-            double offsetSec = 0;
-            if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
-                offsetSec = sm.Current.judgmentOffset * 0.003;
-
             // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - offsetSec);
+            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - _judgmentOffsetSec);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
@@ -599,11 +600,7 @@ namespace SCOdyssey.Game
             if (targetNote.noteData.noteType != NoteType.Holding &&
                 targetNote.noteData.noteType != NoteType.HoldEnd) return;
 
-            double offsetSec = 0;
-            if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
-                offsetSec = sm.Current.judgmentOffset * 0.003;
-
-            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - offsetSec);
+            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - _judgmentOffsetSec);
 
             if (timeDiff < JUDGE_PERFECT)
             {
@@ -628,11 +625,7 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.HoldRelease) return; // 릴리즈 판정 노트가 없으면 무시
 
-            double offsetSec = 0;
-            if (ServiceLocator.TryGet<ISettingsManager>(out var sm2))
-                offsetSec = sm2.Current.judgmentOffset * 0.003;
-
-            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - offsetSec);
+            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - _judgmentOffsetSec);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
