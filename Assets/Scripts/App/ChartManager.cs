@@ -324,10 +324,10 @@ namespace SCOdyssey.Game
             foreach (int groupID in nextGroups)
             {
                 bool isReused = false;
-                if (activeTimelines.ContainsKey(groupID))   // 재사용의 경우
+                if (activeTimelines.TryGetValue(groupID, out var existing) &&
+                    existing.isLTR != nextGroupDirection[groupID])
                 {
-                    if (activeTimelines[groupID].isLTR != nextGroupDirection[groupID])
-                        isReused = true;
+                    isReused = true;
                 }
 
                 if (!isReused)  // 새 판정선 생성
@@ -365,11 +365,7 @@ namespace SCOdyssey.Game
                 int groupID = kvp.Key;
                 TimelineController timeline = kvp.Value;
                 
-                if (!activeTimelines.ContainsKey(groupID))
-                {
-                    activeTimelines.Add(groupID, timeline);
-                }
-                else
+                if (!activeTimelines.TryAdd(groupID, timeline))
                 {
                     Debug.LogWarning("Timeline 승격 중복 발생: 그룹 " + groupID);
                     ReturnTimelineToPool(timeline.gameObject);
@@ -516,9 +512,9 @@ namespace SCOdyssey.Game
                     if (note.noteData.noteType == NoteType.HoldStart)
                     {
                         int groupID = GetTrackGroupID(i);
-                        if (activeTimelines.ContainsKey(groupID))
+                        if (activeTimelines.TryGetValue(groupID, out var timeline))
                         {
-                            note.TrackTimeline(activeTimelines[groupID]);
+                            note.TrackTimeline(timeline);
                         }
                     }
 
