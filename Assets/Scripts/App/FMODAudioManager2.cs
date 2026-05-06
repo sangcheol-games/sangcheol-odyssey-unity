@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using FMODUnity;
+using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace SCOdyssey.App
@@ -107,21 +109,36 @@ namespace SCOdyssey.App
         }
     }
 
+    internal static class FMODUtil
+    {
+        [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+        internal static void CheckFMODResult(FMOD.RESULT result, string context = null)
+        {
+            if(result != FMOD.RESULT.OK)
+                Debug.LogError($"FMOD result: {result} ({context})");
+        }
+    }
+
 #region ResourceManager
     internal sealed class FMODResourceManager: IDisposable
     {
         private bool _disposed = false;
-        private Dictionary<AudioID, FMOD.Sound> _sounds = new();
+        private FMOD.System Sys;
+        private Dictionary<AudioID, (FMOD.Sound, int)> _sounds = new();
 
         // Debug Variables
         private FMOD.OUTPUTTYPE _soundBackend = FMOD.OUTPUTTYPE.UNKNOWN;
         private int _soundSampleRate = 0;
 
-        public FMODResourceManager(FMOD.OUTPUTTYPE backend, int sampleRate)
+        public FMODResourceManager(FMOD.System system)
         {
+            Sys = system;
+
             // Initialize Default Settings
-            _soundBackend = backend;
-            _soundSampleRate = sampleRate;
+            var result = Sys.getOutput(out _soundBackend);
+            FMODUtil.CheckFMODResult(result, $"{nameof(FMODResourceManager)}, Get Current System Backend");
+            result = Sys.getSoftwareFormat(out _soundSampleRate, out _, out _);
+            FMODUtil.CheckFMODResult(result, $"{nameof(FMODResourceManager)}, Get Current System SampleRate");
         }
 
         ~FMODResourceManager()
@@ -134,8 +151,10 @@ namespace SCOdyssey.App
             if(_disposed) return;
             _disposed = true;
 
-            foreach(var (_, sound) in _sounds)
+            foreach(var (audio, (sound, refCount)) in _sounds)
             {
+                Debug.Log($"[{nameof(FMODResourceManager)}] RefCount of {audio.AudioPath}: {refCount}");
+
                 if(sound.hasHandle()){
                     sound.release();
                     sound.clearHandle();
@@ -146,15 +165,59 @@ namespace SCOdyssey.App
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
-        public void AssertBackendUnchanged(
-            FMOD.OUTPUTTYPE expectedBackend,
-            int expectedSampleRate
-        ){
+        public void AssertBackendUnchanged(FMOD.System expectedSystem){
             Debug.Assert(
-                expectedBackend == _soundBackend &&
-                expectedSampleRate == _soundSampleRate,
+                expectedSystem.handle == Sys.handle,
                 $"[{nameof(FMODResourceManager)}] FMOD Backed has been changed"
             );
+        }
+
+        private string GetFullPath(AudioID audio)
+        {
+            return System.IO.Path.Combine(Application.streamingAssetsPath, "Music", audio.AudioPath);
+        }
+
+        public FMOD.Sound GetOrLoadBGMAudio(AudioID audio)
+        {
+            return GetOrLoadAudio(audio,
+                FMOD.MODE.IGNORETAGS | FMOD.MODE.NONBLOCKING |
+                FMOD.MODE.ACCURATETIME | FMOD.MODE.CREATESAMPLE |
+                FMOD.MODE.LOOP_OFF
+            );
+        }
+
+        public FMOD.Sound GetOrLoadSFXAudio(AudioID audio)
+        {
+            return GetOrLoadAudio(audio,
+                FMOD.MODE.CREATESAMPLE | FMOD.MODE.LOOP_OFF
+            );
+        }
+
+        private FMOD.Sound GetOrLoadAudio(AudioID audio, FMOD.MODE mode)
+        {
+            var containsKey = _sounds.TryGetValue(audio, out var tuple);
+
+            if(containsKey){
+                var (existSound, refCount) = tuple;
+                _sounds[audio] = (existSound, ++refCount);
+
+                return existSound;
+            }
+
+            var fullPath = GetFullPath(audio);
+
+            FMOD.CREATESOUNDEXINFO exInfo = new()
+            {
+                cbsize = Marshal.SizeOf<FMOD.CREATESOUNDEXINFO>()
+            };
+            var result = Sys.createSound(
+                fullPath,
+                mode,
+                out var createdSound
+            );
+            FMODUtil.CheckFMODResult(result, $"[{nameof(FMODResourceManager)}] createSound Failed: {audio.AudioPath}");
+
+            return createdSound;
         }
     }
 #endregion
@@ -168,6 +231,15 @@ namespace SCOdyssey.App
         private FMOD.OUTPUTTYPE _sysBackend = FMOD.OUTPUTTYPE.UNKNOWN;
         private int _sysSampleRate = 0;
         private FMOD.ChannelGroup _sysMasterGroup; // for global DSPClock
+        private ulong DSPClock{
+            get{
+                var result = _sysMasterGroup.getDSPClock(out ulong clock, out _);
+                FMODUtil.CheckFMODResult(result, $"[{nameof(FMODAudioManager2)}] DSPClock");
+
+                return clock;
+            }
+        }
+        private double DSPClockSecond => (double)DSPClock * _sysSampleRate;
 
         private FMOD.ChannelGroup _masterGroup;
         private FMOD.ChannelGroup _bgmGroup;
@@ -189,7 +261,7 @@ namespace SCOdyssey.App
             CacheCoreSystem();
             CreateChannelGroup();
 
-            ResourceManager = new FMODResourceManager(_sysBackend, _sysSampleRate);
+            ResourceManager = new FMODResourceManager(Sys);
         }
 
         ~FMODAudioManager2()
@@ -214,9 +286,9 @@ namespace SCOdyssey.App
             AssertCoreSystemValid();
 
             var result = Sys.getOutput(out var currentBackend);
-            CheckFMODResult(result, $"{nameof(AssertCorePropertyValid)}, Get Current System Backend");
+            FMODUtil.CheckFMODResult(result, $"{nameof(AssertCorePropertyValid)}, Get Current System Backend");
             result = Sys.getSoftwareFormat(out var currentSamplerRate, out _, out _);
-            CheckFMODResult(result, $"{nameof(AssertCorePropertyValid)}, Get Current System SampleRate");
+            FMODUtil.CheckFMODResult(result, $"{nameof(AssertCorePropertyValid)}, Get Current System SampleRate");
 
             Debug.Assert(
                 currentBackend == _sysBackend &&
@@ -225,24 +297,17 @@ namespace SCOdyssey.App
             );
         }
 
-        [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
-        private static void CheckFMODResult(FMOD.RESULT result, string context = null)
-        {
-            if(result != FMOD.RESULT.OK)
-                Debug.LogError($"FMOD result: {result} ({context})");
-        }
-
         private void CacheCoreSystem()
         {
             Sys = RuntimeManager.CoreSystem;
 
             var result = Sys.getOutput(out _sysBackend);
-            CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System Backend");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System Backend");
             result = Sys.getSoftwareFormat(out _sysSampleRate, out _, out _);
-            CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System SampleRate");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System SampleRate");
 
             result = Sys.getMasterChannelGroup(out _sysMasterGroup);
-            CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System Master Group");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System Master Group");
         }
 
         private void CreateChannelGroup()
@@ -250,15 +315,15 @@ namespace SCOdyssey.App
             AssertCoreSystemValid();
 
             var result = Sys.createChannelGroup("Master", out _masterGroup);
-            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create Master Group");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create Master Group");
             result = Sys.createChannelGroup("BGM", out _bgmGroup);
-            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create BGM Group");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create BGM Group");
             result = Sys.createChannelGroup("SFX", out _sfxGroup);
-            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create SFX Group");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create SFX Group");
             result = _masterGroup.addGroup(_bgmGroup, false, out _);
-            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register BGM Group to Master Group");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register BGM Group to Master Group");
             result = _masterGroup.addGroup(_sfxGroup, false, out _);
-            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register SFX Group to Master Group");
+            FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register SFX Group to Master Group");
         }
 
         public void Dispose()
@@ -271,19 +336,19 @@ namespace SCOdyssey.App
             if (_sfxGroup.hasHandle())
             {
                 var result = _sfxGroup.release();
-                CheckFMODResult(result, $"{nameof(Dispose)}, SFX Group Release");
+                FMODUtil.CheckFMODResult(result, $"{nameof(Dispose)}, SFX Group Release");
                 _sfxGroup.clearHandle();
             }
             if (_bgmGroup.hasHandle())
             {
                 var result = _bgmGroup.release();
-                CheckFMODResult(result, $"{nameof(Dispose)}, BGM Group Release");
+                FMODUtil.CheckFMODResult(result, $"{nameof(Dispose)}, BGM Group Release");
                 _bgmGroup.clearHandle();
             }
             if (_masterGroup.hasHandle())
             {
                 var result = _masterGroup.release();
-                CheckFMODResult(result, $"{nameof(Dispose)}, Master Group Release");
+                FMODUtil.CheckFMODResult(result, $"{nameof(Dispose)}, Master Group Release");
                 _masterGroup.clearHandle();
             }
 
@@ -295,12 +360,14 @@ namespace SCOdyssey.App
         {
             AssertCorePropertyValid();
 
-            ResourceManager.AssertBackendUnchanged(_sysBackend, _sysSampleRate);
+            ResourceManager.AssertBackendUnchanged(Sys);
         }
 
-        public void Schedule(AudioSession session, double startAt)
+        public async void Schedule(AudioSession session, double startAt)
         {
             AssertBackendUnchanged();
+
+            
         }
 
         public void Play(AudioID audio)
@@ -311,17 +378,17 @@ namespace SCOdyssey.App
         public void SetMasterVolume(float v)
         {
             var result = _masterGroup.setVolume(v);
-            CheckFMODResult(result, nameof(SetMasterVolume));
+            FMODUtil.CheckFMODResult(result, nameof(SetMasterVolume));
         }
         public void SetBgmVolume(float v)
         {
             var result = _bgmGroup.setVolume(v);
-            CheckFMODResult(result, nameof(SetBgmVolume));
+            FMODUtil.CheckFMODResult(result, nameof(SetBgmVolume));
         }
         public void SetSFXVolume(float v)
         {
             var result = _sfxGroup.setVolume(v);
-            CheckFMODResult(result, nameof(SetSFXVolume));
+            FMODUtil.CheckFMODResult(result, nameof(SetSFXVolume));
         }
     }
 #endregion
