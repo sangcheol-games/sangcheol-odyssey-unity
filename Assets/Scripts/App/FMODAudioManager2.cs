@@ -110,6 +110,7 @@ namespace SCOdyssey.App
 #region ResourceManager
     internal sealed class FMODResourceManager: IDisposable
     {
+        private bool _disposed = false;
         private Dictionary<AudioID, FMOD.Sound> _sounds = new();
 
         // Debug Variables
@@ -123,8 +124,16 @@ namespace SCOdyssey.App
             _soundSampleRate = sampleRate;
         }
 
+        ~FMODResourceManager()
+        {
+            Debug.LogError($"[{nameof(FMODResourceManager)}] Disposed by GC. Owner forgot to call Dispose()");
+        }
+
         public void Dispose()
         {
+            if(_disposed) return;
+            _disposed = true;
+
             foreach(var (_, sound) in _sounds)
             {
                 if(sound.hasHandle()){
@@ -132,6 +141,8 @@ namespace SCOdyssey.App
                     sound.clearHandle();
                 }
             }
+
+            GC.SuppressFinalize(this);
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
@@ -142,7 +153,7 @@ namespace SCOdyssey.App
             Debug.Assert(
                 expectedBackend == _soundBackend &&
                 expectedSampleRate == _soundSampleRate,
-                "[FMODResourceManager] FMOD Backed has been changed"
+                $"[{nameof(FMODResourceManager)}] FMOD Backed has been changed"
             );
         }
     }
@@ -183,7 +194,7 @@ namespace SCOdyssey.App
 
         ~FMODAudioManager2()
         {
-            Debug.LogError("[FMODAudioManager2] Disposed by GC. Owner forgot to call Dispose()");
+            Debug.LogError($"[{nameof(FMODAudioManager2)}] Disposed by GC. Owner forgot to call Dispose()");
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
@@ -193,7 +204,7 @@ namespace SCOdyssey.App
 
             Debug.Assert(
                 currentSys.handle == Sys.handle,
-                "[FMODAudioManager] System has been reset"
+                $"[{nameof(FMODAudioManager2)}] System has been reset"
             );
         }
 
@@ -203,14 +214,14 @@ namespace SCOdyssey.App
             AssertCoreSystemValid();
 
             var result = Sys.getOutput(out var currentBackend);
-            CheckFMODResult(result, "AssertCoreProperty, Get Current System Backend");
+            CheckFMODResult(result, $"{nameof(AssertCorePropertyValid)}, Get Current System Backend");
             result = Sys.getSoftwareFormat(out var currentSamplerRate, out _, out _);
-            CheckFMODResult(result, "AssertCoreProperty, Get Current System SampleRate");
+            CheckFMODResult(result, $"{nameof(AssertCorePropertyValid)}, Get Current System SampleRate");
 
             Debug.Assert(
                 currentBackend == _sysBackend &&
                 currentSamplerRate == _sysSampleRate,
-                "[FMODAudioManager] System has been reset, but cache wasn't changed"
+                $"[{nameof(FMODAudioManager2)}] System has been reset, but cache wasn't changed"
             );
         }
 
@@ -226,12 +237,12 @@ namespace SCOdyssey.App
             Sys = RuntimeManager.CoreSystem;
 
             var result = Sys.getOutput(out _sysBackend);
-            CheckFMODResult(result, "CacheCoreSystem, Get System Backend");
+            CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System Backend");
             result = Sys.getSoftwareFormat(out _sysSampleRate, out _, out _);
-            CheckFMODResult(result, "CacheCoreSystem, Get System SampleRate");
+            CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System SampleRate");
 
             result = Sys.getMasterChannelGroup(out _sysMasterGroup);
-            CheckFMODResult(result, "CacheCoreSystem, Get System Master Group");
+            CheckFMODResult(result, $"{nameof(CacheCoreSystem)}, Get System Master Group");
         }
 
         private void CreateChannelGroup()
@@ -239,15 +250,15 @@ namespace SCOdyssey.App
             AssertCoreSystemValid();
 
             var result = Sys.createChannelGroup("Master", out _masterGroup);
-            CheckFMODResult(result, "CreateChannelGroup, Create Master Group");
+            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create Master Group");
             result = Sys.createChannelGroup("BGM", out _bgmGroup);
-            CheckFMODResult(result, "CreateChannelGroup, Create BGM Group");
+            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create BGM Group");
             result = Sys.createChannelGroup("SFX", out _sfxGroup);
-            CheckFMODResult(result, "CreateChannelGroup, Create SFX Group");
+            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create SFX Group");
             result = _masterGroup.addGroup(_bgmGroup, false, out _);
-            CheckFMODResult(result, "CreateChannelGroup, Register BGM Group to Master Group");
+            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register BGM Group to Master Group");
             result = _masterGroup.addGroup(_sfxGroup, false, out _);
-            CheckFMODResult(result, "CreateChannelGroup, Register SFX Group to Master Group");
+            CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register SFX Group to Master Group");
         }
 
         public void Dispose()
@@ -260,19 +271,19 @@ namespace SCOdyssey.App
             if (_sfxGroup.hasHandle())
             {
                 var result = _sfxGroup.release();
-                CheckFMODResult(result, "Dispose, SFX Group Release");
+                CheckFMODResult(result, $"{nameof(Dispose)}, SFX Group Release");
                 _sfxGroup.clearHandle();
             }
             if (_bgmGroup.hasHandle())
             {
                 var result = _bgmGroup.release();
-                CheckFMODResult(result, "Dispose, BGM Group Release");
+                CheckFMODResult(result, $"{nameof(Dispose)}, BGM Group Release");
                 _bgmGroup.clearHandle();
             }
             if (_masterGroup.hasHandle())
             {
                 var result = _masterGroup.release();
-                CheckFMODResult(result, "Dispose, Master Group Release");
+                CheckFMODResult(result, $"{nameof(Dispose)}, Master Group Release");
                 _masterGroup.clearHandle();
             }
 
@@ -295,6 +306,22 @@ namespace SCOdyssey.App
         public void Play(AudioID audio)
         {
             AssertBackendUnchanged();
+        }
+
+        public void SetMasterVolume(float v)
+        {
+            var result = _masterGroup.setVolume(v);
+            CheckFMODResult(result, nameof(SetMasterVolume));
+        }
+        public void SetBgmVolume(float v)
+        {
+            var result = _bgmGroup.setVolume(v);
+            CheckFMODResult(result, nameof(SetBgmVolume));
+        }
+        public void SetSFXVolume(float v)
+        {
+            var result = _sfxGroup.setVolume(v);
+            CheckFMODResult(result, nameof(SetSFXVolume));
         }
     }
 #endregion
