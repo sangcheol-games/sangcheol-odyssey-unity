@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using FMODUnity;
-using UnityEngine;
 using System.Diagnostics;
-
+using FMODUnity;
 using Debug = UnityEngine.Debug;
 
 namespace SCOdyssey.App
@@ -14,21 +12,22 @@ namespace SCOdyssey.App
         public AudioID(string audioPath) => AudioPath = audioPath ??
             throw new ArgumentNullException(nameof(audioPath));
  
+        public override string ToString() => AudioPath;
+
         public bool Equals(AudioID other) => AudioPath == other.AudioPath;
         public override bool Equals(object obj) => obj is AudioID other && Equals(other);
         public override int GetHashCode() => AudioPath?.GetHashCode() ?? 0;
-        public override string ToString() => AudioPath;
         public static bool operator==(AudioID lhs, AudioID rhs) =>  lhs.Equals(rhs);
         public static bool operator!=(AudioID lhs, AudioID rhs) => !lhs.Equals(rhs);
     }
 
-    public readonly struct ScheduledEntry
+    public readonly struct ScheduledEntry : IEquatable<ScheduledEntry>
     {
         public readonly AudioID Audio{ get; }
         public readonly double LocalTime{ get; }
-        public bool Loop{ get; }
+        public readonly bool Loop{ get; }
 
-        public ScheduledEntry(in AudioID audio, in double localTime, in bool loop)
+        public ScheduledEntry(AudioID audio, double localTime, bool loop)
         {
             Audio = audio;
             LocalTime = localTime;
@@ -39,15 +38,26 @@ namespace SCOdyssey.App
         {
             return $"{Audio} {LocalTime} {Loop}";
         }
+
+        public bool Equals(ScheduledEntry other)
+        {
+            return Audio == other.Audio &&
+                LocalTime == other.LocalTime &&
+                Loop == other.Loop;
+        }
+        public override bool Equals(object obj) => obj is ScheduledEntry other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(Audio, LocalTime, Loop);
+        public static bool operator==(ScheduledEntry lhs, ScheduledEntry rhs) => lhs.Equals(rhs);
+        public static bool operator!=(ScheduledEntry lhs, ScheduledEntry rhs) => !lhs.Equals(rhs);
     }
 
     public sealed class AudioSession
     {
         public string Name{ get; }
-        public readonly HashSet<AudioID> Audios;
+        public IReadOnlyCollection<AudioID> Audios{ get; }
         public IReadOnlyCollection<ScheduledEntry> ScheduledEvents{ get; }
 
-        private AudioSession(in string name,
+        private AudioSession(string name,
             in HashSet<AudioID> audios,
             in IReadOnlyCollection<ScheduledEntry> scheduledEvents
         ){
@@ -55,22 +65,28 @@ namespace SCOdyssey.App
             Audios = audios;
             ScheduledEvents = scheduledEvents;
         }
-        public static Builder New(in string name = null) => new(name);
+        public static Builder New(string name = null) => new(name);
 
         public sealed class Builder
         {
-            private readonly string _sessionName;
-            private readonly HashSet<AudioID> _audios = new();
-            private readonly HashSet<ScheduledEntry> _scheduled = new();
+            private string _sessionName;
+            private HashSet<AudioID> _audios = new();
+            private HashSet<ScheduledEntry> _scheduled = new();
 
-            internal Builder(in string sessionName){ _sessionName = sessionName; }
+            internal Builder(string sessionName){ _sessionName = sessionName; }
 
             public AudioSession Build()
             {
-                return new AudioSession(_sessionName, _audios, _scheduled);
+                var session = new AudioSession(_sessionName, _audios, _scheduled);
+
+                _sessionName = null;
+                _audios = null;
+                _scheduled = null;
+
+                return session;
             }
 
-            public Builder Define(in AudioID audio)
+            public Builder Define(AudioID audio)
             {
                 var added = _audios.Add(audio);
                 if(!added) Debug.Log($"Already added on Session {_sessionName}: {audio}");
@@ -78,9 +94,9 @@ namespace SCOdyssey.App
                 return this;
             }
 
-            public Builder Reserve(in AudioID audio,
-                in double localTime = 0.0,
-                in bool loop = false
+            public Builder Reserve(AudioID audio,
+                double localTime = 0.0,
+                bool loop = false
             ){
                 var schedule = new ScheduledEntry(audio, localTime, loop);
                 var added = _scheduled.Add(schedule);
@@ -91,54 +107,37 @@ namespace SCOdyssey.App
         }
     }
 
-    public class Owned<T>: IDisposable
-        where T: class, IDisposable
-    {
-        private T _object;
-        public T Object
-        {
-            get => _object;
-            set
-            {
-                _object?.Dispose();
-                _object = value;
-            }
-        }
-
-        public void Reset(T next = null)
-        {
-            Object = next;
-        }
-
-        public void Dispose() => Reset();
-    }
-
-#region FMODResourceManager
+#region ResourceManager
     internal sealed class FMODResourceManager: IDisposable
     {
-        private bool _disposed = false;
-        private Dictionary<AudioID, FMOD.Sound> _sounds;
+        private Dictionary<AudioID, FMOD.Sound> _sounds = new();
 
         // Debug Variables
-        private FMOD.OUTPUTTYPE _soundBackend;
-        private int _soundSampleRate;
+        private FMOD.OUTPUTTYPE _soundBackend = FMOD.OUTPUTTYPE.UNKNOWN;
+        private int _soundSampleRate = 0;
+
+        public FMODResourceManager(FMOD.OUTPUTTYPE backend, int sampleRate)
+        {
+            // Initialize Default Settings
+            _soundBackend = backend;
+            _soundSampleRate = sampleRate;
+        }
 
         public void Dispose()
         {
-            if(_disposed) return;
-
             foreach(var (_, sound) in _sounds)
             {
-                if(sound.hasHandle()) sound.release();
+                if(sound.hasHandle()){
+                    sound.release();
+                    sound.clearHandle();
+                }
             }
-
-            _disposed = true;
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
         public void AssertBackendUnchanged(
-            in FMOD.OUTPUTTYPE expectedBackend,
-            in int expectedSampleRate
+            FMOD.OUTPUTTYPE expectedBackend,
+            int expectedSampleRate
         ){
             Debug.Assert(
                 expectedBackend == _soundBackend &&
@@ -149,38 +148,42 @@ namespace SCOdyssey.App
     }
 #endregion
 
-#region FMODAudioManager2
-    public class FMODAudioManager2: MonoBehaviour, IDisposable
+#region AudioManager
+    public class FMODAudioManager2: IDisposable
     {
         private bool _disposed = false;
-
         // cache FMOD CoreSystem
         private FMOD.System Sys;
         private FMOD.OUTPUTTYPE _sysBackend = FMOD.OUTPUTTYPE.UNKNOWN;
-        private int _sysSampleRate;
+        private int _sysSampleRate = 0;
         private FMOD.ChannelGroup _sysMasterGroup; // for global DSPClock
 
         private FMOD.ChannelGroup _masterGroup;
         private FMOD.ChannelGroup _bgmGroup;
         private FMOD.ChannelGroup _sfxGroup;
 
-        private Owned<FMODResourceManager> _resource;
-        private FMODResourceManager Resource{
-            get => _resource.Object;
+        private FMODResourceManager _resourceManager = null;
+        private FMODResourceManager ResourceManager
+        {
+            get{ return _resourceManager; }
             set
             {
-                _resource.Object = value;
+                _resourceManager?.Dispose();
+                _resourceManager = value;
             }
         }
 
-        private void Awake()
+        public FMODAudioManager2()
         {
-            Construct();
+            CacheCoreSystem();
+            CreateChannelGroup();
+
+            ResourceManager = new FMODResourceManager(_sysBackend, _sysSampleRate);
         }
 
-        private void OnDestroy()
+        ~FMODAudioManager2()
         {
-            Destruct();
+            Debug.LogError("[FMODAudioManager2] Disposed by GC. Owner forgot to call Dispose()");
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
@@ -199,8 +202,10 @@ namespace SCOdyssey.App
         {
             AssertCoreSystemValid();
 
-            Sys.getOutput(out var currentBackend);
-            Sys.getSoftwareFormat(out var currentSamplerRate, out _, out _);
+            var result = Sys.getOutput(out var currentBackend);
+            CheckFMODResult(result, "AssertCoreProperty, Get Current System Backend");
+            result = Sys.getSoftwareFormat(out var currentSamplerRate, out _, out _);
+            CheckFMODResult(result, "AssertCoreProperty, Get Current System SampleRate");
 
             Debug.Assert(
                 currentBackend == _sysBackend &&
@@ -209,55 +214,69 @@ namespace SCOdyssey.App
             );
         }
 
+        [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+        private static void CheckFMODResult(FMOD.RESULT result, string context = null)
+        {
+            if(result != FMOD.RESULT.OK)
+                Debug.LogError($"FMOD result: {result} ({context})");
+        }
+
         private void CacheCoreSystem()
         {
             Sys = RuntimeManager.CoreSystem;
 
-            Sys.getOutput(out _sysBackend);
-            Sys.getSoftwareFormat(out _sysSampleRate, out _, out _);
+            var result = Sys.getOutput(out _sysBackend);
+            CheckFMODResult(result, "CacheCoreSystem, Get System Backend");
+            result = Sys.getSoftwareFormat(out _sysSampleRate, out _, out _);
+            CheckFMODResult(result, "CacheCoreSystem, Get System SampleRate");
 
-            Sys.getMasterChannelGroup(out _sysMasterGroup);
+            result = Sys.getMasterChannelGroup(out _sysMasterGroup);
+            CheckFMODResult(result, "CacheCoreSystem, Get System Master Group");
         }
 
         private void CreateChannelGroup()
         {
             AssertCoreSystemValid();
 
-            Sys.createChannelGroup("Master", out _masterGroup);
-            Sys.createChannelGroup("BGM", out _bgmGroup);
-            Sys.createChannelGroup("SFX", out _sfxGroup);
-            _masterGroup.addGroup(_bgmGroup, false, out _);
-            _masterGroup.addGroup(_sfxGroup, false, out _);
-        }
-
-        private void Construct()
-        {
-            Debug.Assert(!_disposed);
-
-            CacheCoreSystem();
-            CreateChannelGroup();
-
-            Resource = new FMODResourceManager();
-        }
-
-        private void Destruct()
-        {
-            Debug.Assert(!_disposed);
-
-            Resource = null;
-
-            _sfxGroup.release();
-            _bgmGroup.release();
-            _masterGroup.release();
+            var result = Sys.createChannelGroup("Master", out _masterGroup);
+            CheckFMODResult(result, "CreateChannelGroup, Create Master Group");
+            result = Sys.createChannelGroup("BGM", out _bgmGroup);
+            CheckFMODResult(result, "CreateChannelGroup, Create BGM Group");
+            result = Sys.createChannelGroup("SFX", out _sfxGroup);
+            CheckFMODResult(result, "CreateChannelGroup, Create SFX Group");
+            result = _masterGroup.addGroup(_bgmGroup, false, out _);
+            CheckFMODResult(result, "CreateChannelGroup, Register BGM Group to Master Group");
+            result = _masterGroup.addGroup(_sfxGroup, false, out _);
+            CheckFMODResult(result, "CreateChannelGroup, Register SFX Group to Master Group");
         }
 
         public void Dispose()
         {
             if(_disposed) return;
-
-            Destruct();
-
             _disposed = true;
+
+            ResourceManager = null;
+
+            if (_sfxGroup.hasHandle())
+            {
+                var result = _sfxGroup.release();
+                CheckFMODResult(result, "Dispose, SFX Group Release");
+                _sfxGroup.clearHandle();
+            }
+            if (_bgmGroup.hasHandle())
+            {
+                var result = _bgmGroup.release();
+                CheckFMODResult(result, "Dispose, BGM Group Release");
+                _bgmGroup.clearHandle();
+            }
+            if (_masterGroup.hasHandle())
+            {
+                var result = _masterGroup.release();
+                CheckFMODResult(result, "Dispose, Master Group Release");
+                _masterGroup.clearHandle();
+            }
+
+            GC.SuppressFinalize(this);
         }
 
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
@@ -265,22 +284,22 @@ namespace SCOdyssey.App
         {
             AssertCorePropertyValid();
 
-            Resource.AssertBackendUnchanged(_sysBackend, _sysSampleRate);
+            ResourceManager.AssertBackendUnchanged(_sysBackend, _sysSampleRate);
         }
 
-        public void Schedule(in AudioSession session, in double startAt)
+        public void Schedule(AudioSession session, double startAt)
         {
-            
+            AssertBackendUnchanged();
         }
 
-        public void Play(in AudioID audio)
+        public void Play(AudioID audio)
         {
-            
+            AssertBackendUnchanged();
         }
     }
 #endregion
 
-    public class FMODAudioManagerUseCase
+    internal class FMODAudioManagerUseCase
     {
         public void DefaultUsage()
         {
@@ -291,10 +310,14 @@ namespace SCOdyssey.App
                 .Reserve(new AudioID("Clear"), localTime: 180)
                 .Build();
 
-            using var audioManager = new FMODAudioManager2();
+            var audioManager = new FMODAudioManager2();
+
             audioManager.Schedule(session, startAt: 0);
 
             audioManager.Play(new AudioID("Hit Sound"));
+
+            // OnDestroy
+            audioManager.Dispose();
         }
     }
 }
