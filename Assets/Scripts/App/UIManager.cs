@@ -135,6 +135,12 @@ namespace SCOdyssey.App
             // 스택의 가장 위 UI와 T의 타입이 맞지 않으면 null return
             return uiStack.Peek() as T;
         }
+
+        // 입력 라우팅용: 현재 top UI 반환 (없으면 null)
+        public BaseUI Peek()
+        {
+            return uiStack.Count == 0 ? null : uiStack.Peek();
+        }
         
         // UI 스택의 가장 위에 있는 UI 닫기
         public void CloseUI(BaseUI closeUi)
