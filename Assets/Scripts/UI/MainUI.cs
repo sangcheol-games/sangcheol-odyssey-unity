@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using SCOdyssey.App;
 using SCOdyssey.UI;
@@ -12,8 +13,7 @@ namespace SCOdyssey
         private const float HoverScale = 1.1f;
         private const float HoverDuration = 0.15f;
 
-        private Vector3 _adventureBaseScale = Vector3.one;
-        private Coroutine _adventureScaleRoutine;
+        private readonly Dictionary<Transform, Coroutine> _hoverRoutines = new();
 
         private enum Buttons
         {
@@ -40,14 +40,17 @@ namespace SCOdyssey
             BindImage(typeof(Images));
 
             GameObject adventureGo = GetButton((int)Buttons.Adventure).gameObject;
+            GameObject settingGo = GetButton((int)Buttons.Setting).gameObject;
+            GameObject quitGo = GetButton((int)Buttons.Quit).gameObject;
 
             BindEvent(adventureGo, EventTriggerType.PointerClick, OnClickAdventure);
-            BindEvent(adventureGo, EventTriggerType.PointerEnter, OnPointerEnterAdventure);
-            BindEvent(adventureGo, EventTriggerType.PointerExit, OnPointerExitAdventure);
-            
             //BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
-            BindEvent(GetButton((int)Buttons.Setting).gameObject, EventTriggerType.PointerClick, OnClickSetting);
-            BindEvent(GetButton((int)Buttons.Quit).gameObject, EventTriggerType.PointerClick, ExitGame);
+            BindEvent(settingGo, EventTriggerType.PointerClick, OnClickSetting);
+            BindEvent(quitGo, EventTriggerType.PointerClick, ExitGame);
+
+            BindHoverScale(adventureGo);
+            BindHoverScale(settingGo);
+            BindHoverScale(quitGo);
         }
 
         private void OnClickAdventure()
@@ -68,20 +71,18 @@ namespace SCOdyssey
             ServiceLocator.Get<IUIManager>().ShowUI<GameSettingUI>();
         }
 
-        private void OnPointerEnterAdventure()
+        private void BindHoverScale(GameObject go)
         {
-            StartAdventureScale(_adventureBaseScale * HoverScale);
+            Transform target = go.transform;
+            BindEvent(go, EventTriggerType.PointerEnter, () => StartHoverScale(target, Vector3.one * HoverScale));
+            BindEvent(go, EventTriggerType.PointerExit, () => StartHoverScale(target, Vector3.one));
         }
 
-        private void OnPointerExitAdventure()
+        private void StartHoverScale(Transform target, Vector3 toScale)
         {
-            StartAdventureScale(_adventureBaseScale);
-        }
-
-        private void StartAdventureScale(Vector3 toScale)
-        {
-            if (_adventureScaleRoutine != null) StopCoroutine(_adventureScaleRoutine);
-            _adventureScaleRoutine = StartCoroutine(ScaleTo(GetButton((int)Buttons.Adventure).transform, toScale, HoverDuration));
+            if (_hoverRoutines.TryGetValue(target, out Coroutine running) && running != null)
+                StopCoroutine(running);
+            _hoverRoutines[target] = StartCoroutine(ScaleTo(target, toScale, HoverDuration));
         }
 
         private IEnumerator ScaleTo(Transform target, Vector3 toScale, float duration)
