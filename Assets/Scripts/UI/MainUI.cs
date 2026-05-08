@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using SCOdyssey.App;
 using SCOdyssey.UI;
@@ -8,12 +9,19 @@ namespace SCOdyssey
 {
     public class MainUI : BaseUI
     {
+        private const float HoverScale = 1.1f;
+        private const float HoverDuration = 0.15f;
+
+        private Vector3 _adventureBaseScale = Vector3.one;
+        private Coroutine _adventureScaleRoutine;
+
         private enum Buttons
         {
             Adventure,
             Online,
             Lounge,
-            Setting
+            Setting,
+            Quit
         }
 
         private enum Images
@@ -31,9 +39,15 @@ namespace SCOdyssey
             BindButton(typeof(Buttons));
             BindImage(typeof(Images));
 
-            BindEvent(GetButton((int)Buttons.Adventure).gameObject, EventTriggerType.PointerClick, OnClickAdventure);
-            BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
+            GameObject adventureGo = GetButton((int)Buttons.Adventure).gameObject;
+
+            BindEvent(adventureGo, EventTriggerType.PointerClick, OnClickAdventure);
+            BindEvent(adventureGo, EventTriggerType.PointerEnter, OnPointerEnterAdventure);
+            BindEvent(adventureGo, EventTriggerType.PointerExit, OnPointerExitAdventure);
+            
+            //BindEvent(GetButton((int)Buttons.Lounge).gameObject, EventTriggerType.PointerClick, OnClickLounge);
             BindEvent(GetButton((int)Buttons.Setting).gameObject, EventTriggerType.PointerClick, OnClickSetting);
+            BindEvent(GetButton((int)Buttons.Quit).gameObject, EventTriggerType.PointerClick, ExitGame);
         }
 
         private void OnClickAdventure()
@@ -54,6 +68,42 @@ namespace SCOdyssey
             ServiceLocator.Get<IUIManager>().ShowUI<GameSettingUI>();
         }
 
+        private void OnPointerEnterAdventure()
+        {
+            StartAdventureScale(_adventureBaseScale * HoverScale);
+        }
+
+        private void OnPointerExitAdventure()
+        {
+            StartAdventureScale(_adventureBaseScale);
+        }
+
+        private void StartAdventureScale(Vector3 toScale)
+        {
+            if (_adventureScaleRoutine != null) StopCoroutine(_adventureScaleRoutine);
+            _adventureScaleRoutine = StartCoroutine(ScaleTo(GetButton((int)Buttons.Adventure).transform, toScale, HoverDuration));
+        }
+
+        private IEnumerator ScaleTo(Transform target, Vector3 toScale, float duration)
+        {
+            Vector3 from = target.localScale;
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                target.localScale = Vector3.Lerp(from, toScale, t / duration);
+                yield return null;
+            }
+            target.localScale = toScale;
+        }
+
+
+        private void ExitGame()
+        {
+            var uiManager = ServiceLocator.Get<IUIManager>();
+            uiManager.ShowUI<ExitGameUI>();
+        }
+
         protected override void HandleSelect(Vector2 direction)
         {
             Debug.Log("HandleSelect in MainUI");
@@ -66,7 +116,7 @@ namespace SCOdyssey
 
         protected override void HandleCancel()
         {
-            Debug.Log("HandleCancel in MainUI");
+            ExitGame();
         }
     }
 }
