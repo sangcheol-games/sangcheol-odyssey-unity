@@ -15,7 +15,7 @@ namespace SCOdyssey.Game
         public Image backgroundArt;     // 배경아트 스프라이트 표시용 Image (BGA 꺼진 경우에만 표시)
         public Image alphaOverlay;      // BGA 위에 올린 검정 Image (투명도 조절용)
 
-        private IAudioManager _audioManager;
+        private IGameManager _gameManager;
         private bool isPrepared = false;
         private bool isScheduled = false;
         private double scheduledDspTime = 0;
@@ -23,7 +23,7 @@ namespace SCOdyssey.Game
 
         private void Start()
         {
-            ServiceLocator.TryGet<IAudioManager>(out _audioManager);
+            ServiceLocator.TryGet(out _gameManager);
         }
 
         /// <summary>
@@ -162,7 +162,7 @@ namespace SCOdyssey.Game
         {
             if (!isScheduled || !isPrepared) return;
 
-            double now = _audioManager != null ? _audioManager.GetDSPTime() : AudioSettings.dspTime;
+            double now = _gameManager != null ? _gameManager.GetCurrentTime() : AudioSettings.dspTime;
             if (now < scheduledDspTime) return;
 
             isScheduled = false;
