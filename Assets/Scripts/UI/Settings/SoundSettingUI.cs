@@ -67,7 +67,7 @@ namespace SCOdyssey
             _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
 
             #region Audio Device
-            _audioDevices = ServiceLocator.Get<IAudioManager>().GetAvailableDevices();
+            // _audioDevices = ServiceLocator.Get<FMODAudioManager2>().GetAvailableDevices();
             if (_audioDevices.Length == 0) _audioDevices = new[] { "기본 장치" };
             _audioDeviceIndex = Mathf.Clamp(_pending.audioDeviceIndex, 0, _audioDevices.Length - 1);
             RefreshAudioDeviceText();
@@ -169,8 +169,8 @@ namespace SCOdyssey
             var settings = ServiceLocator.Get<ISettingsManager>();
             settings.Current.audioDeviceIndex    = _pending.audioDeviceIndex;
             settings.Current.playInBackground     = _pending.playInBackground;
-            if (ServiceLocator.TryGet<IAudioManager>(out var audio))
-                audio.SetAudioDevice(_pending.audioDeviceIndex);
+            // if (ServiceLocator.TryGet<IAudioManager>(out var audio))
+            //     audio.SetAudioDevice(_pending.audioDeviceIndex);
             settings.Current.masterVolume   = _pending.masterVolume;
             settings.Current.bgmVolume      = _pending.bgmVolume;
             settings.Current.hitSoundVolume = _pending.hitSoundVolume;
