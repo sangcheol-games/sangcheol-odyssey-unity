@@ -89,7 +89,7 @@ namespace SCOdyssey
             #region Volume
             InitVolumeSlider(Sliders.Slider_MasterVolume,   Texts.Text_MasterVolumeValue,   _pending.masterVolume,   v => _pending.masterVolume   = v);
             InitVolumeSlider(Sliders.Slider_BgmVolume,      Texts.Text_BgmVolumeValue,      _pending.bgmVolume,      v => _pending.bgmVolume      = v);
-            InitVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, _pending.hitSoundVolume, v => _pending.hitSoundVolume = v);
+            // InitVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, _pending.hitSoundVolume, v => _pending.hitSoundVolume = v);
             InitVolumeSlider(Sliders.Slider_SfxVolume,      Texts.Text_SfxVolumeValue,      _pending.sfxVolume,      v => _pending.sfxVolume      = v);
             #endregion
 
@@ -173,7 +173,7 @@ namespace SCOdyssey
             //     audio.SetAudioDevice(_pending.audioDeviceIndex);
             settings.Current.masterVolume   = _pending.masterVolume;
             settings.Current.bgmVolume      = _pending.bgmVolume;
-            settings.Current.hitSoundVolume = _pending.hitSoundVolume;
+            // settings.Current.hitSoundVolume = _pending.hitSoundVolume;
             settings.Current.sfxVolume       = _pending.sfxVolume;
             // 버퍼 크기는 FMODAudioPreInit에서 다음 시작 시 적용됨 (런타임 변경 불가)
             settings.Current.audioBufferIndex = _pending.audioBufferIndex;
@@ -190,7 +190,7 @@ namespace SCOdyssey
             GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[0]; // "OFF"
             Get<Slider>((int)Sliders.Slider_MasterVolume).value   = _pending.masterVolume;
             Get<Slider>((int)Sliders.Slider_BgmVolume).value      = _pending.bgmVolume;
-            Get<Slider>((int)Sliders.Slider_HitSoundVolume).value = _pending.hitSoundVolume;
+            // Get<Slider>((int)Sliders.Slider_HitSoundVolume).value = _pending.hitSoundVolume;
             Get<Slider>((int)Sliders.Slider_SfxVolume).value       = _pending.sfxVolume;
             Get<Slider>((int)Sliders.Slider_BufferSize).value      = _pending.audioBufferIndex; // = 2 (256)
         }
