@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using SCOdyssey.App;
 using SCOdyssey.Core;
@@ -7,79 +8,97 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    internal static class CoroutineUtil
+    {
+        public static void WhenAll(
+            MonoBehaviour runner,
+            IEnumerator[] routines,
+            Action onComplete
+        )
+        {
+            if(routines == null || routines.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            int remaining = routines.Length;
+            foreach(var routine in routines)
+            {
+                runner.StartCoroutine(
+                    Track(routine, () =>
+                    {
+                        --remaining;
+                        if(remaining == 0) onComplete?.Invoke();
+                    })
+                );
+            }
+        }
+
+        private static IEnumerator Track(
+            IEnumerator routine,
+            Action onComplete
+        )
+        {
+            yield return routine;
+            onComplete();
+        }
+    }
+
     public class GameDataLoader : MonoBehaviour
     {
-
         private void Start()
         {
-            StartCoroutine(LoadGameData());
-        }
-
-        private IEnumerator LoadGameData()
-        {
-            if (!ServiceLocator.TryGet<IMusicManager>(out var musicManager))
-            {
-                Debug.LogError("[GameDataLoader] IMusicManager not found in ServiceLocator!");
-                yield break;
-            }
+            var musicManager = ServiceLocator.Get<IMusicManager>();
 
             MusicSO music = musicManager.GetCurrentMusic();
-            if (music == null)
-            {
-                Debug.LogError("[GameDataLoader] No selected music!");
-                yield break;
-            }
-            Debug.Log($"[GameDataLoader] Loading Music: {music.name}");
-
-            var gameManager = ServiceLocator.Get<IGameManager>();
-
-            // FMOD 오디오 로딩
-            if (!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
-            {
-                Debug.LogError("[GameDataLoader] IAudioManager not found in ServiceLocator!");
-                yield break;
-            }
-
-            if (!string.IsNullOrEmpty(music.audioFilePath))
-            {
-                audioManager.LoadAudio(music.audioFilePath);
-                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
-                while (!audioManager.IsLoaded) yield return null;
-            }
-            else
-            {
-                Debug.LogWarning("[GameDataLoader] audioFilePath is empty!");
-            }
-
-            // BGA 및 배경아트 로딩
-            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
-
-            yield return LoadChart(music);
-
-            // 모든 데이터 로딩 완료 후 게임 시작
-            gameManager.StartGame();
-        }
-
-        private IEnumerator LoadChart(MusicSO music)
-        {
-            var musicManager = ServiceLocator.Get<IMusicManager>();
             Difficulty difficulty = musicManager.GetCurrentDifficulty();
 
-            if (!music.chartFile.TryGetValue(difficulty, out TextAsset chart) || chart == null)
+            if (music == null)
             {
-                Debug.LogError($"[GameDataLoader] Chart file missing for difficulty: {difficulty}");
-                yield break;
+                Debug.LogError($"[{nameof(GameDataLoader)}] No selected music!");
+                return;
             }
 
             var gameManager = ServiceLocator.Get<IGameManager>();
+            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
 
             // 캐시된 ChartData 확인 (다시하기용)
-            ChartData cachedData = gameManager.GetCachedChartData();
-            if (cachedData != null)
+            ChartData chart = gameManager.GetCachedChartData() ?? LoadChart(music, difficulty);
+            gameManager.SetChartData(chart);
+
+            CoroutineUtil.WhenAll(this, new[]
             {
-                Debug.Log("Using cached ChartData for retry");
-                gameManager.SetChartData(cachedData);
-                yield break;
+                LoadAudioData(music, initialDelay: chart.BarDuration)
+            }, () => gameManager.StartGame());
+        }
+
+        private IEnumerator LoadAudioData(MusicSO music, double initialDelay)
+        {
+            var bgmAudioPath = music.audioFilePath;
+
+            if (string.IsNullOrEmpty(bgmAudioPath))
+            {
+                Debug.LogWarning($"[{nameof(GameDataLoader)}] audioFilePath is empty!");
+                yield return null;
+            }
+            Debug.Log($"[{nameof(GameDataLoader)}] Loading Music: {bgmAudioPath}");
+
+            var audioManager = ServiceLocator.Get<FMODAudioManager2>();
+
+            var session = AudioSession.New("Game")
+                .ReserveBGM(bgmAudioPath, localTime: initialDelay)
+                .Build();
+
+            yield return audioManager.PushSessionAsync(session);
+        }
+
+        private ChartData LoadChart(MusicSO music, Difficulty difficulty)
+        {
+            if (!music.chartFile.TryGetValue(difficulty, out TextAsset chart) || chart == null)
+            {
+                Debug.LogError($"[{nameof(GameDataLoader)}] Chart file missing for difficulty: {difficulty}");
+                return null;
             }
 
             string chartText = chart.text;
@@ -93,12 +112,9 @@ namespace SCOdyssey.Game
             if (parsedData == null)
             {
                 Debug.LogError("[GameDataLoader] 파싱 실패!");
-                yield break;
             }
 
-            gameManager.SetChartData(parsedData);
-
-            yield return null;
+            return parsedData;
         }
     }
 }

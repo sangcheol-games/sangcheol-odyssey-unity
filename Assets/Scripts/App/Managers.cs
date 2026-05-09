@@ -23,6 +23,10 @@ namespace SCOdyssey.App
             InitServices();
         }
 
+        private void OnDestroy()
+        {
+            DeinitServices();
+        }
 
         private void InitServices()
         {
@@ -46,13 +50,16 @@ namespace SCOdyssey.App
             var characterManager = new CharacterManager();
             ServiceLocator.TryRegister<ICharacterManager>(characterManager);
 
-            // FMODAudioManager는 MonoBehaviour이므로 AddComponent로 생성 (DontDestroyOnLoad 유지)
-            var fmodAudio = gameObject.AddComponent<FMODAudioManager>();
-            ServiceLocator.TryRegister<IAudioManager>(fmodAudio);
+            var audioManager = new FMODAudioManager2();
+            ServiceLocator.TryRegister(audioManager);
 
             // targetFrameRate는 SettingsManager.Apply()에서 설정값으로 적용됨
         }
 
-
+        private void DeinitServices()
+        {
+            var audioManager = ServiceLocator.Get<FMODAudioManager2>();
+            audioManager.Dispose();
+        }
     }
 }

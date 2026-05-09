@@ -63,12 +63,12 @@ namespace SCOdyssey.App
             }
 
             // Sound
-            if (ServiceLocator.TryGet<IAudioManager>(out var audio))
+            if (ServiceLocator.TryGet<FMODAudioManager2>(out var audio))
             {
                 audio.SetMasterVolume(_current.masterVolume);
-                audio.SetBgmVolume(_current.bgmVolume);
-                audio.SetHitSoundVolume(_current.hitSoundVolume);
-                audio.SetSfxVolume(_current.sfxVolume);
+                audio.SetBGMVolume(_current.bgmVolume);
+                // audio.SetHitSoundVolume(_current.hitSoundVolume);
+                audio.SetSFXVolume(_current.sfxVolume);
             }
 
             // Input

@@ -60,6 +60,7 @@ namespace SCOdyssey.App
         public string Name{ get; }
         public IReadOnlyCollection<AudioID> SFXAudios{ get; }
         public IReadOnlyCollection<ScheduledEntry> ScheduledBGM{ get; }
+        public int AudioCount => SFXAudios.Count + ScheduledBGM.Count;
 
         private AudioSession(string name,
             in HashSet<AudioID> SFXAudios,
@@ -98,6 +99,8 @@ namespace SCOdyssey.App
                 return this;
             }
 
+            public Builder DefineSFX(string audioPath) => DefineSFX(new AudioID(audioPath));
+
             public Builder ReserveBGM(AudioID audio,
                 double localTime = 0.0,
                 bool loop = false
@@ -108,6 +111,11 @@ namespace SCOdyssey.App
 
                 return this;
             }
+
+            public Builder ReserveBGM(string audioPath,
+                double localTime = 0.0,
+                bool loop = false
+            ) => ReserveBGM(new AudioID(audioPath), localTime, loop);
         }
     }
 
@@ -130,9 +138,8 @@ namespace SCOdyssey.App
         private FMOD.System Sys{ get; }
         private FMOD.ChannelGroup _BGMGroup, _SFXGroup;
 
-        private Dictionary<AudioID, FMOD.Sound> _sounds = new();
-        private Dictionary<ScheduledEntry, FMOD.Channel> _scheduledChannels = new();
-        private readonly HashSet<AudioID> _BGMAudios = new();
+        private readonly Dictionary<AudioID, FMOD.Sound> _sounds = new();
+        private readonly Dictionary<ScheduledEntry, FMOD.Channel> _scheduledChannels = new();
 
         public ActiveAudioSession(
             FMOD.System sys,
@@ -145,11 +152,6 @@ namespace SCOdyssey.App
 
             Sys = sys;
 
-            foreach(var entry in spec.ScheduledBGM)
-            {
-                _BGMAudios.Add(entry.Audio);
-            }
-
             var prefix = string.IsNullOrEmpty(spec.Name) ? "Anonymous" : spec.Name;
             var BGMGroupName = $"{prefix}_BGM";
             var SFXGroupName = $"{prefix}_SFX";
@@ -160,9 +162,9 @@ namespace SCOdyssey.App
             result = Sys.createChannelGroup(SFXGroupName, out _SFXGroup);
             FMODUtil.CheckFMODResult(result, $"Create ${SFXGroupName}");
 
-            result = BGMParent.addGroup(_BGMGroup, false);
+            result = BGMParent.addGroup(_BGMGroup, true);
             FMODUtil.CheckFMODResult(result, $"Attach ${BGMGroupName}");
-            result = SFXParent.addGroup(_SFXGroup, false);
+            result = SFXParent.addGroup(_SFXGroup, true);
             FMODUtil.CheckFMODResult(result, $"Attach ${SFXGroupName}");
         }
 
@@ -202,24 +204,28 @@ namespace SCOdyssey.App
             }
 
             State = SessionState.Loading;
+            var pending = new List<(AudioID, FMOD.Sound)>(Spec.AudioCount);
 
             const FMOD.MODE BGM_MODE = 
                 FMOD.MODE.IGNORETAGS | FMOD.MODE.NONBLOCKING |
                 FMOD.MODE.ACCURATETIME | FMOD.MODE.CREATESAMPLE |
                 FMOD.MODE.LOOP_OFF;
+            foreach(var entry in Spec.ScheduledBGM)
+            {
+                var audio = entry.Audio;
+                var path = audio.FullPath;
+                var result = Sys.createSound(path, BGM_MODE, out var sound);
+                FMODUtil.CheckFMODResult(result, $"createSound: {audio.AudioPath}");
+                pending.Add((audio, sound));
+            }
+
             const FMOD.MODE SFX_MODE = 
                 FMOD.MODE.NONBLOCKING | FMOD.MODE.CREATESAMPLE |
                 FMOD.MODE.LOOP_OFF;
-
-            var pending = new List<(AudioID, FMOD.Sound)>(Spec.SFXAudios.Count);
             foreach (var audio in Spec.SFXAudios)
             {
-                FMOD.MODE mode = SFX_MODE;
-                if (_BGMAudios.Contains(audio))
-                    mode = BGM_MODE;
-
                 var path = audio.FullPath;
-                var result = Sys.createSound(path, mode, out var sound);
+                var result = Sys.createSound(path, SFX_MODE, out var sound);
                 FMODUtil.CheckFMODResult(result, $"createSound: {audio.AudioPath}");
                 pending.Add((audio, sound));
             }
@@ -234,6 +240,57 @@ namespace SCOdyssey.App
             State = SessionState.Ready;
         }
 
+        public bool Load()
+        {
+            if (State != SessionState.Created)
+            {
+                Debug.LogError($"[{nameof(ActiveAudioSession)}] Load invalid state: {State}");
+                return false;
+            }
+
+            State = SessionState.Loading;
+
+            const FMOD.MODE BGM_MODE = 
+                FMOD.MODE.IGNORETAGS |
+                FMOD.MODE.ACCURATETIME | FMOD.MODE.CREATESAMPLE |
+                FMOD.MODE.LOOP_OFF;
+            foreach(var entry in Spec.ScheduledBGM)
+            {
+                var audio = entry.Audio;
+                var path = audio.FullPath;
+                var result = Sys.createSound(path, BGM_MODE, out var sound);
+                FMODUtil.CheckFMODResult(result, $"createSound: {audio.AudioPath}");
+
+                var audioLoaded = CheckSoundState((audio, sound));
+                if (!audioLoaded)
+                {
+                    Debug.LogError($"[{nameof(ActiveAudioSession)}] Load Audio Failed: {audio.AudioPath}");
+                    return false;
+                }
+            }
+
+            const FMOD.MODE SFX_MODE = 
+                FMOD.MODE.CREATESAMPLE |
+                FMOD.MODE.LOOP_OFF;
+            foreach (var audio in Spec.SFXAudios)
+            {
+                var path = audio.FullPath;
+                var result = Sys.createSound(path, SFX_MODE, out var sound);
+                FMODUtil.CheckFMODResult(result, $"createSound: {audio.AudioPath}");
+
+                var audioLoaded = CheckSoundState((audio, sound));
+                if (!audioLoaded)
+                {
+                    Debug.LogError($"[{nameof(ActiveAudioSession)}] Load Audio Failed: {audio.AudioPath}");
+                    return false;
+                }
+            }
+
+            State = SessionState.Ready;
+
+            return true;
+        }
+
         public void Schedule(ulong startSample, int sampleRate)
         {
             if (State != SessionState.Ready)
@@ -246,7 +303,7 @@ namespace SCOdyssey.App
             {
                 if(!_sounds.TryGetValue(entry.Audio, out var sound))
                 {
-                    Debug.LogError($"[{nameof(ActiveAudioSession)}] Sound not loaded: {entry.Audio}");
+                    Debug.LogError($"[{nameof(ActiveAudioSession)}] Sound not loaded: {entry.Audio} {_sounds.Count}");
                     continue;
                 }
 
@@ -321,7 +378,6 @@ namespace SCOdyssey.App
             State = SessionState.Ending;
         }
 
-
         public void Dispose()
         {
             if (_disposed) return;
@@ -374,16 +430,30 @@ namespace SCOdyssey.App
         private FMOD.System Sys;
         private FMOD.OUTPUTTYPE _sysBackend = FMOD.OUTPUTTYPE.UNKNOWN;
         private int _sysSampleRate = 0;
-        private FMOD.ChannelGroup _sysMasterGroup; // for global DSPClock
-        private ulong DSPClock{
-            get{
+        private FMOD.ChannelGroup _sysMasterGroup; // for global Nonstop DSPClock
+        private ulong NonstopDSPClock
+        {
+            get
+            {
                 var result = _sysMasterGroup.getDSPClock(out ulong clock, out _);
                 FMODUtil.CheckFMODResult(result, $"[{nameof(FMODAudioManager2)}] DSPClock");
 
                 return clock;
             }
         }
-        private double DSPClockSecond => (double)DSPClock / _sysSampleRate;
+        public double NonstopDSPClockSecond => (double)NonstopDSPClock / _sysSampleRate;
+
+        private ulong DSPClock
+        {
+            get
+            {
+                var result = _masterGroup.getDSPClock(out ulong clock, out _);
+                FMODUtil.CheckFMODResult(result, $"[{nameof(FMODAudioManager2)}] DSPClock");
+
+                return clock;
+            }
+        }
+        public double DSPClockSecond => (double) DSPClock / _sysSampleRate;
 
         private FMOD.ChannelGroup _masterGroup, _BGMGroup, _SFXGroup;
 
@@ -391,7 +461,6 @@ namespace SCOdyssey.App
         private readonly Dictionary<AudioID, ActiveAudioSession> _audioToSession = new();
         private readonly Dictionary<string, ActiveAudioSession> _sessionByName = new();
         private readonly List<ActiveAudioSession> _pendingDispose = new();
-
 
         public FMODAudioManager2()
         {
@@ -455,9 +524,9 @@ namespace SCOdyssey.App
             FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create BGM Group");
             result = Sys.createChannelGroup("SFX", out _SFXGroup);
             FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Create SFX Group");
-            result = _masterGroup.addGroup(_BGMGroup, false, out _);
+            result = _masterGroup.addGroup(_BGMGroup, true);
             FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register BGM Group to Master Group");
-            result = _masterGroup.addGroup(_SFXGroup, false, out _);
+            result = _masterGroup.addGroup(_SFXGroup, true);
             FMODUtil.CheckFMODResult(result, $"{nameof(CreateChannelGroup)}, Register SFX Group to Master Group");
         }
 
@@ -494,6 +563,41 @@ namespace SCOdyssey.App
             _activeSessions.Add(activated);
 
             yield return activated.LoadAsync();
+        }
+
+        public bool PushSession(AudioSession session)
+        {
+            AssertCoreSystemValid();
+
+            if (session == null || string.IsNullOrEmpty(session.Name))
+            {
+                Debug.LogError($"[{nameof(FMODAudioManager2)}] Invalid session spec");
+                return false;
+            }
+            if (_sessionByName.ContainsKey(session.Name))
+            {
+                Debug.LogError($"[{nameof(FMODAudioManager2)}] Session already pushed: {session.Name}");
+                return false;
+            }
+
+            foreach (var audio in session.SFXAudios)
+            {
+                if (_audioToSession.ContainsKey(audio))
+                {
+                    Debug.LogError(
+                        $"[{nameof(FMODAudioManager2)}] Audio {audio} already in another session"
+                    );
+                    return false;
+                }
+            }
+
+            var activated = new ActiveAudioSession(Sys, _BGMGroup, _SFXGroup, session);
+            foreach (var audio in session.SFXAudios)
+                _audioToSession[audio] = activated;
+            _sessionByName[session.Name] = activated;
+            _activeSessions.Add(activated);
+
+            return activated.Load();
         }
 
         public void PopSession(string name)
@@ -564,14 +668,21 @@ namespace SCOdyssey.App
             GC.SuppressFinalize(this);
         }
 
-        public async void Schedule(string sessionName, double startAt)
+        public void Schedule(string sessionName, double startAtSecondsFromNow)
         {
             AssertCorePropertyValid();
 
             if(!_sessionByName.TryGetValue(sessionName, out var session))
             {
-                
+                Debug.LogError($"[{nameof(FMODAudioManager2)}] Session not found: {sessionName}");
+                return;
             }
+
+            var currentClock = DSPClock;
+            var startAfter = (ulong)(startAtSecondsFromNow * _sysSampleRate);
+            var startSample = currentClock + startAfter;
+
+            session.Schedule(startSample, _sysSampleRate);
         }
 
         public void Play(AudioID audio)
@@ -586,6 +697,26 @@ namespace SCOdyssey.App
 
             session.Play(audio);
         }
+        public void Play(string audioPath) => Play(new AudioID(audioPath));
+
+        public void Stop()
+        {
+            if(!_masterGroup.hasHandle()) return;
+
+            var result = _masterGroup.isPlaying(out var isPlaying);
+            FMODUtil.CheckFMODResult(result, $"[{nameof(FMODAudioManager2)}] Audio StopAll");
+
+            if(isPlaying) _masterGroup.stop();
+        }
+
+        private void SetPaused(bool paused)
+        {
+            if(!_masterGroup.hasHandle()) return;
+
+            _masterGroup.setPaused(paused);
+        }
+        public void Pause() => SetPaused(true);
+        public void Resume() => SetPaused(false);
 
         public void SetMasterVolume(float v)
         {
@@ -610,17 +741,20 @@ namespace SCOdyssey.App
         public void DefaultUsage()
         {
             var session = AudioSession.New("Song1 - Easy")
-                .DefineSFX(new AudioID("HitSound"))
-                .ReserveBGM(new AudioID("Song1"), localTime: 0.0)
-                .ReserveBGM(new AudioID("CountDown"), localTime: -3.0)
-                .ReserveBGM(new AudioID("Clear"), localTime: 180)
+                .DefineSFX("HitSound")
+                .ReserveBGM("Song1", localTime: 0.0)
+                .ReserveBGM("CountDown", localTime: -3.0)
+                .ReserveBGM("Clear", localTime: 180)
                 .Build();
 
             var audioManager = new FMODAudioManager2();
 
-            audioManager.Schedule("Song1 - Easy", startAt: 0);
+            // Call with Coroutine
+            audioManager.PushSessionAsync(session);
 
-            audioManager.Play(new AudioID("Hit Sound"));
+            audioManager.Schedule("Song1 - Easy", startAtSecondsFromNow: 0);
+
+            audioManager.Play("HitSound");
 
             // OnDestroy
             audioManager.Dispose();

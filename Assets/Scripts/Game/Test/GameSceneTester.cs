@@ -12,8 +12,7 @@ public class GameSceneTester : MonoBehaviour
 
     void Start()
     {
-        IGameManager gameManager = null;
-        if (!ServiceLocator.TryGet<IGameManager>(out gameManager))
+        if (!ServiceLocator.TryGet<IGameManager>(out var gameManager))
         {
             Debug.LogError("IGameManager가 등록되지 않았습니다!");
             return;
@@ -22,9 +21,12 @@ public class GameSceneTester : MonoBehaviour
         Debug.Log("--- [TEST MODE] Starting Game ---");
 
         if (!string.IsNullOrEmpty(testAudioPath) &&
-            ServiceLocator.TryGet<IAudioManager>(out var audioManager))
+            ServiceLocator.TryGet<FMODAudioManager2>(out var audioManager))
         {
-            audioManager.LoadAudio(testAudioPath);
+            var session = AudioSession.New("Test Mode")
+                .DefineSFX(testAudioPath)
+                .Build();
+            audioManager.PushSession(session);
         }
 
         if (testChartFile != null)

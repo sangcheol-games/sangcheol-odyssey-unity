@@ -14,7 +14,7 @@ namespace SCOdyssey.App
     public class GameManager : MonoBehaviour, IGameManager
     {
         [Header("참조")]
-        private IAudioManager _audioManager;
+        private FMODAudioManager2 _audioManager;
         private IInputManager _inputManager;
         public ScoreManager scoreManager;
         public ChartManager chartManager;
@@ -32,11 +32,9 @@ namespace SCOdyssey.App
 
 
         [Header("게임 상태")]
-        private double globalStartTime;
+        private double gameStartTime;
         public bool IsGameRunning { get; private set; } = false;
         public bool IsPaused { get; private set; } = false;
-        private double _pauseDspTime;
-        public bool IsAudioPlaying => _audioManager != null && _audioManager.IsPlaying;
 
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
@@ -46,11 +44,10 @@ namespace SCOdyssey.App
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
         public TextMeshProUGUI clearEffectText; // 클리어 연출 텍스트
 
-
         private void Awake()
         {
             ServiceLocator.TryRegister<IGameManager>(this);
-            if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
+            if (!ServiceLocator.TryGet(out _audioManager))
                 Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
 
             // gameCanvas가 Screen Space - Camera이면 worldCamera 설정
@@ -64,7 +61,7 @@ namespace SCOdyssey.App
         private void Start()
         {
             // InputManager는 Managers에서 이미 생성 및 등록됨
-            if (ServiceLocator.TryGet<IInputManager>(out _inputManager))
+            if (ServiceLocator.TryGet(out _inputManager))
             {
                 _inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
                 _inputManager.OnLanePressed += HandleLaneInput;
@@ -107,39 +104,33 @@ namespace SCOdyssey.App
             chartManager.Init(chartData, this);
             scoreManager.Init(chartData.totalNotes);
 
-            globalStartTime = _audioManager.GetDSPTime();
+            gameStartTime = _audioManager.DSPClockSecond;
+
+            double offsetSec = 0;
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
+                offsetSec = settingsManager.Current.audioOffsetMs / 1000.0;
+            _audioManager.Schedule("Game", startAtSecondsFromNow: offsetSec);
+
+            bgaController.SchedulePlay(gameStartTime);
 
             // 동기점 기록: FMOD DSP 클럭(globalStartTime)과 OS 클럭을 같은 시점에 연속으로 읽어 변환 기준을 설정
             // AudioSettings.dspTime(Unity 내장)은 FMOD 클럭과 기준점이 다르므로 사용 금지
-            _inputManager?.SetTimeSyncPoint(globalStartTime, Time.realtimeSinceStartupAsDouble);
+            _inputManager?.SetTimeSyncPoint(gameStartTime, Time.realtimeSinceStartupAsDouble);
 
             IsGameRunning = true;
         }
         
         public void SetBGAData(string videoFileName, Sprite backgroundArt)
         {
-            bgaController?.Init(videoFileName, backgroundArt);
-        }
-
-        public void StartMusic(double delayTime)
-        {
-            // 노트싱크 오프셋 적용 (양수: 음악 늦게 시작, 음수: 음악 일찍 시작)
-            double offsetSec = 0;
-            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
-                offsetSec = settingsManager.Current.audioOffsetMs / 1000.0;
-
-            double dspStartTime = _audioManager.GetDSPTime() + delayTime + offsetSec;
-            _audioManager.PlayScheduled(dspStartTime);
-            bgaController?.SchedulePlay(dspStartTime);
+            bgaController.Init(videoFileName, backgroundArt);
         }
 
         public double GetCurrentTime()
         {
             if (!IsGameRunning) return 0f;
-            // 일시정지 중: DSP 클록이 계속 진행해도 채보 시간은 일시정지 시점으로 고정
+            // AudioManager을 멈추면 DSP 클록도 멈춤, 즉 채보 시간은 일시정지 시점으로 고정
             // → TimelineController, NoteController 등 GetCurrentTime() 기반 위치 계산이 모두 멈춤
-            if (IsPaused) return _pauseDspTime - globalStartTime;
-            return _audioManager.GetDSPTime() - globalStartTime;
+            return _audioManager.DSPClockSecond - gameStartTime;
         }
 
 
@@ -160,9 +151,9 @@ namespace SCOdyssey.App
         {
             if (!IsGameRunning || IsPaused) return;
             IsPaused = true;
-            _pauseDspTime = _audioManager.GetDSPTime();
+            // NOTE! GetCurrentTime이 AudioManager의 시간을 기준으로 계산되므로, 반드시 멈춰줘야함.
             _audioManager.Pause();
-            bgaController?.Pause();
+            bgaController.Pause();
             _inputManager.SwitchToUI();
             if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
             {
@@ -194,10 +185,9 @@ namespace SCOdyssey.App
                 clearEffectText.gameObject.SetActive(false);
             }
 
-            // 일시정지 동안 흐른 DSP 시간만큼 globalStartTime을 보정하여 채보 위치를 유지
-            globalStartTime += _audioManager.GetDSPTime() - _pauseDspTime;
+            // Note! GetCurrentTime이 AudioManager의 시간을 기준으로 계산되므로, 반드시 시작해줘야함.
             _audioManager.Resume();
-            bgaController?.Resume();
+            bgaController.Resume();
             _inputManager.SetInputActive(true);
             _inputManager.SwitchToGameplay();
             IsPaused = false;
@@ -215,14 +205,14 @@ namespace SCOdyssey.App
         private void HandleLaneInput(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
-            chartManager.TryJudgeInput(laneIndex, inputDspTime - globalStartTime);
+            chartManager.TryJudgeInput(laneIndex, inputDspTime - gameStartTime);
         }
 
         private void HandleLaneRelease(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {laneIndex} Released");
-            chartManager.TryJudgeRelease(laneIndex, inputDspTime - globalStartTime);
+            chartManager.TryJudgeRelease(laneIndex, inputDspTime - gameStartTime);
         }
 
         private void HandleRestart()
@@ -306,7 +296,10 @@ namespace SCOdyssey.App
             IsGameRunning = false;
 
             // 음악 정지
+            // TODO: 음악이 아직 재생 중이면 대기
             _audioManager?.Stop();
+
+            Debug.Log("Game Cleared.");
 
             // UI 모드로 전환
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))

@@ -87,11 +87,7 @@ namespace SCOdyssey.Game
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
 
-            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
-                m_showPerfect = settingsManager.Current.showPerfect;
-
-            // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
-            barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
+            barDuration = chartData.BarDuration;
             currentBarEndTime = 0f + barDuration;
 
             for (int i = 0; i < LANE_COUNT; i++)
@@ -106,8 +102,6 @@ namespace SCOdyssey.Game
 
             PrepareNextBar();
             StartCurrentBar();
-
-            gameManager.StartMusic(barDuration);
         }
 
         public void SyncTime(double time)
@@ -144,10 +138,6 @@ namespace SCOdyssey.Game
                 if (ghostNotes[i].Count > 0) return;
             }
 
-            // 음악이 아직 재생 중이면 대기
-            if (gameManager.IsAudioPlaying) return;
-
-            Debug.Log("Game Cleared.");
             gameManager.OnGameFinished();
         }
 
