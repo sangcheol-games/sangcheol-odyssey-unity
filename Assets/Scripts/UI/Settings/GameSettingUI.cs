@@ -23,9 +23,8 @@ namespace SCOdyssey
             Btn_DisplayLanguageNext,
             Btn_PollingRatePrev,
             Btn_PollingRateNext,
-            Btn_ShowPerfectEnable,
-            Btn_ShowPerfectDisable,
-            Btn_Save,
+            Btn_ShowPerfectPrev,
+            Btn_ShowPerfectNext,
             Btn_Reset,
             Btn_Close,
         }
@@ -39,8 +38,7 @@ namespace SCOdyssey
             Text_NoteOpacityValue,
             Text_NoteSyncValue,
             Text_JudgmentSyncValue,
-            Text_ShowPerfectEnableImg,     // (임시)
-            Text_ShowPerfectDisableImg,
+            Text_ShowPerfectValue,
         }
 
         private enum Sliders
@@ -154,15 +152,14 @@ namespace SCOdyssey
             });
             #endregion
 
-            GetButton((int)Buttons.Btn_ShowPerfectEnable).onClick.AddListener(OnShowPerfectEnable);
-            GetButton((int)Buttons.Btn_ShowPerfectDisable).onClick.AddListener(OnShowPerfectDisable);
-            UpdateShowPerfectBtn();
+            GetButton((int)Buttons.Btn_ShowPerfectPrev).onClick.AddListener(OnShowPerfectToggle);
+            GetButton((int)Buttons.Btn_ShowPerfectNext).onClick.AddListener(OnShowPerfectToggle);
+            UpdateShowPerfectLabel();
 
             GetButton((int)Buttons.Tab_Graphic).onClick.AddListener(SwitchToGraphic);
             GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
             GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
 
-            GetButton((int)Buttons.Btn_Save).onClick.AddListener(OnClickSave);
             GetButton((int)Buttons.Btn_Reset).onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
         }
@@ -258,32 +255,15 @@ namespace SCOdyssey
 
         #endregion
 
-        private void OnShowPerfectEnable()
+        private void OnShowPerfectToggle()
         {
-            _pending.showPerfect = true;
-            UpdateShowPerfectBtn();
+            _pending.showPerfect = !_pending.showPerfect;
+            UpdateShowPerfectLabel();
         }
 
-        private void OnShowPerfectDisable()
+        private void UpdateShowPerfectLabel()
         {
-            _pending.showPerfect = false;
-            UpdateShowPerfectBtn();
-        }
-
-        void UpdateShowPerfectBtn()
-        {
-            // TODO: 실제 UI 리소스로 바인딩
-            // (임시)
-            if (_pending.showPerfect)
-            {
-                GetText((int)Texts.Text_ShowPerfectEnableImg).text = "●";
-                GetText((int)Texts.Text_ShowPerfectDisableImg).text = "○";
-            }
-            else
-            {
-                GetText((int)Texts.Text_ShowPerfectEnableImg).text = "○";
-                GetText((int)Texts.Text_ShowPerfectDisableImg).text = "●";
-            }
+            GetText((int)Texts.Text_ShowPerfectValue).text = _pending.showPerfect ? "On" : "Off";
         }
 
         private void OnClickSave()
@@ -327,7 +307,7 @@ namespace SCOdyssey
             Get<Slider>((int)Sliders.Slider_NoteSync).value     = _pending.audioOffsetMs;
             Get<Slider>((int)Sliders.Slider_JudgmentSync).value = _pending.judgmentOffset;
 
-            UpdateShowPerfectBtn();
+            UpdateShowPerfectLabel();
         }
 
         private void OnClickClose()

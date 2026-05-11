@@ -19,7 +19,6 @@ namespace SCOdyssey
             Btn_AudioDeviceNext,
             Btn_PlayInBackgroundPrev,
             Btn_PlayInBackgroundNext,
-            Btn_Save,
             Btn_Reset,
             Btn_Close
         }
@@ -129,7 +128,6 @@ namespace SCOdyssey
             GetButton((int)Buttons.Tab_Graphic).onClick.AddListener(SwitchToGraphic);
             GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
 
-            GetButton((int)Buttons.Btn_Save)?.onClick.AddListener(OnClickSave);
             GetButton((int)Buttons.Btn_Reset)?.onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
         }
