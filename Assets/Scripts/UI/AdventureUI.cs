@@ -117,6 +117,10 @@ namespace SCOdyssey.UI
 
         private void OnClickBackButton()
         {
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            audioManager.PlaySound("ui_button_simple_click_06.wav");
+            Debug.Log("sdfsad");
+
             var uiManager = ServiceLocator.Get<IUIManager>();
             uiManager.CloseUI(this);
         }
