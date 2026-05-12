@@ -20,7 +20,7 @@ namespace SCOdyssey.ChartEditor
         [Header("씬 참조 - 레인 & 스크롤")]
         public RectTransform leftEndpoint;
         public RectTransform rightEndpoint;
-        public RectTransform[] laneTransforms = new RectTransform[4];
+        public RectTransform[] laneTransforms = new RectTransform[LANE_COUNT];
 
         [Header("씬 참조 - 컨테이너")]
         public RectTransform noteParent;        // 에디터 노트 표시용 부모
@@ -145,7 +145,7 @@ namespace SCOdyssey.ChartEditor
             if (newBeat < bar.beat)
             {
                 bool hasNotesOutOfRange = false;
-                for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+                for (int laneIdx = 0; laneIdx < LANE_COUNT; laneIdx++)
                 {
                     for (int i = newBeat; i < bar.beat; i++)
                     {
@@ -562,11 +562,11 @@ namespace SCOdyssey.ChartEditor
             var buffer = new CopyBuffer
             {
                 beat = bar.beat,
-                laneSequences = new char[4][],
+                laneSequences = new char[LANE_COUNT][],
                 upperGroupLTR = bar.upperGroupLTR,
                 lowerGroupLTR = bar.lowerGroupLTR,
             };
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 buffer.laneSequences[i] = new char[bar.beat];
                 System.Array.Copy(bar.laneSequences[i], buffer.laneSequences[i], bar.beat);
@@ -596,8 +596,8 @@ namespace SCOdyssey.ChartEditor
             bar.beat = _copyBuffer.beat;
             bar.upperGroupLTR = _copyBuffer.upperGroupLTR;
             bar.lowerGroupLTR = _copyBuffer.lowerGroupLTR;
-            bar.laneSequences = new char[4][];
-            for (int i = 0; i < 4; i++)
+            bar.laneSequences = new char[LANE_COUNT][];
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 bar.laneSequences[i] = new char[_copyBuffer.beat];
                 System.Array.Copy(_copyBuffer.laneSequences[i], bar.laneSequences[i], _copyBuffer.beat);

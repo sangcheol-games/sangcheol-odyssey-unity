@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.ChartEditor.Grid
 {
@@ -161,7 +162,7 @@ namespace SCOdyssey.ChartEditor.Grid
             // 레인 판별
             int laneNumber = GetLaneNumberFromY(localPoint.y);
             Debug.Log($"[GridInput] beatIndex={beatIndex}, laneNumber={laneNumber} (laneDetectionRadius={laneDetectionRadius:F1})");
-            if (laneNumber < 1 || laneNumber > 4)
+            if (laneNumber < 1 || laneNumber > LANE_COUNT)
             {
                 Debug.Log("[GridInput] 레인 판별 실패 - 레인 근처를 클릭하세요");
                 return;
@@ -183,7 +184,7 @@ namespace SCOdyssey.ChartEditor.Grid
             float closestDist = float.MaxValue;
             int closestLane = -1;
 
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 float laneY = editorManager.laneTransforms[i].anchoredPosition.y;
                 float dist = Mathf.Abs(y - laneY);

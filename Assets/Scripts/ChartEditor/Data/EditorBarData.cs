@@ -1,3 +1,5 @@
+using static SCOdyssey.Domain.Service.Constants;
+
 namespace SCOdyssey.ChartEditor.Data
 {
     /// <summary>
@@ -24,8 +26,8 @@ namespace SCOdyssey.ChartEditor.Data
             this.upperGroupLTR = null;
             this.lowerGroupLTR = null;
 
-            laneSequences = new char[4][];
-            for (int i = 0; i < 4; i++)
+            laneSequences = new char[LANE_COUNT][];
+            for (int i = 0; i < LANE_COUNT; i++)
             {
                 laneSequences[i] = new char[beat];
                 for (int j = 0; j < beat; j++)

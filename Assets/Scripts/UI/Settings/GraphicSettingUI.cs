@@ -21,7 +21,6 @@ namespace SCOdyssey
             Btn_FrameRateNext,
             Btn_DisplayModePrev,
             Btn_DisplayModeNext,
-            Btn_Save,
             Btn_Reset,
             Btn_Close
         }
@@ -123,7 +122,6 @@ namespace SCOdyssey
             GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
             GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
 
-            GetButton((int)Buttons.Btn_Save)?.onClick.AddListener(OnClickSave);
             GetButton((int)Buttons.Btn_Reset)?.onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
         }

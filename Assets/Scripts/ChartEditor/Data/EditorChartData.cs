@@ -113,7 +113,7 @@ namespace SCOdyssey.ChartEditor.Data
             int count = 0;
             foreach (var bar in bars.Values)
             {
-                for (int laneIdx = 0; laneIdx < 4; laneIdx++)
+                for (int laneIdx = 0; laneIdx < LANE_COUNT; laneIdx++)
                 {
                     for (int i = 0; i < bar.beat; i++)
                     {
