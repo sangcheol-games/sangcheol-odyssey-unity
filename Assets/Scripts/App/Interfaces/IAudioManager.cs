@@ -25,6 +25,7 @@ namespace SCOdyssey.App
         void Pause();
         void Resume();
         void PlayHitSound(Constants.JudgeType type);
+        void PlaySound(string filename);
         double GetDSPTime();   // AudioSettings.dspTime 대체 (double 정밀도 필수)
         bool IsPlaying { get; }
         bool IsLoaded { get; } // GameDataLoader의 로딩 대기용

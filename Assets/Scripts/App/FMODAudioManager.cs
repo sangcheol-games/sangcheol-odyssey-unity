@@ -19,7 +19,7 @@ namespace SCOdyssey.App
         private FMOD.ChannelGroup _sfxGroup;       // 효과음 볼륨
         private bool _isLoaded;
         private bool _isLoading;
-        private bool _LoadFailed;       // 현재 플래그 사용은 미구현
+        private bool _LoadFailed;
 
         // 출력 설정 - ConfigureOutput()에서 저장
         private AudioOutputConfig _outputConfig = new AudioOutputConfig
@@ -29,14 +29,13 @@ namespace SCOdyssey.App
         };
 
 
-        // 이걸 걍 돌려써도 좋을거같다
         private struct ManageSFX
         {
             public FMOD.Sound sound;
             public FMOD.Channel channel;
             public bool isLoaded;
             public bool play;
-            // lastPlayedTime 같은거 기록해야할수도
+            public string filename;     // 추가
         }
 
         private struct HitSounds
@@ -51,6 +50,12 @@ namespace SCOdyssey.App
 
         private const int HIT_SOUND_SIZE = 5;
 
+        private const int SFX_SIZE = 18;
+        private int sfx_cLoaded;
+
+        private ManageSFX[] _SFX = new ManageSFX[SFX_SIZE];
+
+
         // Path: StreamingAssets/SFX/
         private static readonly string SFX_Perfect_Filename = "SFX_Perfect.wav";
         private static readonly string SFX_Master_Filename = "SFX_Master.wav";
@@ -58,7 +63,27 @@ namespace SCOdyssey.App
         private static readonly string SFX_Kind_Filename = "SFX_Kind.wav";
         private static readonly string SFX_Umm_Filename = "SFX_Umm.wav";
 
-
+        // 경로 동일
+        private static readonly string[] SFX_Filenames = {
+            "button_press_309.wav",
+            "ui_button_simple_click_05.wav",
+            "ui_button_simple_click_06.wav",
+            "ui_button_simple_click_07.wav",
+            "ui_menu_button_beep_04.wav",
+            "ui_menu_button_beep_17.wav",
+            "ui_menu_button_beep_18.wav",
+            "ui_menu_button_beep_19.wav",
+            "ui_menu_button_beep_23.wav",
+            "ui_menu_button_beep_24.wav",
+            "ui_menu_button_beep_25.wav",
+            "ui_menu_button_cancel_02.wav",
+            "ui_menu_button_click_03.wav",
+            "ui_menu_button_click_15.wav",
+            "ui_menu_popup_01.wav",
+            "ui_menu_popup_02.wav",
+            "ui_menu_popup_03.wav",
+            "ui_menu_popup_04.wav",
+        };
 
 
         // -------------------------------------------------------
@@ -116,6 +141,16 @@ namespace SCOdyssey.App
             _hitSound.Umm.play = false;
 
             #endregion
+
+            sfx_cLoaded = 0;
+
+            for (int i = 0; i < SFX_SIZE; i++)
+            {
+                _SFX[i].isLoaded = false;
+                LoadSFX(ref _SFX[i].sound, SFX_Filenames[i]);
+                _SFX[i].play = false;
+                _SFX[i].filename = SFX_Filenames[i];
+            }
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -173,8 +208,24 @@ namespace SCOdyssey.App
                     }
                 }
             }
-            
-            
+
+            // 레전드
+            if (!_LoadFailed && sfx_cLoaded < SFX_SIZE)
+            {
+                for (int i = 0; i < SFX_SIZE; i++)
+                {
+                    if (!_SFX[i].isLoaded)
+                    {
+                        if (CheckSoundLoaded(ref _SFX[i].sound))
+                        {
+                            _SFX[i].isLoaded = true;
+                            sfx_cLoaded++;
+                        }
+                    }
+                }
+            }
+
+
             else if (!_isLoading) return;
 
             _sound.getOpenState(out FMOD.OPENSTATE state, out _, out _, out _);
@@ -353,6 +404,26 @@ namespace SCOdyssey.App
                 case Constants.JudgeType.Umm:
                     _hitSound.Umm.play = true;
                     break;
+            }
+        }
+
+        // SFX 재생용 (임시)
+        public void PlaySound(string filename)
+        {
+            if (sfx_cLoaded < SFX_SIZE)
+            {
+                Debug.LogError("[FMODAudioManager] PlaySound: 오디오가 로드되지 않았습니다.");
+                return;
+            }
+
+            // 어떻게든 해시로 할걸!
+            for (int i = 0; i < SFX_SIZE; i++)
+            {
+                if (_SFX[i].filename == filename)
+                {
+                    PlaySFX(ref _SFX[i]);       // 중첩될일 없으니까 즉시 실행
+                    break;
+                }
             }
         }
 
