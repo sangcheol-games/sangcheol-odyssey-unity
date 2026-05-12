@@ -179,6 +179,7 @@ MonoBehaviour:
   animator: Tale
   bpm: 195
   audioFilePath: "\u30B5\u30D0\uFF01\u30B5\u30DE\u30FC\uFF01\u30B5\u30F3\u30D0\uFF01.ogg"
+  previewAudioFilePath: "\u30B5\u30D0\uFF01\u30B5\u30DE\u30FC\uFF01\u30B5\u30F3\u30D0\uFF01_preview.ogg"
   videoFileName: BGA_0001.mp4
   backgroundArt: {fileID: -7052913442509953211, guid: 64fa82816eb702e4eaf33bc551902ad4, type: 3}
   albumArt: {fileID: 7811851848434822332, guid: f61fbd6a1b1ba0f4686a94aaa4cf380f, type: 3}

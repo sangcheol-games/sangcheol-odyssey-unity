@@ -12,6 +12,7 @@ namespace SCOdyssey.Domain.Dto
         public string displayLanguageCode = "origin";  // 곡 제목 표시 언어 (origin / ko-KR / ja-JP / en-US)
         public float bgaOpacity = 0.4f;               // BGA 투명도 0 ~ 1
         public float noteOpacity = 0.2f;              // 고스트 노트 투명도 0 ~ 0.5
+        public bool showPerfect = false;    // 노트 세부판정 표시
 
         // Graphic
         public int displayMode = 0;         // 0=전체 화면 / 1=창 모드 / 2=전체 창 모드

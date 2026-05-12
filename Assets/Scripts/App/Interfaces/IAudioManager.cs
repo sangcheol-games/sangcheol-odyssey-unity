@@ -1,3 +1,5 @@
+using SCOdyssey.Domain.Service;
+
 namespace SCOdyssey.App
 {
     // 출력 드라이버 타입 - ASIO 추후 지원 예정
@@ -17,11 +19,12 @@ namespace SCOdyssey.App
 
     public interface IAudioManager
     {
-        void LoadAudio(string filePath);         // StreamingAssets/Music/ 기준 파일명
-        void PlayScheduled(double dspStartTime); // sample-accurate 재생 예약
+        void LoadAudio(string filePath, bool loopHint=false);         // StreamingAssets/Music/ 기준 파일명
+        void PlayScheduled(double dspStartTime, bool loopPlay=false); // sample-accurate 재생 예약
         void Stop();
         void Pause();
         void Resume();
+        void PlayHitSound(Constants.JudgeType type);
         double GetDSPTime();   // AudioSettings.dspTime 대체 (double 정밀도 필수)
         bool IsPlaying { get; }
         bool IsLoaded { get; } // GameDataLoader의 로딩 대기용

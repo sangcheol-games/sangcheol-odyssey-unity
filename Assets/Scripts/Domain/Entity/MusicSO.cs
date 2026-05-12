@@ -27,6 +27,7 @@ namespace SCOdyssey.Domain.Entity
 
         public Dictionary<Difficulty, TextAsset> chartFile;
         public string audioFilePath;    // StreamingAssets 기준 상대 경로 (예: "Music/song_0001.ogg")
+        public string previewAudioFilePath;
         public string videoFileName;    // StreamingAssets/BGA/ 폴더 내 파일명 (예: "BGA_0001.mp4")
         public Sprite backgroundArt;    // 게임 배경 아트 (BGA 없거나 꺼진 경우 표시)
         public Sprite albumArt;

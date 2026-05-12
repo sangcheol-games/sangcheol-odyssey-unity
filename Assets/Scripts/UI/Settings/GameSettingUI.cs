@@ -5,6 +5,7 @@ using SCOdyssey.UI;
 using UnityEngine;
 using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
+using static UnityEngine.Rendering.DebugUI;
 
 namespace SCOdyssey
 {
@@ -22,6 +23,8 @@ namespace SCOdyssey
             Btn_DisplayLanguageNext,
             Btn_PollingRatePrev,
             Btn_PollingRateNext,
+            Btn_ShowPerfectEnable,
+            Btn_ShowPerfectDisable,
             Btn_Save,
             Btn_Reset,
             Btn_Close,
@@ -36,6 +39,8 @@ namespace SCOdyssey
             Text_NoteOpacityValue,
             Text_NoteSyncValue,
             Text_JudgmentSyncValue,
+            Text_ShowPerfectEnableImg,     // (임시)
+            Text_ShowPerfectDisableImg,
         }
 
         private enum Sliders
@@ -149,6 +154,10 @@ namespace SCOdyssey
             });
             #endregion
 
+            GetButton((int)Buttons.Btn_ShowPerfectEnable).onClick.AddListener(OnShowPerfectEnable);
+            GetButton((int)Buttons.Btn_ShowPerfectDisable).onClick.AddListener(OnShowPerfectDisable);
+            UpdateShowPerfectBtn();
+
             GetButton((int)Buttons.Tab_Graphic).onClick.AddListener(SwitchToGraphic);
             GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
             GetButton((int)Buttons.Tab_Account).onClick.AddListener(SwitchToAccount);
@@ -249,6 +258,34 @@ namespace SCOdyssey
 
         #endregion
 
+        private void OnShowPerfectEnable()
+        {
+            _pending.showPerfect = true;
+            UpdateShowPerfectBtn();
+        }
+
+        private void OnShowPerfectDisable()
+        {
+            _pending.showPerfect = false;
+            UpdateShowPerfectBtn();
+        }
+
+        void UpdateShowPerfectBtn()
+        {
+            // TODO: 실제 UI 리소스로 바인딩
+            // (임시)
+            if (_pending.showPerfect)
+            {
+                GetText((int)Texts.Text_ShowPerfectEnableImg).text = "●";
+                GetText((int)Texts.Text_ShowPerfectDisableImg).text = "○";
+            }
+            else
+            {
+                GetText((int)Texts.Text_ShowPerfectEnableImg).text = "○";
+                GetText((int)Texts.Text_ShowPerfectDisableImg).text = "●";
+            }
+        }
+
         private void OnClickSave()
         {
             var settings = ServiceLocator.Get<ISettingsManager>();
@@ -266,6 +303,7 @@ namespace SCOdyssey
             settings.Current.audioOffsetMs       = _pending.audioOffsetMs;
             settings.Current.judgmentOffset      = _pending.judgmentOffset;
             settings.Current.inputPollingRateHz  = _pending.inputPollingRateHz;
+            settings.Current.showPerfect         = _pending.showPerfect;
             settings.Apply();
             settings.Save();
         }
@@ -288,6 +326,8 @@ namespace SCOdyssey
             Get<Slider>((int)Sliders.Slider_NoteOpacity).value  = _pending.noteOpacity / 0.5f;
             Get<Slider>((int)Sliders.Slider_NoteSync).value     = _pending.audioOffsetMs;
             Get<Slider>((int)Sliders.Slider_JudgmentSync).value = _pending.judgmentOffset;
+
+            UpdateShowPerfectBtn();
         }
 
         private void OnClickClose()

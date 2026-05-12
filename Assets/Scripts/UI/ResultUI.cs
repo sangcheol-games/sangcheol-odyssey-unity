@@ -44,6 +44,11 @@ namespace SCOdyssey.UI
             AlbumArt      // 앨범 아트
         }
 
+        private enum GameObjects
+        {
+            Perfect
+        }
+
         protected override void Awake()
         {
             base.Awake();
@@ -51,6 +56,7 @@ namespace SCOdyssey.UI
             BindText(typeof(Texts));
             BindButton(typeof(Buttons));
             BindImage(typeof(Images));
+            BindObject(typeof(GameObjects));
 
             // 버튼 클릭 이벤트 연결
             GetButton((int)Buttons.RetryButton).onClick.AddListener(OnClickRetryButton);
@@ -90,7 +96,16 @@ namespace SCOdyssey.UI
 
             // 판정 통계 표시
             GetText((int)Texts.TotalNotesText).text = totalNotes.ToString();
-            GetText((int)Texts.PerfectCountText).text = judgeCounts[JudgeType.Perfect].ToString();
+
+            // OverMillion 판정, perfect 비표시
+            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager) &&
+                (settingsManager.Current.showPerfect || result == ClearType.OverMillion || result == ClearType.AllPerfect))
+            {
+                GetText((int)Texts.PerfectCountText).text = judgeCounts[JudgeType.Perfect].ToString();
+            }
+            else
+                DisablePerfect();
+
             GetText((int)Texts.MasterCountText).text = judgeCounts[JudgeType.Master].ToString();
             GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();
             GetText((int)Texts.KindCountText).text = judgeCounts[JudgeType.Kind].ToString();
@@ -127,6 +142,13 @@ namespace SCOdyssey.UI
                 _             => Color.white
             };
         }
+
+        private void DisablePerfect()
+        {
+            // 필요 시 ui / 로직 수정
+            GetObject((int)GameObjects.Perfect).SetActive(false);
+        }
+
 
         // 다시하기 버튼 클릭
         private void OnClickRetryButton()
