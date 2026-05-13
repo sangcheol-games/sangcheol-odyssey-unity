@@ -19,6 +19,10 @@ MonoBehaviour:
     m_Key: ARTSIT_MendoZID
     m_Metadata:
       m_Items: []
+  - m_Id: 30007774504460288
+    m_Key: ARTIST_MaroNote
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

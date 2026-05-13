@@ -15,7 +15,8 @@ MonoBehaviour:
   serializationData:
     SerializedFormat: 2
     SerializedBytes: 
-    ReferencedUnityObjects: []
+    ReferencedUnityObjects:
+    - {fileID: 4900000, guid: 3d96cf42b1411fa4d80ba6159a02c3e3, type: 3}
     SerializedBytesString: 
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
@@ -61,7 +62,7 @@ MonoBehaviour:
       Data: 1
     - Name: $v
       Entry: 3
-      Data: -1
+      Data: 4
     - Name: 
       Entry: 8
       Data: 
@@ -96,7 +97,42 @@ MonoBehaviour:
       Entry: 8
       Data: 
     - Name: chartFile
-      Entry: 6
+      Entry: 7
+      Data: 2|System.Collections.Generic.Dictionary`2[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp],[UnityEngine.TextAsset, UnityEngine.CoreModule]], mscorlib
+    - Name: comparer
+      Entry: 7
+      Data: 3|System.Collections.Generic.EnumEqualityComparer`1[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 0
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 12
+      Data: 1
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 1
+    - Name: $v
+      Entry: 10
+      Data: 0
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
       Data: 
   id: 2
   title:
@@ -112,7 +148,7 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:191f8a71a059972429c30e757a1bb0ed
     m_TableEntryReference:
-      m_KeyId: 216554426368
+      m_KeyId: 30007774504460288
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
@@ -121,18 +157,19 @@ MonoBehaviour:
     m_TableReference:
       m_TableCollectionName: GUID:df65b7b7ffdb3e34e92c243cd4010b91
     m_TableEntryReference:
-      m_KeyId: 19023679488
+      m_KeyId: 30006958364205056
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  illustrator: Zzul
-  animator: FRIYAY
-  bpm: 180
-  musicFile: {fileID: 0}
-  videoFileName: 
-  backgroundArt: {fileID: 0}
-  albumArt: {fileID: 0}
+  illustrator: Vaco
+  animator: Seowol
+  bpm: 155
+  audioFilePath: Una Alarm.ogg
+  previewAudioFilePath: Una Alarm_preview.wav
+  videoFileName: BGA_0002.mp4
+  backgroundArt: {fileID: -7052913442509953211, guid: 64fa82816eb702e4eaf33bc551902ad4, type: 3}
+  albumArt: {fileID: -3368966193787546213, guid: f759dd26a7284014a86f48e835797d0d, type: 3}
   references:
     version: 2
     RefIds: []

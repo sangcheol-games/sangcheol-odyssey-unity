@@ -19,6 +19,10 @@ MonoBehaviour:
     m_Key: VOCALOID_HATSUNE_MIIKU
     m_Metadata:
       m_Items: []
+  - m_Id: 30006958364205056
+    m_Key: VOCALOID_OTOMACHI_UNA
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

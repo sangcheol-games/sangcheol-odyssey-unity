@@ -22,6 +22,10 @@ MonoBehaviour:
     m_Localized: Hatsune Miku
     m_Metadata:
       m_Items: []
+  - m_Id: 30006958364205056
+    m_Localized: Otomachi Una
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
