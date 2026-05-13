@@ -66,7 +66,7 @@ namespace SCOdyssey.Game
                 videoPlayer.source = VideoSource.Url;
                 videoPlayer.url = path;
                 videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
-                videoPlayer.skipOnDrop = true;
+                videoPlayer.skipOnDrop = false;
                 videoPlayer.renderMode = VideoRenderMode.RenderTexture;
                 videoPlayer.playOnAwake = false;
 
@@ -166,6 +166,7 @@ namespace SCOdyssey.Game
             if (now < scheduledDspTime) return;
 
             isScheduled = false;
+            videoPlayer.time = 0;
             videoPlayer.Play();
             bgaScreen.enabled = true;
         }
