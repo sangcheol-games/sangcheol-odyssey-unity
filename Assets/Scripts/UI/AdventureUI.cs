@@ -48,7 +48,7 @@ namespace SCOdyssey.UI
         {
             base.OnEnable();
 
-            StartCoroutine(PlayPreviewAudio());
+            OnSelectedMusicChanged();
         }
 
         protected override void OnDisable()
@@ -89,7 +89,6 @@ namespace SCOdyssey.UI
 
             selectedIndex = 0;
             RefreshList();
-            OnSelectedMusicChanged();
         }
 
         /// <summary>
