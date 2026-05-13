@@ -129,6 +129,8 @@ namespace SCOdyssey.UI
         {
             // 곡 앨범아트 갱신
             GetImage((int)Images.AlbumArt).sprite = selectedMusic.albumArt;
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            audioManager.PlaySound("ui_button_simple_click_07.wav");
 
             StartCoroutine(PlayPreviewAudio());
         }

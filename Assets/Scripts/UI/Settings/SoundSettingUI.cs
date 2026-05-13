@@ -232,6 +232,8 @@ namespace SCOdyssey
         private void OnClickClose()
         {
             // _pending은 버려지고 UI만 닫힘 — 저장된 설정값은 변경되지 않음
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            audioManager.PlaySound("ui_button_simple_click_06.wav");
             ServiceLocator.Get<IUIManager>().CloseUI(this);
         }
 

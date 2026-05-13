@@ -68,6 +68,8 @@ namespace SCOdyssey
         }
         private void OnClickSetting()
         {
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            audioManager.PlaySound("ui_button_simple_click_06.wav");
             ServiceLocator.Get<IUIManager>().ShowUI<GameSettingUI>();
         }
 
@@ -101,6 +103,8 @@ namespace SCOdyssey
 
         private void ExitGame()
         {
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            audioManager.PlaySound("ui_button_simple_click_06.wav");
             var uiManager = ServiceLocator.Get<IUIManager>();
             uiManager.ShowUI<ExitGameUI>();
         }
