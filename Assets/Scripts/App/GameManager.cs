@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
 using SCOdyssey.UI;
@@ -47,6 +48,7 @@ namespace SCOdyssey.App
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
         public TextMeshProUGUI clearEffectText; // 클리어 연출 텍스트
 
+        public Dictionary<(string title, Difficulty diffuculty), int> bestScores = new();
 
         private void Awake()
         {
@@ -63,6 +65,8 @@ namespace SCOdyssey.App
             {
                 gameCanvas.worldCamera = Camera.main;
             }
+
+            bestScores = ScoreSaveSystem.Load();
         }
 
         private void Start()
@@ -325,13 +329,34 @@ namespace SCOdyssey.App
                 inputManager.SwitchToUI();
             }
 
+            SaveFinalScore();
+
+            ClearType rank = scoreManager.GetClearRank();
+            // 클리어 연출 시퀀스 시작 (2초 후)
+            StartCoroutine(ShowClearSequence(rank));
+        }
+
+        private void SaveFinalScore()
+        {
             int finalScore = scoreManager.GetFinalScore();
             ClearType rank = scoreManager.GetClearRank();
 
             Debug.Log($"Game Finished. Score: {finalScore}, Rank: {rank}");
 
-            // 클리어 연출 시퀀스 시작 (2초 후)
-            StartCoroutine(ShowClearSequence(rank));
+            var musicManager = ServiceLocator.Get<IMusicManager>();
+            var currentMusic = musicManager.GetCurrentMusic();
+
+            var title = currentMusic.title.GetLocalizedString();
+            var difficulty = musicManager.GetCurrentDifficulty();
+            var key = (title, difficulty); 
+
+            var contains = bestScores.TryGetValue(key, out var bestScore);
+            if (!contains || bestScore < finalScore)
+            {
+                bestScores[key] = finalScore;
+            }
+
+            ScoreSaveSystem.Save(bestScores);
         }
 
         // 클리어 연출 표시 (즉시 텍스트 표시 후 4초 대기)
