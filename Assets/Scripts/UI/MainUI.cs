@@ -55,6 +55,20 @@ namespace SCOdyssey
             BindHoverScale(quitGo);
         }
 
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+
+            StartCoroutine(PlayLobbyAudio());
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+
+            StopLobbyAudio();
+        }
+
         private IEnumerator PlayLobbyAudio()
         {
             if(!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
@@ -83,8 +97,6 @@ namespace SCOdyssey
         {
             Debug.Log("OnClickAdventure");
             ServiceLocator.Get<IUIManager>().ShowUI<AdventureUI>();
-
-            StopLobbyAudio();
         }
         private void OnClickOnline()
         {

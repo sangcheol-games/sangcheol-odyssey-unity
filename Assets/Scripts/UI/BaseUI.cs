@@ -37,6 +37,8 @@ namespace SCOdyssey.UI
             }
         }
 
+        public void Enable() => OnEnable();
+
         protected virtual void OnDisable()
         {
             if (inputManager != null)
@@ -46,6 +48,8 @@ namespace SCOdyssey.UI
                 inputManager.OnCancel -= OnCancelInternal;
             }
         }
+
+        public void Disable() => OnDisable();
 
         // 스택 top UI에만 입력을 라우팅 — 하단 UI들이 같은 키 이벤트를 동시에 처리하지 않도록 함
         private void OnSelectInternal(Vector2 d) { if (IsTopUI()) HandleSelect(d); }
