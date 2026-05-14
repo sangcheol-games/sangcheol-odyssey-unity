@@ -32,6 +32,8 @@ namespace SCOdyssey
         private void Start()
         {
             Init();
+
+            StartCoroutine(PlayLobbyAudio());
         }
 
         private void Init()
@@ -51,6 +53,44 @@ namespace SCOdyssey
             BindHoverScale(adventureGo);
             BindHoverScale(settingGo);
             BindHoverScale(quitGo);
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+
+            StartCoroutine(PlayLobbyAudio());
+        }
+
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+
+            StopLobbyAudio();
+        }
+
+        private IEnumerator PlayLobbyAudio()
+        {
+            if(!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
+            {
+                yield break;
+            }
+
+            if(audioManager.IsPlaying) audioManager.Stop();
+
+            var audioFilePath = "Lobby BGM.wav";
+
+            audioManager.LoadAudio(audioFilePath, loopHint: true);
+            while(!audioManager.IsLoaded) yield return null;
+
+            var dspStartTime = audioManager.GetDSPTime();
+            audioManager.PlayScheduled(dspStartTime, loopPlay: true);
+        }
+
+        private void StopLobbyAudio()
+        {
+            var audioManager = ServiceLocator.Get<IAudioManager>();
+            if(audioManager.IsPlaying) audioManager.Stop();
         }
 
         private void OnClickAdventure()
