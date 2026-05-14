@@ -55,17 +55,13 @@ namespace SCOdyssey
             BindHoverScale(quitGo);
         }
 
-        protected override void OnEnable()
+        public override void OnUIPushed()
         {
-            base.OnEnable();
-
             StartCoroutine(PlayLobbyAudio());
         }
 
-        protected override void OnDisable()
+        public override void OnUIPopped()
         {
-            base.OnDisable();
-
             StopLobbyAudio();
         }
 

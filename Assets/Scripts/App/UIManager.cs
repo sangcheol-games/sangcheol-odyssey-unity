@@ -94,13 +94,13 @@ namespace SCOdyssey.App
             }
 
             if(uiStack.Count > 0)
-                uiStack.Peek().Disable();
+                uiStack.Peek().OnUIPopped();
 
             // UI 생성 후 스택에 넣기
             GameObject go = ResourceLoader.PrefabInstantiate($"UI/{name}");
             T ui = go.GetComponent<T>();
             uiStack.Push(ui);
-            ui.Enable();
+            ui.OnUIPushed();
             SetCanvas(go);
 
             // 부모 설정
@@ -164,9 +164,9 @@ namespace SCOdyssey.App
 
             // UI 스택에서 Pop & Destroy
             BaseUI destroyUi = uiStack.Pop();
-            destroyUi.Disable();
+            destroyUi.OnUIPushed();
 
-            uiStack.Peek().Enable();
+            uiStack.Peek().OnUIPushed();
 
             Object.Destroy(destroyUi.gameObject);
 
