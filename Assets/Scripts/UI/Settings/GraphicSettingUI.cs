@@ -189,22 +189,19 @@ namespace SCOdyssey
         private void SwitchToGame()
         {
             var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<GameSettingUI>();
+            uiManager.SwapUI<GameSettingUI>();
         }
 
         private void SwitchToSound()
         {
             var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<SoundSettingUI>();
+            uiManager.SwapUI<SoundSettingUI>();
         }
 
         private void SwitchToAccount()
         {
             var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<AccountSettingUI>();
+            uiManager.SwapUI<AccountSettingUI>();
         }
 
         protected override void HandleSelect(Vector2 direction) { }

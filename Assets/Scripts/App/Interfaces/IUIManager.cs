@@ -8,6 +8,7 @@ namespace SCOdyssey.App
     {
         public T ShowUI<T>(string name = null, Transform parent = null) where T : BaseUI;
         public void CloseUI(BaseUI ui);
+        public void SwapUI<T>(string name = null, Transform parent = null) where T : BaseUI;
         public BaseUI Peek();
     }
 }

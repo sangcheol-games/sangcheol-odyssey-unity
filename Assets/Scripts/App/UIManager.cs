@@ -164,7 +164,7 @@ namespace SCOdyssey.App
 
             // UI 스택에서 Pop & Destroy
             BaseUI destroyUi = uiStack.Pop();
-            destroyUi.OnUIPushed();
+            destroyUi.OnUIPopped();
 
             uiStack.Peek().OnUIPushed();
 
@@ -176,6 +176,60 @@ namespace SCOdyssey.App
             if (canvas.sortingOrder < 0)
             {
                 order--;
+            }
+        }
+
+        public void SwapUI<T>(string name = null, Transform parent = null)
+            where T : BaseUI
+        {
+            T peekUI = PeekUI<T>();
+            if (peekUI != null)
+            {
+                return; // 이미 활성화된 UI가 있으면 동작 안 함.
+            }
+
+            // Nothing to Swap
+            if(uiStack.Count == 0)
+            {
+                return;
+            }
+
+            // 이름이 없다면 타입을 이름으로 사용
+            if (string.IsNullOrEmpty(name))
+            {
+                name = typeof(T).Name;
+            }
+
+            // UI 스택에서 Pop & Destroy
+            BaseUI destroyUi = uiStack.Pop();
+            destroyUi.OnUIPopped();
+
+            Canvas canvas = destroyUi.GetComponent<Canvas>();
+
+            // SetCanvas가 된 UI를 닫을 때는 order 되돌리기
+            if (canvas.sortingOrder < 0)
+            {
+                order--;
+            }
+
+            Object.Destroy(destroyUi.gameObject);
+
+            // UI 생성 후 스택에 넣기
+            GameObject go = ResourceLoader.PrefabInstantiate($"UI/{name}");
+            T ui = go.GetComponent<T>();
+            uiStack.Push(ui);
+            ui.OnUIPushed();
+            SetCanvas(go);
+
+            // 부모 설정
+            if (parent != null)
+            {
+                go.transform.SetParent(parent);
+            }
+            else
+            {
+                // parameter가 없다면 @UI_Root를 부모로 설정
+                go.transform.SetParent(Root.transform);
             }
         }
     }
