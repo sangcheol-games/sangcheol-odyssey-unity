@@ -48,7 +48,7 @@ namespace SCOdyssey.App
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
         public TextMeshProUGUI clearEffectText; // 클리어 연출 텍스트
 
-        public Dictionary<(string title, Difficulty diffuculty), int> bestScores = new();
+        public Dictionary<(int, Difficulty), int> bestScores = new();
 
         private void Awake()
         {
@@ -346,9 +346,9 @@ namespace SCOdyssey.App
             var musicManager = ServiceLocator.Get<IMusicManager>();
             var currentMusic = musicManager.GetCurrentMusic();
 
-            var title = currentMusic.title.GetLocalizedString();
+            var musicId = currentMusic.id;
             var difficulty = musicManager.GetCurrentDifficulty();
-            var key = (title, difficulty); 
+            var key = (musicId, difficulty);
 
             var contains = bestScores.TryGetValue(key, out var bestScore);
             if (!contains || bestScore < finalScore)

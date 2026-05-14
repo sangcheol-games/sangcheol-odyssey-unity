@@ -9,7 +9,7 @@ namespace SCOdyssey.App
     [Serializable]
     public class MusicScoreEntry
     {
-        public string title;
+        public int musicId;
         public Difficulty difficulty;
         public int bestScore;
     }
@@ -25,15 +25,15 @@ namespace SCOdyssey.App
         public static string SavePath =>
             Path.Combine(Application.persistentDataPath, "scores.json");
 
-        public static void Save(Dictionary<(string, Difficulty), int> dict)
+        public static void Save(Dictionary<(int, Difficulty), int> dict)
         {
             var data = FromDict(dict);
             var json = JsonUtility.ToJson(data, prettyPrint: true);
-           
+
             File.WriteAllText(SavePath, json);
         }
 
-        private static SaveData FromDict(Dictionary<(string title, Difficulty difficulty), int> dict)
+        private static SaveData FromDict(Dictionary<(int musicId, Difficulty difficulty), int> dict)
         {
             var data = new SaveData();
 
@@ -41,7 +41,7 @@ namespace SCOdyssey.App
             {
                 data.records.Add(new MusicScoreEntry
                 {
-                    title = key.title,
+                    musicId = key.musicId,
                     difficulty = key.difficulty,
                     bestScore = score
                 });
@@ -50,22 +50,22 @@ namespace SCOdyssey.App
             return data;
         }
 
-        public static Dictionary<(string, Difficulty), int> Load()
+        public static Dictionary<(int, Difficulty), int> Load()
         {
-            if (!File.Exists(SavePath)) return new Dictionary<(string, Difficulty), int>();
+            if (!File.Exists(SavePath)) return new Dictionary<(int, Difficulty), int>();
 
             var json = File.ReadAllText(SavePath);
             var data = JsonUtility.FromJson<SaveData>(json);
             return ToDict(data);
         }
 
-        private static Dictionary<(string, Difficulty), int> ToDict(SaveData data)
+        private static Dictionary<(int, Difficulty), int> ToDict(SaveData data)
         {
-            var dict = new Dictionary<(string title, Difficulty diffuculty), int>();
+            var dict = new Dictionary<(int musicId, Difficulty difficulty), int>();
 
             foreach(var record in data.records)
             {
-                dict.Add((record.title, record.difficulty), record.bestScore);
+                dict.TryAdd((record.musicId, record.difficulty), record.bestScore);
             }
 
             return dict;

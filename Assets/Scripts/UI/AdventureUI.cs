@@ -22,6 +22,12 @@ namespace SCOdyssey.UI
         private int selectedIndex;
         private MusicSO selectedMusic => musicList[selectedIndex];
         private Difficulty selectedDifficulty = Difficulty.Easy;
+        private Dictionary<(int, Difficulty), int> _bestScores;
+
+        private enum Texts
+        {
+            BestScore     // 최고 점수
+        }
 
         private enum Images
         {
@@ -36,6 +42,7 @@ namespace SCOdyssey.UI
         protected override void Awake()
         {
             base.Awake();
+            BindText(typeof(Texts));
             BindImage(typeof(Images));
             BindButton(typeof(Buttons));
 
@@ -48,6 +55,7 @@ namespace SCOdyssey.UI
         {
             base.OnEnable();
 
+            _bestScores = ScoreSaveSystem.Load();
             OnSelectedMusicChanged();
         }
 
@@ -88,6 +96,7 @@ namespace SCOdyssey.UI
             }
 
             selectedIndex = 0;
+            _bestScores = ScoreSaveSystem.Load();
             RefreshList();
         }
 
@@ -103,6 +112,8 @@ namespace SCOdyssey.UI
                 int dataIndex = WrapIndex(selectedIndex - CENTER_INDEX + i);
                 slots[i].SetData(musicList[dataIndex], i == CENTER_INDEX, selectedDifficulty);
             }
+
+            RefreshBestScore();
         }
 
         /// <summary>
@@ -112,6 +123,20 @@ namespace SCOdyssey.UI
         {
             int count = musicList.Count;
             return ((index % count) + count) % count;
+        }
+
+        /// <summary>
+        /// 현재 선택된 곡+난이도의 최고 점수를 표시합니다.
+        /// </summary>
+        private void RefreshBestScore()
+        {
+            var key = (selectedMusic.id, selectedDifficulty);
+            var text = GetText((int)Texts.BestScore);
+            if (text == null) return;
+
+            text.text = _bestScores.TryGetValue(key, out int best)
+                ? best.ToString("N0")
+                : "- - -";
         }
 
         private void OnClickBackButton()
