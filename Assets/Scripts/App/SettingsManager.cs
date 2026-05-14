@@ -19,23 +19,9 @@ namespace SCOdyssey.App
         public void Load()
         {
             var json = PlayerPrefs.GetString(PREFS_KEY, "");
-            if (string.IsNullOrEmpty(json))
-            {
-                _current = new SettingsData();
-                return;
-            }
-            _current = JsonAdapter.FromJson<SettingsData>(json);
-            MigrateLegacy(_current);
-        }
-
-        // audioOutputType 필드가 없던 구버전 저장본 호환.
-        // 그 시절 audioDeviceIndex는 FMOD AUTODETECT(=Windows에서 WASAPI) 기준의 드라이버 인덱스였음.
-        // FMODAudioPreInit.EnumerateAllDevices는 AUTODETECT를 enumerate하지 않으므로 0으로 두면
-        // 설정 UI의 FindDeviceListIndex가 매칭에 실패해 첫 항목으로 폴백 → 사용자 선택이 사라짐.
-        // Windows에서 AUTODETECT ≡ WASAPI이므로 1로 정규화해 (1, audioDeviceIndex) 매칭을 보존.
-        private static void MigrateLegacy(SettingsData data)
-        {
-            if (data.audioOutputType == 0) data.audioOutputType = 1;
+            _current = string.IsNullOrEmpty(json)
+                ? new SettingsData()
+                : JsonAdapter.FromJson<SettingsData>(json);
         }
 
         public void Save()

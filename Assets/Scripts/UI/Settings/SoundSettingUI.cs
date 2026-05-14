@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Dto;
@@ -48,9 +47,8 @@ namespace SCOdyssey
 
         // _pending: UI에서 변경한 값을 임시로 보관. Btn_Save를 눌러야 실제로 저장됨.
         private SettingsData _pending;
-        // 모든 출력 모드 통합 디바이스 목록 — FMODAudioPreInit이 부트 시 채워둠
-        private List<AudioDeviceEntry> _allDevices;
-        private int _audioDeviceListIndex;
+        private string[] _audioDevices;
+        private int _audioDeviceIndex;
 
         private void Start()
         {
@@ -68,32 +66,22 @@ namespace SCOdyssey
             _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
 
             #region Audio Device
-            // FMODAudioPreInit.AllDevices(부트 시 모드별로 모은 통합 목록)을 그대로 사용
-            _allDevices = new List<AudioDeviceEntry>(FMODAudioPreInit.AllDevices);
-            if (_allDevices.Count == 0)
-            {
-                // 폴백 — enumeration 자체가 실패한 환경
-                _allDevices.Add(new AudioDeviceEntry
-                {
-                    OutputType = 0,
-                    DriverIndex = 0,
-                    DisplayName = "기본 장치"
-                });
-            }
-            _audioDeviceListIndex = FindDeviceListIndex(_pending.audioOutputType, _pending.audioDeviceIndex);
+            _audioDevices = ServiceLocator.Get<IAudioManager>().GetAvailableDevices();
+            if (_audioDevices.Length == 0) _audioDevices = new[] { "기본 장치" };
+            _audioDeviceIndex = Mathf.Clamp(_pending.audioDeviceIndex, 0, _audioDevices.Length - 1);
             RefreshAudioDeviceText();
 
             GetButton((int)Buttons.Btn_AudioDevicePrev).onClick.AddListener(() =>
             {
-                if (_audioDeviceListIndex <= 0) return;
-                _audioDeviceListIndex--;
-                ApplySelectedDevice();
+                if (_audioDeviceIndex <= 0) return;
+                _pending.audioDeviceIndex = --_audioDeviceIndex;
+                RefreshAudioDeviceText();
             });
             GetButton((int)Buttons.Btn_AudioDeviceNext).onClick.AddListener(() =>
             {
-                if (_audioDeviceListIndex >= _allDevices.Count - 1) return;
-                _audioDeviceListIndex++;
-                ApplySelectedDevice();
+                if (_audioDeviceIndex >= _audioDevices.Length - 1) return;
+                _pending.audioDeviceIndex = ++_audioDeviceIndex;
+                RefreshAudioDeviceText();
             });
             #endregion
 
@@ -148,27 +136,7 @@ namespace SCOdyssey
 
         private void RefreshAudioDeviceText()
         {
-            GetText((int)Texts.Text_AudioDeviceValue).text = _allDevices[_audioDeviceListIndex].DisplayName;
-        }
-
-        // (outputType, driverIndex) 조합과 일치하는 통합 목록 인덱스를 찾음. 없으면 0.
-        private int FindDeviceListIndex(int outputType, int driverIndex)
-        {
-            for (int i = 0; i < _allDevices.Count; i++)
-            {
-                var e = _allDevices[i];
-                if (e.OutputType == outputType && e.DriverIndex == driverIndex) return i;
-            }
-            return 0;
-        }
-
-        // 현재 선택된 항목을 _pending에 반영하고 텍스트 갱신.
-        private void ApplySelectedDevice()
-        {
-            var entry = _allDevices[_audioDeviceListIndex];
-            _pending.audioOutputType = entry.OutputType;
-            _pending.audioDeviceIndex = entry.DriverIndex;
-            RefreshAudioDeviceText();
+            GetText((int)Texts.Text_AudioDeviceValue).text = _audioDevices[_audioDeviceIndex];
         }
 
         #endregion
@@ -197,19 +165,15 @@ namespace SCOdyssey
         {
             // _pending의 값을 Current에 복사한 뒤 Apply(시스템 반영) + Save(PlayerPrefs 저장)
             var settings = ServiceLocator.Get<ISettingsManager>();
-            bool outputTypeChanged = settings.Current.audioOutputType != _pending.audioOutputType;
-            settings.Current.audioOutputType     = _pending.audioOutputType;
             settings.Current.audioDeviceIndex    = _pending.audioDeviceIndex;
             settings.Current.playInBackground     = _pending.playInBackground;
-            // 출력 모드(ASIO/WASAPI/...)가 바뀌면 런타임 setDriver 불가 → 다음 시작 시 적용.
-            // 같은 모드 내 디바이스 변경만 즉시 반영.
-            if (!outputTypeChanged && ServiceLocator.TryGet<IAudioManager>(out var audio))
+            if (ServiceLocator.TryGet<IAudioManager>(out var audio))
                 audio.SetAudioDevice(_pending.audioDeviceIndex);
             settings.Current.masterVolume   = _pending.masterVolume;
             settings.Current.bgmVolume      = _pending.bgmVolume;
             settings.Current.hitSoundVolume = _pending.hitSoundVolume;
             settings.Current.sfxVolume       = _pending.sfxVolume;
-            // 버퍼 크기/출력 타입은 FMODAudioPreInit에서 다음 시작 시 적용됨 (런타임 변경 불가)
+            // 버퍼 크기는 FMODAudioPreInit에서 다음 시작 시 적용됨 (런타임 변경 불가)
             settings.Current.audioBufferIndex = _pending.audioBufferIndex;
             settings.Apply();
             settings.Save();
@@ -219,7 +183,7 @@ namespace SCOdyssey
         {
             // _pending만 기본값으로 갱신 — Save를 눌러야 실제로 적용됨
             _pending = new SettingsData();
-            _audioDeviceListIndex = FindDeviceListIndex(_pending.audioOutputType, _pending.audioDeviceIndex);
+            _audioDeviceIndex = _pending.audioDeviceIndex;
             RefreshAudioDeviceText();
             GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[0]; // "OFF"
             Get<Slider>((int)Sliders.Slider_MasterVolume).value   = _pending.masterVolume;

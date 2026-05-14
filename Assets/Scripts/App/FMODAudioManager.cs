@@ -458,21 +458,11 @@ namespace SCOdyssey.App
 
         public string[] GetAvailableDevices()
         {
-            // FMODAudioPreInit이 부트 시 모드별로 enumerate해둔 통합 목록을 사용
-            var all = FMODAudioPreInit.AllDevices;
-            if (all != null && all.Count > 0)
-            {
-                var names = new string[all.Count];
-                for (int i = 0; i < all.Count; i++) names[i] = all[i].DisplayName;
-                return names;
-            }
-
-            // 폴백 — 통합 목록이 비었으면 현재 출력의 드라이버만이라도 노출
             RuntimeManager.CoreSystem.getNumDrivers(out int count);
-            var fallback = new string[count];
+            var names = new string[count];
             for (int i = 0; i < count; i++)
-                RuntimeManager.CoreSystem.getDriverInfo(i, out fallback[i], 256, out _, out _, out _, out _);
-            return fallback;
+                RuntimeManager.CoreSystem.getDriverInfo(i, out names[i], 256, out _, out _, out _, out _);
+            return names;
         }
 
         public void SetAudioDevice(int driverIndex)

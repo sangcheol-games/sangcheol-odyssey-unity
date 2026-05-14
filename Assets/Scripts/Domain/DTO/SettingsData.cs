@@ -24,9 +24,8 @@ namespace SCOdyssey.Domain.Dto
         public float bgmVolume = 1f;          // 배경음(음악)
         public float hitSoundVolume = 1f;     // 타격음
         public float sfxVolume = 1f;          // 효과음
-        public int audioDeviceIndex = 0;     // FMOD 출력 장치 인덱스 (audioOutputType 내 드라이버 인덱스)
-        public int audioOutputType = 0;      // 0=Default(AUTODETECT) / 1=WASAPI / 2=ASIO — 변경 시 재시작 필요
-        public int audioBufferIndex = 0;      // 0=64 / 1=128 / 2=256 / 3=512 / 4=1024
+        public int audioDeviceIndex = 0;     // FMOD 출력 장치 인덱스
+        public int audioBufferIndex = 2;      // 0=64 / 1=128 / 2=256 / 3=512 / 4=1024
         public bool playInBackground = false; // true=백그라운드 재생 / false=포커스 잃으면 음소거
 
         // Input
