@@ -37,7 +37,7 @@ namespace SCOdyssey.UI
             }
         }
 
-        public void Enable() => OnEnable();
+        public virtual void OnUIPushed(){}
 
         protected virtual void OnDisable()
         {
@@ -49,7 +49,7 @@ namespace SCOdyssey.UI
             }
         }
 
-        public void Disable() => OnDisable();
+        public virtual void OnUIPopped(){}
 
         // 스택 top UI에만 입력을 라우팅 — 하단 UI들이 같은 키 이벤트를 동시에 처리하지 않도록 함
         private void OnSelectInternal(Vector2 d) { if (IsTopUI()) HandleSelect(d); }
