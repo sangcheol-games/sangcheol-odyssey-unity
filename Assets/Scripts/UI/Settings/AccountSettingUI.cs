@@ -33,23 +33,17 @@ namespace SCOdyssey
 
         private void SwitchToGame()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<GameSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<GameSettingUI>(PushMode.Replace);
         }
 
         private void SwitchToGraphic()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<GraphicSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<GraphicSettingUI>(PushMode.Replace);
         }
 
         private void SwitchToSound()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<SoundSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<SoundSettingUI>(PushMode.Replace);
         }
 
         private void OnClickClose()

@@ -69,35 +69,25 @@ namespace SCOdyssey
         private int _languageIndex;
         private int _displayLanguageIndex;
         private int _pollingRateIndex;
+        private bool _initialized;
 
         private void Start()
         {
             Init();
         }
 
+        // 일회성 배선만 담당 (캐싱으로 인스턴스가 재사용되므로 Bind/AddListener는 1회면 충분)
         private void Init()
         {
             BindButton(typeof(Buttons));
             BindText(typeof(Texts));
             Bind<Slider>(typeof(Sliders));
 
-            // 현재 저장된 설정을 JSON 직렬화/역직렬화로 깊은 복사 → _pending에 저장
-            var current = ServiceLocator.Get<ISettingsManager>().Current;
-            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
-
             #region Language
-            _languageIndex = Mathf.Max(0, System.Array.IndexOf(LanguageCodes, _pending.languageCode));
-            UpdateLanguageLabel();
             GetButton((int)Buttons.Btn_LanguagePrev).onClick.AddListener(OnLanguagePrev);
             GetButton((int)Buttons.Btn_LanguageNext).onClick.AddListener(OnLanguageNext);
-
-            _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, _pending.displayLanguageCode));
-            UpdateDisplayLanguageLabel();
             GetButton((int)Buttons.Btn_DisplayLanguagePrev).onClick.AddListener(OnDisplayLanguagePrev);
             GetButton((int)Buttons.Btn_DisplayLanguageNext).onClick.AddListener(OnDisplayLanguageNext);
-
-            _pollingRateIndex = Mathf.Max(0, System.Array.IndexOf(PollingRateValues, _pending.inputPollingRateHz));
-            UpdatePollingRateLabel();
             GetButton((int)Buttons.Btn_PollingRatePrev).onClick.AddListener(OnPollingRatePrev);
             GetButton((int)Buttons.Btn_PollingRateNext).onClick.AddListener(OnPollingRateNext);
             #endregion
@@ -106,8 +96,6 @@ namespace SCOdyssey
             var bgaSlider = Get<Slider>((int)Sliders.Slider_BgaOpacity);
             bgaSlider.minValue = 0f;
             bgaSlider.maxValue = 1f;
-            bgaSlider.value = _pending.bgaOpacity;
-            UpdateBgaOpacityLabel(_pending.bgaOpacity);
             bgaSlider.onValueChanged.AddListener(v =>
             {
                 _pending.bgaOpacity = v;
@@ -117,8 +105,6 @@ namespace SCOdyssey
             var noteSlider = Get<Slider>((int)Sliders.Slider_NoteOpacity);
             noteSlider.minValue = 0f;
             noteSlider.maxValue = 1f;
-            noteSlider.value = _pending.noteOpacity / 0.5f;
-            UpdateNoteOpacityLabel(noteSlider.value);
             noteSlider.onValueChanged.AddListener(v =>
             {
                 _pending.noteOpacity = v * 0.5f;
@@ -131,8 +117,6 @@ namespace SCOdyssey
             noteSyncSlider.minValue = -200f;
             noteSyncSlider.maxValue = 200f;
             noteSyncSlider.wholeNumbers = true;
-            noteSyncSlider.value = _pending.audioOffsetMs;
-            UpdateNoteSyncLabel(_pending.audioOffsetMs);
             noteSyncSlider.onValueChanged.AddListener(v =>
             {
                 int ms = Mathf.RoundToInt(v);
@@ -144,8 +128,6 @@ namespace SCOdyssey
             judgmentSlider.minValue = -20f;
             judgmentSlider.maxValue = 20f;
             judgmentSlider.wholeNumbers = true;
-            judgmentSlider.value = _pending.judgmentOffset;
-            UpdateJudgmentSyncLabel(_pending.judgmentOffset);
             judgmentSlider.onValueChanged.AddListener(v =>
             {
                 int step = Mathf.RoundToInt(v);
@@ -156,7 +138,6 @@ namespace SCOdyssey
 
             GetButton((int)Buttons.Btn_ShowPerfectEnable).onClick.AddListener(OnShowPerfectEnable);
             GetButton((int)Buttons.Btn_ShowPerfectDisable).onClick.AddListener(OnShowPerfectDisable);
-            UpdateShowPerfectBtn();
 
             GetButton((int)Buttons.Tab_Graphic).onClick.AddListener(SwitchToGraphic);
             GetButton((int)Buttons.Tab_Sound).onClick.AddListener(SwitchToSound);
@@ -165,6 +146,47 @@ namespace SCOdyssey
             GetButton((int)Buttons.Btn_Save).onClick.AddListener(OnClickSave);
             GetButton((int)Buttons.Btn_Reset).onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
+
+            RefreshFromSettings();   // 최초 1회 채우기
+            _initialized = true;
+        }
+
+        // 캐싱된 UI가 재진입(재활성화)될 때마다 저장된 설정값을 다시 불러와 stale 방지
+        // (Unity 순서: Awake → OnEnable → Start. 최초엔 Init 전이므로 가드로 건너뛰고 Init 끝에서 채운다)
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (_initialized) RefreshFromSettings();
+        }
+
+        // 저장된 설정을 _pending에 깊은 복사로 로드한 뒤 UI에 반영
+        private void RefreshFromSettings()
+        {
+            var current = ServiceLocator.Get<ISettingsManager>().Current;
+            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
+            ApplyPendingToUI();
+        }
+
+        // 현재 _pending 값을 모든 UI 컴포넌트에 반영 (RefreshFromSettings / OnClickReset 공용)
+        private void ApplyPendingToUI()
+        {
+            _languageIndex = Mathf.Max(0, System.Array.IndexOf(LanguageCodes, _pending.languageCode));
+            UpdateLanguageLabel();
+            _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, _pending.displayLanguageCode));
+            UpdateDisplayLanguageLabel();
+            _pollingRateIndex = Mathf.Max(0, System.Array.IndexOf(PollingRateValues, _pending.inputPollingRateHz));
+            UpdatePollingRateLabel();
+
+            Get<Slider>((int)Sliders.Slider_BgaOpacity).value   = _pending.bgaOpacity;
+            UpdateBgaOpacityLabel(_pending.bgaOpacity);
+            Get<Slider>((int)Sliders.Slider_NoteOpacity).value  = _pending.noteOpacity / 0.5f;
+            UpdateNoteOpacityLabel(_pending.noteOpacity / 0.5f);
+            Get<Slider>((int)Sliders.Slider_NoteSync).value     = _pending.audioOffsetMs;
+            UpdateNoteSyncLabel(_pending.audioOffsetMs);
+            Get<Slider>((int)Sliders.Slider_JudgmentSync).value = _pending.judgmentOffset;
+            UpdateJudgmentSyncLabel(_pending.judgmentOffset);
+
+            UpdateShowPerfectBtn();
         }
 
         #region Opacity
@@ -310,24 +332,9 @@ namespace SCOdyssey
 
         private void OnClickReset()
         {
+            // _pending을 기본값으로 갱신 후 모든 UI 컴포넌트에 반영
             _pending = new SettingsData();
-
-            // 모든 UI 컴포넌트를 기본값으로 갱신
-            _languageIndex = Mathf.Max(0, System.Array.IndexOf(LanguageCodes, _pending.languageCode));
-            UpdateLanguageLabel();
-
-            _displayLanguageIndex = Mathf.Max(0, System.Array.IndexOf(DisplayLanguageCodes, _pending.displayLanguageCode));
-            UpdateDisplayLanguageLabel();
-
-            _pollingRateIndex = Mathf.Max(0, System.Array.IndexOf(PollingRateValues, _pending.inputPollingRateHz));
-            UpdatePollingRateLabel();
-
-            Get<Slider>((int)Sliders.Slider_BgaOpacity).value   = _pending.bgaOpacity;
-            Get<Slider>((int)Sliders.Slider_NoteOpacity).value  = _pending.noteOpacity / 0.5f;
-            Get<Slider>((int)Sliders.Slider_NoteSync).value     = _pending.audioOffsetMs;
-            Get<Slider>((int)Sliders.Slider_JudgmentSync).value = _pending.judgmentOffset;
-
-            UpdateShowPerfectBtn();
+            ApplyPendingToUI();
         }
 
         private void OnClickClose()
@@ -337,23 +344,17 @@ namespace SCOdyssey
 
         private void SwitchToGraphic()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<GraphicSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<GraphicSettingUI>(PushMode.Replace);
         }
 
         private void SwitchToSound()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<SoundSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<SoundSettingUI>(PushMode.Replace);
         }
 
         private void SwitchToAccount()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<AccountSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<AccountSettingUI>(PushMode.Replace);
         }
 
         protected override void HandleSelect(Vector2 direction) { }
