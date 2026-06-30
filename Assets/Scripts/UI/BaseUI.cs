@@ -31,9 +31,9 @@ namespace SCOdyssey.UI
             {
                 inputManager.SwitchToUI();
 
-                inputManager.OnSelect += HandleSelect;
-                inputManager.OnSubmit += HandleSubmit;
-                inputManager.OnCancel += HandleCancel;
+                inputManager.OnSelect += OnSelectInternal;
+                inputManager.OnSubmit += OnSubmitInternal;
+                inputManager.OnCancel += OnCancelInternal;
             }
         }
 
@@ -41,10 +41,20 @@ namespace SCOdyssey.UI
         {
             if (inputManager != null)
             {
-                inputManager.OnSelect -= HandleSelect;
-                inputManager.OnSubmit -= HandleSubmit;
-                inputManager.OnCancel -= HandleCancel;
+                inputManager.OnSelect -= OnSelectInternal;
+                inputManager.OnSubmit -= OnSubmitInternal;
+                inputManager.OnCancel -= OnCancelInternal;
             }
+        }
+
+        // 스택 top UI에만 입력을 라우팅 — 아래(또는 오버레이 하단) UI들이 같은 키를 동시에 처리하지 않도록 함
+        private void OnSelectInternal(Vector2 d) { if (IsTopUI()) HandleSelect(d); }
+        private void OnSubmitInternal()          { if (IsTopUI()) HandleSubmit(); }
+        private void OnCancelInternal()          { if (IsTopUI()) HandleCancel(); }
+
+        private bool IsTopUI()
+        {
+            return ServiceLocator.TryGet(out IUIManager m) && m.PeekUI() == this;
         }
 
         protected abstract void HandleSelect(Vector2 direction);
