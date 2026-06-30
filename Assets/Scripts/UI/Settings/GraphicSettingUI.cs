@@ -49,25 +49,20 @@ namespace SCOdyssey
         private int _resolutionIndex;
         private int _frameRateIndex;
         private int _displayModeIndex;
+        private bool _initialized;
 
         private void Start()
         {
             Init();
         }
 
+        // 일회성 배선만 담당 (Bind/AddListener는 1회면 충분)
         private void Init()
         {
             BindButton(typeof(Buttons));
             Bind<TMP_Text>(typeof(Texts));
 
-            // 현재 저장된 설정을 깊은 복사 → _pending에 저장
-            var current = ServiceLocator.Get<ISettingsManager>().Current;
-            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
-
             #region Resolution
-            _resolutionIndex = _pending.resolutionIndex;
-            RefreshResolutionText();
-
             GetButton((int)Buttons.Btn_ResolutionPrev).onClick.AddListener(() =>
             {
                 if (_resolutionIndex <= 0) return;
@@ -83,10 +78,6 @@ namespace SCOdyssey
             #endregion
 
             #region Frame Rate
-            _frameRateIndex = System.Array.IndexOf(FrameRateValues, _pending.targetFrameRate);
-            if (_frameRateIndex < 0) _frameRateIndex = 0;
-            RefreshFrameRateText();
-
             GetButton((int)Buttons.Btn_FrameRatePrev).onClick.AddListener(() =>
             {
                 if (_frameRateIndex <= 0) return;
@@ -102,9 +93,6 @@ namespace SCOdyssey
             #endregion
 
             #region Display Mode
-            _displayModeIndex = _pending.displayMode;
-            RefreshDisplayModeText();
-
             GetButton((int)Buttons.Btn_DisplayModePrev).onClick.AddListener(() =>
             {
                 if (_displayModeIndex <= 0) return;
@@ -126,6 +114,36 @@ namespace SCOdyssey
             GetButton((int)Buttons.Btn_Save)?.onClick.AddListener(OnClickSave);
             GetButton((int)Buttons.Btn_Reset)?.onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
+
+            RefreshFromSettings();   // 최초 1회 채우기
+            _initialized = true;
+        }
+
+        // 재진입(재활성화)마다 저장된 설정값을 다시 로드해 stale 방지
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (_initialized) RefreshFromSettings();
+        }
+
+        // 저장된 설정을 _pending에 깊은 복사로 로드한 뒤 UI에 반영
+        private void RefreshFromSettings()
+        {
+            var current = ServiceLocator.Get<ISettingsManager>().Current;
+            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
+            ApplyPendingToUI();
+        }
+
+        // 현재 _pending 값을 모든 UI 컴포넌트에 반영 (RefreshFromSettings / OnClickReset 공용)
+        private void ApplyPendingToUI()
+        {
+            _resolutionIndex = _pending.resolutionIndex;
+            RefreshResolutionText();
+            _frameRateIndex = System.Array.IndexOf(FrameRateValues, _pending.targetFrameRate);
+            if (_frameRateIndex < 0) _frameRateIndex = 0;
+            RefreshFrameRateText();
+            _displayModeIndex = _pending.displayMode;
+            RefreshDisplayModeText();
         }
 
         #region Resolution
@@ -171,13 +189,7 @@ namespace SCOdyssey
         {
             // _pending만 기본값으로 갱신 — Save를 눌러야 실제로 적용됨
             _pending = new SettingsData();
-            _resolutionIndex = _pending.resolutionIndex;
-            RefreshResolutionText();
-            _frameRateIndex = System.Array.IndexOf(FrameRateValues, _pending.targetFrameRate);
-            if (_frameRateIndex < 0) _frameRateIndex = 0;
-            RefreshFrameRateText();
-            _displayModeIndex = _pending.displayMode;
-            RefreshDisplayModeText();
+            ApplyPendingToUI();
         }
 
         private void OnClickClose()

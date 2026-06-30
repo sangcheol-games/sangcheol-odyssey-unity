@@ -45,32 +45,29 @@ namespace SCOdyssey
         }
 
         private static readonly string[] PlayInBackgroundLabels = { "OFF", "ON" };
+        private static readonly int[] BufferSizes = { 64, 128, 256, 512, 1024 };
 
         // _pending: UI에서 변경한 값을 임시로 보관. Btn_Save를 눌러야 실제로 저장됨.
         private SettingsData _pending;
         private string[] _audioDevices;
         private int _audioDeviceIndex;
+        private bool _initialized;
 
         private void Start()
         {
             Init();
         }
 
+        // 일회성 배선만 담당 (Bind/AddListener는 1회면 충분)
         private void Init()
         {
             BindButton(typeof(Buttons));
             Bind<TMPro.TMP_Text>(typeof(Texts));
             Bind<Slider>(typeof(Sliders));
 
-            // 현재 저장된 설정을 깊은 복사 → _pending에 저장
-            var current = ServiceLocator.Get<ISettingsManager>().Current;
-            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
-
             #region Audio Device
             _audioDevices = ServiceLocator.Get<IAudioManager>().GetAvailableDevices();
             if (_audioDevices.Length == 0) _audioDevices = new[] { "기본 장치" };
-            _audioDeviceIndex = Mathf.Clamp(_pending.audioDeviceIndex, 0, _audioDevices.Length - 1);
-            RefreshAudioDeviceText();
 
             GetButton((int)Buttons.Btn_AudioDevicePrev).onClick.AddListener(() =>
             {
@@ -87,14 +84,13 @@ namespace SCOdyssey
             #endregion
 
             #region Volume
-            InitVolumeSlider(Sliders.Slider_MasterVolume,   Texts.Text_MasterVolumeValue,   _pending.masterVolume,   v => _pending.masterVolume   = v);
-            InitVolumeSlider(Sliders.Slider_BgmVolume,      Texts.Text_BgmVolumeValue,      _pending.bgmVolume,      v => _pending.bgmVolume      = v);
-            InitVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, _pending.hitSoundVolume, v => _pending.hitSoundVolume = v);
-            InitVolumeSlider(Sliders.Slider_SfxVolume,      Texts.Text_SfxVolumeValue,      _pending.sfxVolume,      v => _pending.sfxVolume      = v);
+            WireVolumeSlider(Sliders.Slider_MasterVolume,   Texts.Text_MasterVolumeValue,   v => _pending.masterVolume   = v);
+            WireVolumeSlider(Sliders.Slider_BgmVolume,      Texts.Text_BgmVolumeValue,      v => _pending.bgmVolume      = v);
+            WireVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, v => _pending.hitSoundVolume = v);
+            WireVolumeSlider(Sliders.Slider_SfxVolume,      Texts.Text_SfxVolumeValue,      v => _pending.sfxVolume      = v);
             #endregion
 
             #region Play In Background
-            GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[_pending.playInBackground ? 1 : 0];
             GetButton((int)Buttons.Btn_PlayInBackgroundPrev).onClick.AddListener(() =>
             {
                 if (!_pending.playInBackground) return;
@@ -110,18 +106,15 @@ namespace SCOdyssey
             #endregion
 
             #region Buffer Size
-            var bufferSizes = new[] { 64, 128, 256, 512, 1024 };
             var bufferSlider = Get<Slider>((int)Sliders.Slider_BufferSize);
             bufferSlider.wholeNumbers = true;
             bufferSlider.minValue = 0;
             bufferSlider.maxValue = 4;
-            bufferSlider.value = _pending.audioBufferIndex;
-            GetText((int)Texts.Text_BufferSizeValue).text = bufferSizes[_pending.audioBufferIndex].ToString();
             bufferSlider.onValueChanged.AddListener(v =>
             {
                 int idx = Mathf.RoundToInt(v);
                 _pending.audioBufferIndex = idx;
-                GetText((int)Texts.Text_BufferSizeValue).text = bufferSizes[idx].ToString();
+                GetText((int)Texts.Text_BufferSizeValue).text = BufferSizes[idx].ToString();
             });
             #endregion
 
@@ -132,6 +125,41 @@ namespace SCOdyssey
             GetButton((int)Buttons.Btn_Save)?.onClick.AddListener(OnClickSave);
             GetButton((int)Buttons.Btn_Reset)?.onClick.AddListener(OnClickReset);
             GetButton((int)Buttons.Btn_Close).onClick.AddListener(OnClickClose);
+
+            RefreshFromSettings();   // 최초 1회 채우기
+            _initialized = true;
+        }
+
+        // 재진입(재활성화)마다 저장된 설정값을 다시 로드해 stale 방지
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (_initialized) RefreshFromSettings();
+        }
+
+        // 저장된 설정을 _pending에 깊은 복사로 로드한 뒤 UI에 반영
+        private void RefreshFromSettings()
+        {
+            var current = ServiceLocator.Get<ISettingsManager>().Current;
+            _pending = JsonAdapter.FromJson<SettingsData>(JsonAdapter.ToJson(current));
+            ApplyPendingToUI();
+        }
+
+        // 현재 _pending 값을 모든 UI 컴포넌트에 반영 (RefreshFromSettings / OnClickReset 공용)
+        private void ApplyPendingToUI()
+        {
+            _audioDeviceIndex = Mathf.Clamp(_pending.audioDeviceIndex, 0, _audioDevices.Length - 1);
+            RefreshAudioDeviceText();
+
+            SetVolumeSlider(Sliders.Slider_MasterVolume,   Texts.Text_MasterVolumeValue,   _pending.masterVolume);
+            SetVolumeSlider(Sliders.Slider_BgmVolume,      Texts.Text_BgmVolumeValue,      _pending.bgmVolume);
+            SetVolumeSlider(Sliders.Slider_HitSoundVolume, Texts.Text_HitSoundVolumeValue, _pending.hitSoundVolume);
+            SetVolumeSlider(Sliders.Slider_SfxVolume,      Texts.Text_SfxVolumeValue,      _pending.sfxVolume);
+
+            GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[_pending.playInBackground ? 1 : 0];
+
+            Get<Slider>((int)Sliders.Slider_BufferSize).value = _pending.audioBufferIndex;
+            GetText((int)Texts.Text_BufferSizeValue).text = BufferSizes[_pending.audioBufferIndex].ToString();
         }
 
         #region Audio Device
@@ -145,18 +173,22 @@ namespace SCOdyssey
 
         #region Volume
 
-        private void InitVolumeSlider(Sliders sliderEnum, Texts textEnum, float initialValue, System.Action<float> onChanged)
+        private void WireVolumeSlider(Sliders sliderEnum, Texts textEnum, System.Action<float> onChanged)
         {
             var slider = Get<Slider>((int)sliderEnum);
             slider.minValue = 0f;
             slider.maxValue = 1f;
-            slider.value = initialValue;
-            GetText((int)textEnum).text = ToPercent(initialValue);
             slider.onValueChanged.AddListener(v =>
             {
                 onChanged(v);
                 GetText((int)textEnum).text = ToPercent(v);
             });
+        }
+
+        private void SetVolumeSlider(Sliders sliderEnum, Texts textEnum, float value)
+        {
+            Get<Slider>((int)sliderEnum).value = value;
+            GetText((int)textEnum).text = ToPercent(value);
         }
 
         private string ToPercent(float value) => $"{Mathf.RoundToInt(value * 100)}%";
@@ -185,14 +217,7 @@ namespace SCOdyssey
         {
             // _pending만 기본값으로 갱신 — Save를 눌러야 실제로 적용됨
             _pending = new SettingsData();
-            _audioDeviceIndex = _pending.audioDeviceIndex;
-            RefreshAudioDeviceText();
-            GetText((int)Texts.Text_PlayInBackgroundValue).text = PlayInBackgroundLabels[0]; // "OFF"
-            Get<Slider>((int)Sliders.Slider_MasterVolume).value   = _pending.masterVolume;
-            Get<Slider>((int)Sliders.Slider_BgmVolume).value      = _pending.bgmVolume;
-            Get<Slider>((int)Sliders.Slider_HitSoundVolume).value = _pending.hitSoundVolume;
-            Get<Slider>((int)Sliders.Slider_SfxVolume).value       = _pending.sfxVolume;
-            Get<Slider>((int)Sliders.Slider_BufferSize).value      = _pending.audioBufferIndex; // = 2 (256)
+            ApplyPendingToUI();
         }
 
         private void OnClickClose()
