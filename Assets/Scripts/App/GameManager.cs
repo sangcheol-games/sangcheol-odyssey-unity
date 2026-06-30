@@ -166,10 +166,8 @@ namespace SCOdyssey.App
             _inputManager.SwitchToUI();
             if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
             {
-                var pauseUI = uiManager.ShowUI<PauseUI>();
-                // Two-Layer 기준: headLayer(2) 위인 3으로 고정하여 최상단 렌더링 보장.
-                if (pauseUI.TryGetComponent<Canvas>(out var pauseCanvas))
-                    pauseCanvas.sortingOrder = 3;
+                // Overlay: 게임 화면 위에 겹쳐 표시. sortingOrder는 UIManager가 표시 깊이에 따라 부여(게임 레이어 위).
+                uiManager.ShowUI<PauseUI>(PushMode.Overlay);
             }
         }
 

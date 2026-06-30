@@ -337,23 +337,17 @@ namespace SCOdyssey
 
         private void SwitchToGraphic()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<GraphicSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<GraphicSettingUI>(PushMode.Replace);
         }
 
         private void SwitchToSound()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<SoundSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<SoundSettingUI>(PushMode.Replace);
         }
 
         private void SwitchToAccount()
         {
-            var uiManager = ServiceLocator.Get<IUIManager>();
-            uiManager.CloseUI(this);
-            uiManager.ShowUI<AccountSettingUI>();
+            ServiceLocator.Get<IUIManager>().ShowUI<AccountSettingUI>(PushMode.Replace);
         }
 
         protected override void HandleSelect(Vector2 direction) { }
