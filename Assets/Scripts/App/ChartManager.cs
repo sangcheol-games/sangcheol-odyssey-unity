@@ -54,7 +54,6 @@ namespace SCOdyssey.Game
 
         [Header("마디 진행 관리")]
         private Queue<LaneData> remainingChart; // chartData 내의 모든 LaneData를 복사하여 사용
-        private List<LaneData> currentBarLanes = new List<LaneData>();  // 현재 스크롤 중인 마디의 LaneData 리스트
         private Queue<LaneData> nextBarLanes = new Queue<LaneData>();   // 다음 스크롤을 준비 중인 마디의 LaneData 리스트
 
         private int currentBarNumber = 0;
@@ -74,9 +73,6 @@ namespace SCOdyssey.Game
             public double countdownTargetTime;
             public bool isCountdownActive;
         }
-
-
-        private Action<JudgeType, NoteController> judgeEffectAction;
 
         private double _judgmentOffsetSec;
 
@@ -246,9 +242,6 @@ namespace SCOdyssey.Game
 
             ActivateTimelines();
             ActivateGhostNotes();
-            
-
-            currentBarLanes = new List<LaneData>(nextBarLanes);
 
             currentBarNumber++;
             PrepareNextBar();
