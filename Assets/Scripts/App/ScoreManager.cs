@@ -5,6 +5,18 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
 {
+    // ── 흐름 (점수·콤보·게이지 계산) ──────────────────────────────────────────
+    //
+    //  게임 시작 시 GameManager가 Init(totalNotes)를 호출한다.
+    //        노트당 기본점수 = 100만 / 총노트수 를 산정하고 상태를 초기화한다.
+    //
+    //  노트 판정마다 GameManager 경유로 ProcessJudge(type)가 호출된다.
+    //        판정 배율로 점수 가산 -> 판정별 카운트/콤보 갱신 -> UpdateUI()로 점수·콤보·게이지 이벤트 발행.
+    //        (배율: Perfect·Master 100% / Ideal 70% / Kind 50% / Umm 0%. Kind 이하는 콤보 끊김)
+    //
+    //  게임 종료 시 GameManager가 GetFinalScore()/GetClearRank()로 최종 결과를 조회한다.
+    //        모든 노트가 Master 이상이면 OverMillion 보정(100만점) + Perfect Ex보너스를 합산한다.
+    // ──────────────────────────────────────────────────────────────────────────
     public class ScoreManager : MonoBehaviour
     {
         [Header("Settings")]
@@ -34,6 +46,7 @@ namespace SCOdyssey.App
             { JudgeType.Umm, 0 }
         };
 
+        // 게임 시작 시 총 노트 수를 받아 노트당 기본점수를 산정하고 상태를 초기화(GameManager.StartGame이 호출)
         public void Init(int totalNotes)
         {
             totalNoteCount = totalNotes;
@@ -57,6 +70,7 @@ namespace SCOdyssey.App
             UpdateUI();
         }
 
+        // 노트 1개 판정마다 호출(GameManager 경유). 배율로 점수 가산, 판정별 카운트/콤보 갱신 후 UI 이벤트 발행
         public void ProcessJudge(JudgeType type)
         {
             float multiplier = 0f;

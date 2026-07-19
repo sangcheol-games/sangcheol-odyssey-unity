@@ -11,6 +11,28 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
 {
+    // ── 흐름 (게임 오케스트레이터) ──────────────────────────────────────────
+    //
+    //  준비: Awake()에서 자신을 ServiceLocator에 등록하고 IAudioManager를 얻는다.
+    //        Start()에서 IInputManager의 입력 이벤트와 ScoreManager의 UI 이벤트를 구독한다.
+    //
+    //  게임 시작: GameDataLoader가 StartGame()을 호출한다.
+    //        chartManager.Init() -> scoreManager.Init() -> globalStartTime 기록(현재 DSP 시각) -> 입력 동기점 설정
+    //
+    //  시간: GetCurrentTime()은 (현재 DSP - globalStartTime), 즉 게임 상대시간을 돌려준다.
+    //        일시정지 중에는 _pauseDspTime 기준으로 고정하고, 재개 시 흐른 만큼 globalStartTime을 보정한다.
+    //        ※ FMOD DSP 클럭만 사용한다. AudioSettings.dspTime은 기준점이 달라 쓰지 않는다.
+    //
+    //  매 프레임: Update() -> chartManager.SyncTime(GetCurrentTime())
+    //
+    //  입력: HandleLaneInput()/HandleLaneRelease() -> chartManager.TryJudgeInput()/TryJudgeRelease()
+    //        (입력 DSP 시각을 globalStartTime 기준 상대시간으로 변환해 전달한다)
+    //
+    //  판정 수신: ChartManager가 OnNoteJudged()/OnNoteMissed()/OnHoldStart() 등을 호출하면
+    //        scoreManager.ProcessJudge()로 점수를 넘기고, *Event를 발행해 CharacterAnimator에 전파한다.
+    //
+    //  종료: 채보와 음원이 끝나면 ChartManager가 OnGameFinished()를 호출한다 -> 클리어 연출 -> ResultUI 표시.
+    // ──────────────────────────────────────────────────────────────────────────
     public class GameManager : MonoBehaviour, IGameManager
     {
         [Header("참조")]
@@ -23,7 +45,8 @@ namespace SCOdyssey.App
         [Header("BGA")]
         public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
 
-        // 캐릭터 애니메이터 구독용 이벤트
+        // 캐릭터 애니메이터 구독용 이벤트. 아래 On* 콜백(ChartManager가 호출)이 이 이벤트를 발행하고,
+        // CharacterAnimator가 groupID로 필터링해 자기 그룹 이벤트만 처리한다.
         public event Action<JudgeType, NotePosition, int> OnNoteJudgedEvent;
         public event Action<NotePosition, int> OnHoldStartEvent;
         public event Action<NotePosition, int> OnHoldEndEvent;
@@ -32,7 +55,7 @@ namespace SCOdyssey.App
 
 
         [Header("게임 상태")]
-        private double globalStartTime;
+        private double globalStartTime;  // 게임 상대시간의 원점(StartGame 시점의 DSP 시각)
         public bool IsGameRunning { get; private set; } = false;
         public bool IsPaused { get; private set; } = false;
         private double _pauseDspTime;
@@ -230,6 +253,9 @@ namespace SCOdyssey.App
         }
 
 
+        // ── ChartManager 판정 결과 콜백 (IGameManager) ──
+        // ChartManager.ApplyJudgment/CheckMissedNotes/TryJudge*가 호출.
+        // 점수는 ScoreManager로, 연출은 *Event로 CharacterAnimator에 전달한다.
         public void OnNoteJudged(JudgeType judgeType, NotePosition pos, int groupID)
         {
             scoreManager.ProcessJudge(judgeType);
