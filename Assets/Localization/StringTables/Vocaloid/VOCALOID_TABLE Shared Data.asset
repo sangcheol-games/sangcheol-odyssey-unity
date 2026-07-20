@@ -16,7 +16,11 @@ MonoBehaviour:
   m_TableCollectionNameGuidString: df65b7b7ffdb3e34e92c243cd4010b91
   m_Entries:
   - m_Id: 19023679488
-    m_Key: VOCALOID_HATSUNE_MIIKU
+    m_Key: VOCALOID_HATSUNE_MIKU
+    m_Metadata:
+      m_Items: []
+  - m_Id: 54602493003735040
+    m_Key: VOCALOID_OTOMACHI_UNA
     m_Metadata:
       m_Items: []
   m_Metadata:
