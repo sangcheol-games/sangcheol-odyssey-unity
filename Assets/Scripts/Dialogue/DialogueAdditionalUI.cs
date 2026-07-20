@@ -60,6 +60,9 @@ namespace SCOdyssey.Dialogue
             cancelSkip.onClick.AddListener(OnCancelSkipTriggered);
             cancelSkipBg.onClick.AddListener(OnCancelSkipTriggered);    // 투명버튼
             approveSkip.onClick.AddListener(OnApproveSkipTriggered);
+
+
+            // 매니저 찾아다가 호출..
         }
 
         private void OnDisable()
