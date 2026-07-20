@@ -42,13 +42,9 @@ namespace SCOdyssey.Dialogue
 
             isAuto = false;
 
-            backLogPanel.alpha = 0f;
-            backLogPanel.interactable = false;
-            backLogPanel.blocksRaycasts = false;
+            ToggleUI(backLogPanel, false);
 
-            skipAlertPanel.alpha = 0f;
-            skipAlertPanel.interactable = false;
-            skipAlertPanel.blocksRaycasts = false;
+            ToggleUI(skipAlertPanel, false);
 
 
             autoPlay.onClick.AddListener(OnAutoPlayTriggered);
@@ -101,9 +97,7 @@ namespace SCOdyssey.Dialogue
 
         private void OnBackLogTriggered()
         {
-            backLogPanel.alpha = 1f;
-            backLogPanel.interactable = true;
-            backLogPanel.blocksRaycasts = true;
+            ToggleUI(backLogPanel, true);
 
             // 자동진행 강제 종료
             if (isAuto)
@@ -112,9 +106,7 @@ namespace SCOdyssey.Dialogue
 
         private void OnBackLogCloseTriggered()
         {
-            backLogPanel.alpha = 0f;
-            backLogPanel.interactable = false;
-            backLogPanel.blocksRaycasts = false;
+            ToggleUI(backLogPanel, false);
         }
 
         private void OnHideUITriggered()
@@ -122,26 +114,18 @@ namespace SCOdyssey.Dialogue
             // 숨기기
             if (!showUI.interactable)
             {
-                dialoguePanel.alpha = 0f;
-                dialoguePanel.interactable = false;
-                dialoguePanel.blocksRaycasts = false;
+                ToggleUI(dialoguePanel, false);
 
-                topMenuPanel.alpha = 0f;
-                topMenuPanel.interactable = false;
-                topMenuPanel.blocksRaycasts = false;
+                ToggleUI(topMenuPanel, false);
 
                 showUI.interactable = true;
             }
             // 보이기
             else
             {
-                dialoguePanel.alpha = 1f;
-                dialoguePanel.interactable = true;
-                dialoguePanel.blocksRaycasts = true;
+                ToggleUI(dialoguePanel, true);
 
-                topMenuPanel.alpha = 1f;
-                topMenuPanel.interactable = true;
-                topMenuPanel.blocksRaycasts = true;
+                ToggleUI(topMenuPanel, true);
 
                 showUI.interactable = false;
             }
@@ -150,22 +134,36 @@ namespace SCOdyssey.Dialogue
 
         private void OnSkipTriggered()
         {
-            skipAlertPanel.alpha = 1f;
-            skipAlertPanel.interactable = true;
-            skipAlertPanel.blocksRaycasts = true;
+            ToggleUI(skipAlertPanel, true);
         }
 
         private void OnCancelSkipTriggered()
         {
-            skipAlertPanel.alpha = 0f;
-            skipAlertPanel.interactable = false;
-            skipAlertPanel.blocksRaycasts = false;
+            ToggleUI(skipAlertPanel, false);
         }
 
         private void OnApproveSkipTriggered()
         {
             // 래퍼쪽에 호출주는게 낫겠지 (추후)
             DialogueManager.StopAllConversations();
+        }
+
+
+        // 헬퍼
+        private void ToggleUI(CanvasGroup canvas, bool toggle)
+        {
+            if (toggle)
+            {
+                canvas.alpha = 1f;
+                canvas.interactable = true;
+                canvas.blocksRaycasts = true;
+            }
+            else
+            {
+                canvas.alpha = 0f;
+                canvas.interactable = false;
+                canvas.blocksRaycasts = false;
+            }
         }
     }
 }

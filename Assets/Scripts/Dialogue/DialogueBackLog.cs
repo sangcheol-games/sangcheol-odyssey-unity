@@ -9,9 +9,9 @@ namespace SCOdyssey.Dialogue
     public class DialogueBackLog : MonoBehaviour
     {
         private Queue<GameObject> backLogTextQueue;
-        public int maxLogCount = 100;
+        public int maxLogCount = 200;
 
-        // TODO: 풀링 적용하기
+        // 풀링 적용하기?
         public GameObject backLogText;
 
 
