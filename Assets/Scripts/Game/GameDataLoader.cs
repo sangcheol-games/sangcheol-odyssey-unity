@@ -7,6 +7,8 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    // GameScene 진입 시 선택된 곡의 오디오/BGA/채보를 로딩한 뒤 GameManager.StartGame()으로 게임을 시작시키는 부트로더.
+    // 채보는 ChartParser.Parse로 변환 후 GameManager에 캐싱 → 다시하기 시 재파싱 없이 캐시를 재사용한다.
     public class GameDataLoader : MonoBehaviour
     {
 
@@ -73,7 +75,7 @@ namespace SCOdyssey.Game
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
-            // 캐시된 ChartData 확인 (다시하기용)
+            // 캐시된 ChartData 확인 (다시하기용): 있으면 재파싱 없이 그대로 재사용 → ChartManager.Init에서 즉시 시작
             ChartData cachedData = gameManager.GetCachedChartData();
             if (cachedData != null)
             {

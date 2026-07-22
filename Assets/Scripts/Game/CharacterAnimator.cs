@@ -7,6 +7,16 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    // ── 흐름 (이벤트 구동 상태 머신) ──────────────────────────────────────────
+    //
+    //  Start()에서 GameManager의 On*Event(입력/판정/홀드)를 구독한다(OnDestroy에서 해제).
+    //
+    //  이벤트 수신: 각 라우터(OnLaneInputEvent 등)는 groupID로 자기 그룹만 통과시킨 뒤 핸들러로 넘긴다.
+    //        OnLaneInput -> HandleLaneInput(),  OnNoteJudged -> HandleNoteJudged(),  OnHoldStart/Release -> UpdateHoldState()
+    //
+    //  상태 반영: 핸들러가 위치(_pos)와 애니메이션을 정한 뒤 Play(state) + SnapY(y)로 적용한다.
+    //        (같은 프레임 상·하단 동시 입력은 Middle로 승격, 이동 애니메이션은 히트가 덮어쓰지 않음)
+    // ──────────────────────────────────────────────────────────────────────────
     /// <summary>
     /// 캐릭터 상태 머신. 그룹 단위 입력/판정 이벤트를 받아 Y 위치와 애니메이션을 결정한다.
     /// - 입력(OnLaneInput): Y 이동 + Top/Middle/Bottom 또는 Attack(같은 레인 재입력)
@@ -52,6 +62,8 @@ namespace SCOdyssey.Game
                     LoadCharacter(skin);
             }
 
+            // 이벤트 출처: ChartManager 판정/입력 → GameManager On*() 콜백 → 여기 *Event 구독.
+            // 각 핸들러는 groupID로 필터링해 자기 그룹(판정선) 이벤트만 처리한다.
             if (ServiceLocator.TryGet<IGameManager>(out _gameManager))
             {
                 _gameManager.OnLaneInputEvent    += OnLaneInputEvent;

@@ -1,5 +1,6 @@
 namespace SCOdyssey.Game
 {
+    // 홀드 종점 노트(채보 5, 떼는 판정 O): 헤드만 표시. 판정범위 내에서 키를 떼는 타이밍으로 판정(TryJudgeRelease)
     public class HoldReleaseNote : NoteController
     {
         protected override void SetVisual()

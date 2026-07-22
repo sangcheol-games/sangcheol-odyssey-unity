@@ -4,9 +4,16 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    // 채보 텍스트 → ChartData 변환기. 여기서 마디/노트의 모든 시간을 미리 계산해 넣는다.
+    // (런타임에는 시간을 다시 계산하지 않고 이 값을 그대로 판정에 쓴다.)
     public static class ChartParser
     {
 
+        /// <summary>
+        /// 채보 텍스트를 파싱해 ChartData를 만든다(GameDataLoader가 호출).
+        /// 헤더(#KEY value)와 데이터(#마디:채널레인:시퀀스;)를 구분해 처리하고,
+        /// 마디 시작 시각·노트 판정 시각을 모두 계산해 채운다.
+        /// </summary>
         public static ChartData Parse(string chartText, int bpm)
         {
             ChartData chartData = new ChartData();

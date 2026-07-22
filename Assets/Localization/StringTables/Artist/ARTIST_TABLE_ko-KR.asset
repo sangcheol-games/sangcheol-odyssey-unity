@@ -22,6 +22,10 @@ MonoBehaviour:
     m_Localized: MendoZID
     m_Metadata:
       m_Items: []
+  - m_Id: 54603844186185728
+    m_Localized: Maro Note
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

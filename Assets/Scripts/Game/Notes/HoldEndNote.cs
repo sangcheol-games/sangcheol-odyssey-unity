@@ -1,5 +1,6 @@
 namespace SCOdyssey.Game
 {
+    // 홀드 종점 노트(채보 4, 떼는 판정 X): 비주얼 없음. 판정 시점까지 누르고 있으면 자동 Perfect
     public class HoldEndNote : NoteController
     {
         protected override void SetVisual()

@@ -4,6 +4,8 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    // 홀드 시작 노트(채보 2): 일반 노트처럼 눌러 홀드에 진입. 헤드 + 홀드바(Bar)를 소유하며,
+    // 판정선 위치에 맞춰 홀드바 fill을 줄인다. 판정/miss 후에도 홀드바가 다 소모될 때까지 시각적으로 링거링.
     public class HoldStartNote : NoteController
     {
         private Image holdImage;
