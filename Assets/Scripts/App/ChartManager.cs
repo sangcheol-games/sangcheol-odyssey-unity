@@ -287,7 +287,7 @@ namespace SCOdyssey.Game
 
         }
         // 레인 인덱스(0~3) → 그룹 ID. 0~1 = 그룹0(상단), 2~3 = 그룹1(하단)
-        private int GetTrackGroupID(int laneIndex)
+        private static int GetTrackGroupID(int laneIndex)
         {
             return laneIndex <= 1 ? 0 : 1;
         }
@@ -620,7 +620,7 @@ namespace SCOdyssey.Game
 
 
 
-        private NotePosition GetNotePosition(int listIndex)
+        private static NotePosition GetNotePosition(int listIndex)
         {
             // 각 그룹 내 첫 번째 레인(짝수 인덱스) = Top, 두 번째(홀수) = Bottom
             return listIndex % 2 == 0 ? NotePosition.Top : NotePosition.Bottom;
