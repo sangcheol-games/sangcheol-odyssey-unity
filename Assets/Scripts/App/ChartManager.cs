@@ -277,7 +277,10 @@ namespace SCOdyssey.Game
             foreach (int id in _groupsToRemoveBuffer) activeTimelines.Remove(id);
 
             ActivateTimelines();
-            ActivateGhostNotes();
+            _chartState.ActivateGhostNotes(
+                activeTimelines: activeTimelines,
+                tryJudgeInput: TryJudgeInput
+            );
 
             // 5) 마디 번호 증가 후, 그 다음 마디를 다시 선행 준비 (항상 한 마디 앞서 준비 유지)
             currentBarNumber++;
@@ -555,30 +558,6 @@ namespace SCOdyssey.Game
                     _chartState.EnqueueGhostNotes(lane.line - 1, noteController);
                 }
             }
-        }
-
-        /// <summary>
-        /// 마디 시작 시, 모든 레인의 ghostNotes를 Active로 올려 activeNotes(판정 대상)로 이동시킨다.
-        /// HoldStart는 홀드바 fill 애니메이션을 위해 판정선 추적을 연결하고, 선입력 버퍼가 있으면 flush한다.
-        /// </summary>
-        private void ActivateGhostNotes()
-        {
-            _chartState.ActivateGhostNotes(
-                onActivate: (i, note) =>
-                {
-                    // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
-                    // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
-                    if (note.noteData.noteType == NoteType.HoldStart)
-                    {
-                        int groupID = GetTrackGroupID(i);
-                        if (activeTimelines.TryGetValue(groupID, out var timeline))
-                        {
-                            note.TrackTimeline(timeline);
-                        }
-                    }
-                },
-                tryJudgeInput: TryJudgeInput
-            );
         }
 
         #endregion

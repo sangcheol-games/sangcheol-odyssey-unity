@@ -215,8 +215,18 @@ namespace SCOdyssey.Game
             onFlush(inputTime);
         }
 
+        // 레인 인덱스(0~3) → 그룹 ID. 0~1 = 그룹0(상단), 2~3 = 그룹1(하단)
+        private int GetTrackGroupID(int laneIndex)
+        {
+            return laneIndex <= 1 ? 0 : 1;
+        }
+
+        /// <summary>
+        /// 마디 시작 시, 모든 레인의 ghostNotes를 Active로 올려 activeNotes(판정 대상)로 이동시킨다.
+        /// HoldStart는 홀드바 fill 애니메이션을 위해 판정선 추적을 연결하고, 선입력 버퍼가 있으면 flush한다.
+        /// </summary>
         public void ActivateGhostNotes(
-            Action<int, NoteController> onActivate,
+            Dictionary<int, TimelineController> activeTimelines,
             Action<int, double> tryJudgeInput
         ){
             for (int i = 0; i < LANE_COUNT; i++)
@@ -226,7 +236,16 @@ namespace SCOdyssey.Game
                     NoteController note = _lanes[i].ghostNotes.Dequeue();
                     note.SetState(NoteState.Active);
 
-                    onActivate(i, note);
+                    // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
+                    // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
+                    if (note.noteData.noteType == NoteType.HoldStart)
+                    {
+                        int groupID = GetTrackGroupID(i);
+                        if (activeTimelines.TryGetValue(groupID, out var timeline))
+                        {
+                            note.TrackTimeline(timeline);
+                        }
+                    }
 
                     EnqueueActiveNotes(i, note);
                     FlushBufferedInput(
