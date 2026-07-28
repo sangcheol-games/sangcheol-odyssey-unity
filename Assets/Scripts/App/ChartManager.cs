@@ -152,8 +152,14 @@ namespace SCOdyssey.Game
 
             _chartState.SyncTime(
                 time: currentTime,
-                checkMissedNotes: CheckMissedNotes,
-                checkHoldingBody: CheckHoldingBody
+                onNeedToActivate: (targetNote) =>
+                {
+                    gameManager.OnNoteMissed();
+
+                    EffectJudgement(JudgeType.Umm, targetNote);
+                },
+                judgementOffsetSec: _judgmentOffsetSec,
+                applyJudgement: ApplyJudgement2
             );
 
             UpdateCountdowns();
@@ -618,29 +624,6 @@ namespace SCOdyssey.Game
 
         }
 
-        private void CheckHoldingBody(int listIndex)
-        {
-            var queue = _chartState.GetActiveNotes(listIndex: listIndex);
-            if (queue.Count == 0) return;
-
-            //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
-
-            NoteController targetNote = queue.Peek();
-            // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
-            if (targetNote.noteData.noteType != NoteType.Holding &&
-                targetNote.noteData.noteType != NoteType.HoldEnd) return;
-
-            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - _judgmentOffsetSec);
-
-            if (timeDiff < JUDGE_PERFECT)
-            {
-                targetNote.OnHit();
-                ApplyJudgment(targetNote, listIndex, JudgeType.Perfect);
-            }
-
-        }
-
-
         /// <summary>
         /// 키를 뗐을 때 호출. 홀드 상태를 해제하고, 맨 앞 노트가 HoldRelease면 떼는 타이밍을 윈도우로 판정한다.
         /// (HoldRelease가 아니면 릴리즈 판정 없이 상태 해제만)
@@ -691,6 +674,7 @@ namespace SCOdyssey.Game
         /// 판정 확정 공통 처리. 노트를 activeNotes에서 제거하고 OnHit → GameManager로 판정/홀드 콜백 발화 → 이펙트 출력.
         /// GameManager 콜백이 ScoreManager·CharacterAnimator로 전파된다.
         /// </summary>
+        [Obsolete]
         private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
         {
             //Debug.Log($"Note Judged: {type}");
@@ -718,23 +702,29 @@ namespace SCOdyssey.Game
             else
                 EffectJudgement(type, targetNote);
         }
-        
-        /// <summary>
-        /// 맨 앞 노트가 Umm 윈도우(+JUDGE_UMM)까지 지나도록 판정되지 않았으면 miss 처리(Umm).
-        /// SyncTime에서 레인마다 매 프레임 호출.
-        /// </summary>
-        private void CheckMissedNotes(int listIndex, double currentTime)
-        {
-            _chartState.CheckMissedNotes(
-                listIndex: listIndex,
-                currentTime: currentTime,
-                onNoteMissed: (targetNote) =>
-                {
-                    gameManager.OnNoteMissed();
 
-                    EffectJudgement(JudgeType.Umm, targetNote);
-                }
-            );
+        private void ApplyJudgement2(NoteController targetNote, int listIndex, JudgeType type)
+        {
+            NotePosition pos = GetNotePosition(listIndex);
+            int groupID = GetTrackGroupID(listIndex);
+            gameManager.OnNoteJudged(type, pos, groupID);
+
+            // 홀드 관련 이벤트 발화
+            // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
+            // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
+            // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
+            var nt = targetNote.noteData.noteType;
+            if (nt == NoteType.HoldStart || nt == NoteType.Holding)
+                gameManager.OnHoldStart(pos, groupID);
+            else if (nt == NoteType.HoldEnd)
+                gameManager.OnHoldEnd(pos, groupID);
+            else if (nt == NoteType.HoldRelease)
+                gameManager.OnHoldRelease(pos, groupID);
+
+            if (!m_showPerfect && type == JudgeType.Perfect)
+                EffectJudgement(JudgeType.Master, targetNote);
+            else
+                EffectJudgement(type, targetNote);
         }
 
         #endregion

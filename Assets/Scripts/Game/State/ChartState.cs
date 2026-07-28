@@ -69,12 +69,48 @@ namespace SCOdyssey.Game
             }
         }
 
-        public void SyncTime(double time, Action<int, double> checkMissedNotes, Action<int> checkHoldingBody)
-        {
+        public void SyncTime(
+            double time,
+            Action<NoteController> onNeedToActivate,
+            double judgementOffsetSec,
+            Action<NoteController, int, JudgeType> applyJudgement
+        ){
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                checkMissedNotes(i, time);
-                if (_lanes[i].isHolding) checkHoldingBody(i);
+                CheckMissedNotes(i, time, onNeedToActivate);
+                if (_lanes[i].isHolding)
+                    CheckHoldingBody(
+                        listIndex: i,
+                        currentTime: time,
+                        judgementOffsetSec: judgementOffsetSec,
+                        applyJudgement: applyJudgement
+                    );
+            }
+        }
+
+        private void CheckHoldingBody(
+            int listIndex,
+            double currentTime,
+            double judgementOffsetSec,
+            Action<NoteController, int, JudgeType> applyJudgement
+        ){
+            var queue = GetActiveNotes(listIndex: listIndex);
+            if (queue.Count == 0) return;
+
+            //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
+
+            NoteController targetNote = queue.Peek();
+            // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
+            if (targetNote.noteData.noteType != NoteType.Holding &&
+                targetNote.noteData.noteType != NoteType.HoldEnd) return;
+
+            double timeDiff = Math.Abs(currentTime - targetNote.noteData.time - judgementOffsetSec);
+
+            if (timeDiff < JUDGE_PERFECT)
+            {
+                targetNote.OnHit();
+                DequeueActiveNotes(listIndex: listIndex);
+                applyJudgement(targetNote, listIndex, JudgeType.Perfect);
             }
         }
 
@@ -88,7 +124,11 @@ namespace SCOdyssey.Game
             _lanes[index].isCountdownActive = true;
         }
 
-        public void CheckMissedNotes(int listIndex, double currentTime, Action<NoteController> onNoteMissed)
+        /// <summary>
+        /// 맨 앞 노트가 Umm 윈도우(+JUDGE_UMM)까지 지나도록 판정되지 않았으면 miss 처리(Umm).
+        /// SyncTime에서 레인마다 매 프레임 호출.
+        /// </summary>
+        private void CheckMissedNotes(int listIndex, double currentTime, Action<NoteController> onNoteMissed)
         {
             if (_lanes[listIndex].activeNotes.Count == 0) return;
 
