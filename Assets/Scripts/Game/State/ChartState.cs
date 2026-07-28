@@ -16,6 +16,8 @@ namespace SCOdyssey.Game
         }
         private LaneState[] _lanes;
 
+        private double _judgementOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
+
         public ChartState()
         {
             _lanes = new LaneState[LANE_COUNT];
@@ -23,7 +25,7 @@ namespace SCOdyssey.Game
                 _lanes[i] = new LaneState();
         }
 
-        public void Init()
+        public void Init(double judgementOffsetSec)
         {
             for(int i=0; i<LANE_COUNT; ++i)
             {
@@ -33,6 +35,8 @@ namespace SCOdyssey.Game
                 _lanes[i].bufferedInput = null;
                 _lanes[i].isCountdownActive = false;
             }
+
+            _judgementOffsetSec = judgementOffsetSec;
         }
 
         public bool IsGameClear()
@@ -71,7 +75,6 @@ namespace SCOdyssey.Game
         public void SyncTime(
             double time,
             Action<NoteController> onNeedToActivate,
-            double judgementOffsetSec,
             Action<NoteController, int, JudgeType> applyJudgement
         ){
             for (int i = 0; i < LANE_COUNT; i++)
@@ -83,7 +86,6 @@ namespace SCOdyssey.Game
                     CheckNoteBody(
                         listIndex: i,
                         currentTime: time,
-                        judgementOffsetSec: judgementOffsetSec,
                         // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
                         acceptMask: Mask(NoteType.Holding, NoteType.HoldEnd),
                         window: JUDGE_PERFECT,
@@ -97,7 +99,6 @@ namespace SCOdyssey.Game
         public void CheckNoteBody(
             int listIndex,
             double currentTime,
-            double judgementOffsetSec,
             int acceptMask,
             float window,
             Action<NoteController, int, JudgeType> applyJudgement,
@@ -112,7 +113,7 @@ namespace SCOdyssey.Game
             if(!Accepts(acceptMask, note.noteData.noteType)) return;
 
             // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            double timeDiff = Math.Abs(currentTime - note.noteData.time - judgementOffsetSec);
+            double timeDiff = Math.Abs(currentTime - note.noteData.time - _judgementOffsetSec);
 
             // 판정 범위 밖
             if (timeDiff > window)

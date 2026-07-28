@@ -86,8 +86,6 @@ namespace SCOdyssey.Game
 
         private ChartState _chartState;
 
-        private double _judgmentOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
-
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
         private readonly Dictionary<int, bool> _nextGroupDirBuffer = new Dictionary<int, bool>(); // 그룹별 진행 방향(isLTR)
@@ -110,17 +108,19 @@ namespace SCOdyssey.Game
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
 
+            double judgementOffsetSec = 0;
+
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
             {
                 m_showPerfect = settingsManager.Current.showPerfect;
-                _judgmentOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
+                judgementOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
             }
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
             currentBarEndTime = 0f + barDuration;
 
-            _chartState.Init();
+            _chartState.Init(judgementOffsetSec: judgementOffsetSec);
 
             for (int i = 0; i < LANE_COUNT; i++)
             {
@@ -158,7 +158,6 @@ namespace SCOdyssey.Game
 
                     EffectJudgement(JudgeType.Umm, targetNote);
                 },
-                judgementOffsetSec: _judgmentOffsetSec,
                 applyJudgement: ApplyJudgement
             );
 
@@ -590,7 +589,6 @@ namespace SCOdyssey.Game
             _chartState.CheckNoteBody(
                 listIndex: listIndex,
                 currentTime: inputGameTime,
-                judgementOffsetSec: _judgmentOffsetSec,
                 // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
                 acceptMask: Mask(NoteType.Normal, NoteType.HoldStart),
                 window: JUDGE_UMM,
@@ -613,7 +611,6 @@ namespace SCOdyssey.Game
             _chartState.CheckNoteBody(
                 listIndex: listIndex,
                 currentTime: inputGameTime,
-                judgementOffsetSec: _judgmentOffsetSec,
                 // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
                 acceptMask: Mask(NoteType.HoldRelease),
                 window: JUDGE_UMM,
