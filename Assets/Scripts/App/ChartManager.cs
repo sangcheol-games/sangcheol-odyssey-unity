@@ -159,7 +159,7 @@ namespace SCOdyssey.Game
                     EffectJudgement(JudgeType.Umm, targetNote);
                 },
                 judgementOffsetSec: _judgmentOffsetSec,
-                applyJudgement: ApplyJudgement2
+                applyJudgement: ApplyJudgement
             );
 
             UpdateCountdowns();
@@ -608,20 +608,15 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            NoteController targetNote = queue.Peek();
-            if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
-
-            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - _judgmentOffsetSec);
-
-            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
-            {
-                //Debug.Log("판정 범위 밖 입력");
-                return;
-            }
-
-            ApplyJudgment(targetNote, listIndex, GetJudgeType(timeDiff));
-
+            _chartState.CheckNoteBody(
+                listIndex: listIndex,
+                currentTime: inputGameTime,
+                judgementOffsetSec: _judgmentOffsetSec,
+                // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
+                acceptMask: Mask(NoteType.Normal, NoteType.HoldStart),
+                window: JUDGE_UMM,
+                applyJudgement: ApplyJudgement
+            );
         }
 
         /// <summary>
@@ -636,32 +631,17 @@ namespace SCOdyssey.Game
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
             gameManager.OnHoldRelease(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
 
-            var queue = _chartState.GetActiveNotes(listIndex: listIndex);
-            if (queue.Count == 0) return;
-
-            NoteController targetNote = queue.Peek();
-            if (targetNote.noteData.noteType != NoteType.HoldRelease) return; // 릴리즈 판정 노트가 없으면 무시
-
-            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - _judgmentOffsetSec);
-
-            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
-            {
-                Debug.Log("판정 범위 밖 입력");
-                return;
-            }
-
-            ApplyJudgment(targetNote, listIndex, GetJudgeType(timeDiff));
+            _chartState.CheckNoteBody(
+                listIndex: listIndex,
+                currentTime: inputGameTime,
+                judgementOffsetSec: _judgmentOffsetSec,
+                // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
+                acceptMask: Mask(NoteType.HoldRelease),
+                window: JUDGE_UMM,
+                applyJudgement: ApplyJudgement
+            );
         }
 
-        // 타이밍 오차(절댓값, 초)를 판정 등급으로 매핑. 윈도우 상수는 Constants.cs
-        private static JudgeType GetJudgeType(double timeDiff)
-        {
-            if (timeDiff <= JUDGE_PERFECT) return JudgeType.Perfect;
-            if (timeDiff <= JUDGE_MASTER)  return JudgeType.Master;
-            if (timeDiff <= JUDGE_IDEAL)   return JudgeType.Ideal;
-            if (timeDiff <= JUDGE_KIND)    return JudgeType.Kind;
-            return JudgeType.Umm;
-        }
 
 
         private NotePosition GetNotePosition(int listIndex)
@@ -674,36 +654,7 @@ namespace SCOdyssey.Game
         /// 판정 확정 공통 처리. 노트를 activeNotes에서 제거하고 OnHit → GameManager로 판정/홀드 콜백 발화 → 이펙트 출력.
         /// GameManager 콜백이 ScoreManager·CharacterAnimator로 전파된다.
         /// </summary>
-        [Obsolete]
-        private void ApplyJudgment(NoteController targetNote, int listIndex, JudgeType type)
-        {
-            //Debug.Log($"Note Judged: {type}");
-            _chartState.DequeueActiveNotes(listIndex: listIndex);
-            targetNote.OnHit();
-
-            NotePosition pos = GetNotePosition(listIndex);
-            int groupID = GetTrackGroupID(listIndex);
-            gameManager.OnNoteJudged(type, pos, groupID);
-
-            // 홀드 관련 이벤트 발화
-            // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
-            // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
-            // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
-            var nt = targetNote.noteData.noteType;
-            if (nt == NoteType.HoldStart || nt == NoteType.Holding)
-                gameManager.OnHoldStart(pos, groupID);
-            else if (nt == NoteType.HoldEnd)
-                gameManager.OnHoldEnd(pos, groupID);
-            else if (nt == NoteType.HoldRelease)
-                gameManager.OnHoldRelease(pos, groupID);
-
-            if (!m_showPerfect && type == JudgeType.Perfect)
-                EffectJudgement(JudgeType.Master, targetNote);
-            else
-                EffectJudgement(type, targetNote);
-        }
-
-        private void ApplyJudgement2(NoteController targetNote, int listIndex, JudgeType type)
+        private void ApplyJudgement(NoteController targetNote, int listIndex, JudgeType type)
         {
             NotePosition pos = GetNotePosition(listIndex);
             int groupID = GetTrackGroupID(listIndex);

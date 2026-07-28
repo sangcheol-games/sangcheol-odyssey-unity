@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
@@ -78,40 +77,65 @@ namespace SCOdyssey.Game
             for (int i = 0; i < LANE_COUNT; i++)
             {
                 CheckMissedNotes(i, time, onNeedToActivate);
+
                 if (_lanes[i].isHolding)
-                    CheckHoldingBody(
+                {
+                    CheckNoteBody(
                         listIndex: i,
                         currentTime: time,
                         judgementOffsetSec: judgementOffsetSec,
-                        applyJudgement: applyJudgement
+                        // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
+                        acceptMask: Mask(NoteType.Holding, NoteType.HoldEnd),
+                        window: JUDGE_PERFECT,
+                        applyJudgement: applyJudgement,
+                        judgeType: JudgeType.Perfect
                     );
+                }
             }
         }
 
-        private void CheckHoldingBody(
+        public void CheckNoteBody(
             int listIndex,
             double currentTime,
             double judgementOffsetSec,
-            Action<NoteController, int, JudgeType> applyJudgement
+            int acceptMask,
+            float window,
+            Action<NoteController, int, JudgeType> applyJudgement,
+            JudgeType? judgeType = null
         ){
             var queue = GetActiveNotes(listIndex: listIndex);
             if (queue.Count == 0) return;
 
             //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
 
-            NoteController targetNote = queue.Peek();
-            // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
-            if (targetNote.noteData.noteType != NoteType.Holding &&
-                targetNote.noteData.noteType != NoteType.HoldEnd) return;
+            NoteController note = queue.Peek();
+            if(!Accepts(acceptMask, note.noteData.noteType)) return;
 
-            double timeDiff = Math.Abs(currentTime - targetNote.noteData.time - judgementOffsetSec);
+            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
+            double timeDiff = Math.Abs(currentTime - note.noteData.time - judgementOffsetSec);
 
-            if (timeDiff < JUDGE_PERFECT)
+            // 판정 범위 밖
+            if (timeDiff > window)
             {
-                targetNote.OnHit();
-                DequeueActiveNotes(listIndex: listIndex);
-                applyJudgement(targetNote, listIndex, JudgeType.Perfect);
+                //Debug.Log("판정 범위 밖 입력");
+                return;
             }
+
+            //Debug.Log($"Note Judged: {type}");
+            note.OnHit();
+            DequeueActiveNotes(listIndex: listIndex);
+            applyJudgement(note, listIndex, judgeType ?? GetJudgeType(timeDiff));
+        }
+
+
+        // 타이밍 오차(절댓값, 초)를 판정 등급으로 매핑. 윈도우 상수는 Constants.cs
+        private static JudgeType GetJudgeType(double timeDiff)
+        {
+            if (timeDiff <= JUDGE_PERFECT) return JudgeType.Perfect;
+            if (timeDiff <= JUDGE_MASTER)  return JudgeType.Master;
+            if (timeDiff <= JUDGE_IDEAL)   return JudgeType.Ideal;
+            if (timeDiff <= JUDGE_KIND)    return JudgeType.Kind;
+            return JudgeType.Umm;
         }
 
         public void CheckActivateCountdown(int index, double targetTime, Action<int> onNeedToActivate)

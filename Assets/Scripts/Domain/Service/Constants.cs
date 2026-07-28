@@ -40,6 +40,17 @@ namespace SCOdyssey.Domain.Service
             HoldRelease = 5     // 릴리즈 판정: 헤드만 표시, 손을 떼는 판정 담당
         }
 
+        public static int Mask(params NoteType[] types)
+        {
+            int m = 0;
+            foreach(var t in types)
+                m |= 1 << (int)t;
+            return m;
+        }
+
+        public static bool Accepts(int mask, NoteType t)
+            => (mask & (1 << (int)t)) != 0;
+
         public enum JudgeType
         {
             Perfect,
