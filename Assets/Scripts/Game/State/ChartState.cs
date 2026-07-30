@@ -73,6 +73,31 @@ namespace SCOdyssey.Game
             }
         }
 
+        private bool IsPastWindow(
+            NoteController note,
+            double currentTime,
+            float window
+        )
+        {
+            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
+            var targetTime = note.noteData.time + _judgementOffsetSec;
+
+            return targetTime + window < currentTime;
+        }
+
+        private bool IsWithinWindow(
+            NoteController note,
+            double currentTime,
+            float window
+        )
+        {
+            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
+            var targetTime = note.noteData.time + _judgementOffsetSec;
+            double timeDiff = Math.Abs(currentTime - targetTime);
+
+            return timeDiff < window;
+        }
+
         public void SyncTime(
             double time,
             Action<NoteController> onNeedToActivate,
@@ -80,7 +105,11 @@ namespace SCOdyssey.Game
         ){
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                var note = DequeueActiveNotesIfMissed(i, time);
+                var note = TryDequeueActiveNotes(
+                    listIndex: i,
+                    shouldDequeue: (note) => IsPastWindow(note, time, JUDGE_UMM)
+                );
+
                 if(note != null)
                 {
                     note.OnMiss();
@@ -89,17 +118,38 @@ namespace SCOdyssey.Game
 
                 if (_lanes[i].isHolding)
                 {
-                    CheckNoteBody(
+                    note = TryDequeueActiveNotes(
                         listIndex: i,
-                        currentTime: time,
-                        // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
-                        acceptMask: Mask(NoteType.Holding, NoteType.HoldEnd),
-                        window: JUDGE_PERFECT,
-                        applyJudgement: applyJudgement,
-                        judgeType: JudgeType.Perfect
+                        shouldDequeue: (note) =>
+                        {
+                            var typeMatched = Accepts(Mask(NoteType.Holding, NoteType.HoldEnd), note.noteData.noteType);
+                            var insideWindow = IsWithinWindow(note, time, JUDGE_PERFECT); 
+
+                            return typeMatched && insideWindow;
+                        }
                     );
+
+                    if(note != null)
+                    {
+                        //Debug.Log($"Note Judged: {type}");
+                        note.OnHit();
+                        applyJudgement(note, i, JudgeType.Perfect);
+                    }
                 }
             }
+        }
+
+        public NoteController TryDequeueActiveNotes(
+            int listIndex,
+            Func<NoteController, bool> shouldDequeue
+        )
+        {
+            var queue = _lanes[listIndex].activeNotes;
+
+            if(queue.Count == 0) return null;
+            if(!shouldDequeue(queue.Peek())) return null;
+
+            return queue.Dequeue();
         }
 
         public void CheckNoteBody(
@@ -110,28 +160,26 @@ namespace SCOdyssey.Game
             Action<NoteController, int, JudgeType> applyJudgement,
             JudgeType? judgeType = null
         ){
-            var queue = _lanes[listIndex].activeNotes;
-            if (queue.Count == 0) return;
+            var note = TryDequeueActiveNotes(
+                listIndex: listIndex,
+                shouldDequeue: (note) =>
+                {
+                    var typeMatched = Accepts(acceptMask, note.noteData.noteType);
+                    var insideWindow = IsWithinWindow(note, currentTime, window);
 
-            //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
+                    return typeMatched && insideWindow;
+                }
+            );
 
-            NoteController note = queue.Peek();
-            if(!Accepts(acceptMask, note.noteData.noteType)) return;
-
-            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            double timeDiff = Math.Abs(currentTime - note.noteData.time - _judgementOffsetSec);
-
-            // 판정 범위 밖
-            if (timeDiff > window)
+            if(note != null)
             {
-                //Debug.Log("판정 범위 밖 입력");
-                return;
-            }
+                //Debug.Log($"Note Judged: {type}");
+                note.OnHit();
 
-            //Debug.Log($"Note Judged: {type}");
-            note.OnHit();
-            _lanes[listIndex].activeNotes.Dequeue();
-            applyJudgement(note, listIndex, judgeType ?? GetJudgeType(timeDiff));
+                var targetTime = note.noteData.time;
+                double timeDiff = Math.Abs(currentTime - targetTime - _judgementOffsetSec);
+                applyJudgement(note, listIndex, judgeType ?? GetJudgeType(timeDiff));
+            }
         }
 
 
@@ -149,22 +197,6 @@ namespace SCOdyssey.Game
         {
             _lanes[index].countdownTargetTime = targetTime;
             _lanes[index].isCountdownActive = true;
-        }
-
-        private NoteController DequeueActiveNotesIfMissed(int listIndex, double currentTime)
-        {
-            var queue = _lanes[listIndex].activeNotes;
-
-            if (queue.Count == 0)
-                return null;
-
-            var targetTime = queue.Peek().noteData.time;
-            var isMissed = targetTime + JUDGE_UMM < currentTime;
-
-            if (!isMissed)
-                return null;
-
-            return queue.Dequeue();
         }
 
         public void SetLaneHolding(int listIndex, bool value)
