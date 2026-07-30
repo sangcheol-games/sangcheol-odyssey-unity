@@ -73,28 +73,16 @@ namespace SCOdyssey.Game
             }
         }
 
-        private bool IsPastWindow(
+        public double ToNoteLocalTime(NoteController note, double currentTime)
+            => note.noteData.time + _judgementOffsetSec - currentTime;
+
+        public bool IsWithinWindow(
             NoteController note,
             double currentTime,
             float window
         )
         {
-            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            var targetTime = note.noteData.time + _judgementOffsetSec;
-
-            return targetTime + window < currentTime;
-        }
-
-        private bool IsWithinWindow(
-            NoteController note,
-            double currentTime,
-            float window
-        )
-        {
-            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            var targetTime = note.noteData.time + _judgementOffsetSec;
-            double timeDiff = Math.Abs(currentTime - targetTime);
-
+            double timeDiff = Math.Abs(ToNoteLocalTime(note, currentTime));
             return timeDiff < window;
         }
 
@@ -107,7 +95,7 @@ namespace SCOdyssey.Game
             {
                 var note = TryDequeueActiveNotes(
                     listIndex: i,
-                    shouldDequeue: (note) => IsPastWindow(note, time, JUDGE_UMM)
+                    shouldDequeue: (note) => ToNoteLocalTime(note, time) < -JUDGE_UMM
                 );
 
                 if(note != null)
@@ -151,37 +139,6 @@ namespace SCOdyssey.Game
 
             return queue.Dequeue();
         }
-
-        public void CheckNoteBody(
-            int listIndex,
-            double currentTime,
-            int acceptMask,
-            float window,
-            Action<NoteController, int, JudgeType> applyJudgement,
-            JudgeType? judgeType = null
-        ){
-            var note = TryDequeueActiveNotes(
-                listIndex: listIndex,
-                shouldDequeue: (note) =>
-                {
-                    var typeMatched = Accepts(acceptMask, note.noteData.noteType);
-                    var insideWindow = IsWithinWindow(note, currentTime, window);
-
-                    return typeMatched && insideWindow;
-                }
-            );
-
-            if(note != null)
-            {
-                //Debug.Log($"Note Judged: {type}");
-                note.OnHit();
-
-                var targetTime = note.noteData.time;
-                double timeDiff = Math.Abs(currentTime - targetTime - _judgementOffsetSec);
-                applyJudgement(note, listIndex, judgeType ?? GetJudgeType(timeDiff));
-            }
-        }
-
 
         // 타이밍 오차(절댓값, 초)를 판정 등급으로 매핑. 윈도우 상수는 Constants.cs
         private static JudgeType GetJudgeType(double timeDiff)

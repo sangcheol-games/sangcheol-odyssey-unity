@@ -576,14 +576,35 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            _chartState.CheckNoteBody(
+            double timeDiff = 0.0;
+            var note = _chartState.TryDequeueActiveNotes(
                 listIndex: listIndex,
-                currentTime: inputGameTime,
-                // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
-                acceptMask: Mask(NoteType.Normal, NoteType.HoldStart),
-                window: JUDGE_UMM,
-                applyJudgement: ApplyJudgement
+                shouldDequeue: (note) =>
+                {
+                    var typeMatched = Accepts(Mask(NoteType.Normal, NoteType.HoldStart), note.noteData.noteType);
+                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, currentTime));
+                    var insideWindow = timeDiff < JUDGE_UMM;
+
+                    return typeMatched && insideWindow;
+                }
             );
+
+            if(note != null)
+            {
+                //Debug.Log($"Note Judged: {type}");
+                note.OnHit();
+                ApplyJudgement(note, listIndex, GetJudgeType(timeDiff));
+            }
+        }
+
+        // Duplicate of ChartState.GetJudgeType
+        private static JudgeType GetJudgeType(double timeDiff)
+        {
+            if (timeDiff <= JUDGE_PERFECT) return JudgeType.Perfect;
+            if (timeDiff <= JUDGE_MASTER)  return JudgeType.Master;
+            if (timeDiff <= JUDGE_IDEAL)   return JudgeType.Ideal;
+            if (timeDiff <= JUDGE_KIND)    return JudgeType.Kind;
+            return JudgeType.Umm;
         }
 
         /// <summary>
@@ -598,14 +619,25 @@ namespace SCOdyssey.Game
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
             gameManager.OnHoldRelease(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
 
-            _chartState.CheckNoteBody(
+            double timeDiff = 0.0;
+            var note = _chartState.TryDequeueActiveNotes(
                 listIndex: listIndex,
-                currentTime: inputGameTime,
-                // HoldEnd도 Holding과 동일하게 누르고 있는지 판정
-                acceptMask: Mask(NoteType.HoldRelease),
-                window: JUDGE_UMM,
-                applyJudgement: ApplyJudgement
+                shouldDequeue: (note) =>
+                {
+                    var typeMatched = Accepts(Mask(NoteType.HoldRelease), note.noteData.noteType);
+                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, currentTime));
+                    var insideWindow = timeDiff < JUDGE_UMM;
+
+                    return typeMatched && insideWindow;
+                }
             );
+
+            if(note != null)
+            {
+                //Debug.Log($"Note Judged: {type}");
+                note.OnHit();
+                ApplyJudgement(note, listIndex, GetJudgeType(timeDiff));
+            }
         }
 
 
