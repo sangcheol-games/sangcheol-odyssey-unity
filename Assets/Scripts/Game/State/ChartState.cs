@@ -86,6 +86,15 @@ namespace SCOdyssey.Game
             return timeDiff < window;
         }
 
+        private bool IsPastWindow(
+            NoteController note,
+            double currentTime,
+            float window
+        )
+        {
+            return ToNoteLocalTime(note, currentTime) < -window;
+        }
+
         public void SyncTime(
             double time,
             Action<NoteController> onNeedToActivate,
@@ -95,7 +104,7 @@ namespace SCOdyssey.Game
             {
                 var note = TryDequeueActiveNotes(
                     listIndex: i,
-                    shouldDequeue: (note) => ToNoteLocalTime(note, time) < -JUDGE_UMM
+                    shouldDequeue: (note) => IsPastWindow(note, time, JUDGE_UMM)
                 );
 
                 if(note != null)
