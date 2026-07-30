@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
@@ -14,7 +15,7 @@ namespace SCOdyssey.Game
             public double countdownTargetTime;
             public bool isCountdownActive;
         }
-        private LaneState[] _lanes;
+        private readonly LaneState[] _lanes;
 
         private double _judgementOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
 
@@ -139,15 +140,13 @@ namespace SCOdyssey.Game
             return JudgeType.Umm;
         }
 
-        public void CheckActivateCountdown(int index, double targetTime, Action<int> onNeedToActivate)
+        // 특정 카운트다운 슬롯을 켠다.
+        public void ActivateCountdown(int index, double targetTime)
         {
-            if (_lanes[index].isCountdownActive && Math.Abs(_lanes[index].countdownTargetTime - targetTime) < 0.01d) return;
-
-            onNeedToActivate(index);
-
             _lanes[index].countdownTargetTime = targetTime;
             _lanes[index].isCountdownActive = true;
         }
+
 
         /// <summary>
         /// 맨 앞 노트가 Umm 윈도우(+JUDGE_UMM)까지 지나도록 판정되지 않았으면 miss 처리(Umm).

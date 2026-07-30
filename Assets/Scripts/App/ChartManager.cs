@@ -326,23 +326,6 @@ namespace SCOdyssey.Game
                 }
             );
         }
-        
-        // 특정 카운트다운 슬롯을 켠다. 이미 같은 목표 시각으로 켜져 있으면 중복 설정 방지
-        private void ActivateCountdown(int index, double targetTime)
-        {
-            _chartState.CheckActivateCountdown(
-                index: index,
-                targetTime: targetTime,
-                onNeedToActivate: (index) =>
-                {
-                    countdownTexts[index].gameObject.SetActive(true);
-                    countdownTexts[index].text = "";
-                }
-            );
-        }
-
-
-
 
 
         #region Timeline
@@ -403,7 +386,14 @@ namespace SCOdyssey.Game
 
                 // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐: 그룹당 2슬롯 중 LTR=0, RTL=1
                 int uiIndex = (groupID * 2) + (_nextGroupDirBuffer[groupID] ? 0 : 1);
-                ActivateCountdown(uiIndex, nextStartTime);
+
+                _chartState.ActivateCountdown(
+                    index: uiIndex,
+                    targetTime: nextStartTime
+                );
+
+                countdownTexts[uiIndex].gameObject.SetActive(true);
+                countdownTexts[uiIndex].text = "";
             }
 
         }
