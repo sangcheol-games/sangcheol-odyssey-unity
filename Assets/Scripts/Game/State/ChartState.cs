@@ -80,7 +80,12 @@ namespace SCOdyssey.Game
         ){
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                CheckMissedNotes(i, time, onNeedToActivate);
+                var note = DequeueActiveNotesIfMissed(i, time);
+                if(note != null)
+                {
+                    note.OnMiss();
+                    onNeedToActivate(note);
+                }
 
                 if (_lanes[i].isHolding)
                 {
@@ -105,7 +110,7 @@ namespace SCOdyssey.Game
             Action<NoteController, int, JudgeType> applyJudgement,
             JudgeType? judgeType = null
         ){
-            var queue = GetActiveNotes(listIndex: listIndex);
+            var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0) return;
 
             //Debug.Log($"Lane {listIndex+1} Holding now, currentTime: {currentTime}");
@@ -125,7 +130,7 @@ namespace SCOdyssey.Game
 
             //Debug.Log($"Note Judged: {type}");
             note.OnHit();
-            DequeueActiveNotes(listIndex: listIndex);
+            _lanes[listIndex].activeNotes.Dequeue();
             applyJudgement(note, listIndex, judgeType ?? GetJudgeType(timeDiff));
         }
 
@@ -140,31 +145,26 @@ namespace SCOdyssey.Game
             return JudgeType.Umm;
         }
 
-        // 특정 카운트다운 슬롯을 켠다.
         public void ActivateCountdown(int index, double targetTime)
         {
             _lanes[index].countdownTargetTime = targetTime;
             _lanes[index].isCountdownActive = true;
         }
 
-
-        /// <summary>
-        /// 맨 앞 노트가 Umm 윈도우(+JUDGE_UMM)까지 지나도록 판정되지 않았으면 miss 처리(Umm).
-        /// SyncTime에서 레인마다 매 프레임 호출.
-        /// </summary>
-        private void CheckMissedNotes(int listIndex, double currentTime, Action<NoteController> onNoteMissed)
+        private NoteController DequeueActiveNotesIfMissed(int listIndex, double currentTime)
         {
-            if (_lanes[listIndex].activeNotes.Count == 0) return;
+            var queue = _lanes[listIndex].activeNotes;
 
-            NoteController targetNote = _lanes[listIndex].activeNotes.Peek();
+            if (queue.Count == 0)
+                return null;
 
-            if (currentTime > targetNote.noteData.time + JUDGE_UMM)
-            {
-                _lanes[listIndex].activeNotes.Dequeue();
-                targetNote.OnMiss();
+            var targetTime = queue.Peek().noteData.time;
+            var isMissed = targetTime + JUDGE_UMM < currentTime;
 
-                onNoteMissed(targetNote);
-            }
+            if (!isMissed)
+                return null;
+
+            return queue.Dequeue();
         }
 
         public void SetLaneHolding(int listIndex, bool value)
@@ -175,16 +175,6 @@ namespace SCOdyssey.Game
         public Queue<NoteController> GetActiveNotes(int listIndex)
         {
             return _lanes[listIndex].activeNotes;
-        }
-
-        private void EnqueueActiveNotes(int listIndex, NoteController note)
-        {
-            _lanes[listIndex].activeNotes.Enqueue(note);
-        }
-
-        private NoteController DequeueActiveNotes(int listIndex)
-        {
-            return _lanes[listIndex].activeNotes.Dequeue();
         }
 
         public void EnqueueGhostNotes(int index, NoteController note)
@@ -247,7 +237,7 @@ namespace SCOdyssey.Game
                         }
                     }
 
-                    EnqueueActiveNotes(i, note);
+                    _lanes[i].activeNotes.Enqueue(note);
                     FlushBufferedInput(
                         listIndex: i,
                         onFlush: (inputTime) => tryJudgeInput(i + 1, inputTime)
