@@ -177,12 +177,12 @@ namespace SCOdyssey.Game
             return _lanes[listIndex].activeNotes;
         }
 
-        public void EnqueueActiveNotes(int listIndex, NoteController note)
+        private void EnqueueActiveNotes(int listIndex, NoteController note)
         {
             _lanes[listIndex].activeNotes.Enqueue(note);
         }
 
-        public NoteController DequeueActiveNotes(int listIndex)
+        private NoteController DequeueActiveNotes(int listIndex)
         {
             return _lanes[listIndex].activeNotes.Dequeue();
         }
@@ -201,7 +201,7 @@ namespace SCOdyssey.Game
         /// 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
         /// press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
         /// </summary>
-        public void FlushBufferedInput(
+        private void FlushBufferedInput(
             int listIndex,
             Action<double> onFlush
         ){
