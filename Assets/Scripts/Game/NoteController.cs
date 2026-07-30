@@ -4,6 +4,7 @@ using SCOdyssey.App;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
+using UnityEditor.Localization.Plugins.XLIFF.V12;
 
 namespace SCOdyssey.Game
 {
@@ -148,6 +149,17 @@ namespace SCOdyssey.Game
             isJudged = true;
             gameObject.SetActive(false);
             onReturn?.Invoke(this);
+        }
+
+        public bool AnyOf(params NoteType[] types)
+        {
+            foreach(var type in types)
+            {
+                if(noteData.noteType == type)
+                    return true;
+            }
+
+            return false;
         }
     }
 }

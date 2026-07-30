@@ -110,7 +110,7 @@ namespace SCOdyssey.Game
                         listIndex: i,
                         shouldDequeue: (note) =>
                         {
-                            var typeMatched = Accepts(Mask(NoteType.Holding, NoteType.HoldEnd), note.noteData.noteType);
+                            var typeMatched = note.AnyOf(NoteType.Holding, NoteType.HoldEnd);
                             var insideWindow = IsWithinWindow(note, time, JUDGE_PERFECT); 
 
                             return typeMatched && insideWindow;

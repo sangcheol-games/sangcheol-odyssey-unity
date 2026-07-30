@@ -581,7 +581,7 @@ namespace SCOdyssey.Game
                 listIndex: listIndex,
                 shouldDequeue: (note) =>
                 {
-                    var typeMatched = Accepts(Mask(NoteType.Normal, NoteType.HoldStart), note.noteData.noteType);
+                    var typeMatched = note.AnyOf(NoteType.Normal, NoteType.HoldStart);
                     timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, currentTime));
                     var insideWindow = timeDiff < JUDGE_UMM;
 
@@ -624,7 +624,7 @@ namespace SCOdyssey.Game
                 listIndex: listIndex,
                 shouldDequeue: (note) =>
                 {
-                    var typeMatched = Accepts(Mask(NoteType.HoldRelease), note.noteData.noteType);
+                    var typeMatched = note.AnyOf(NoteType.HoldRelease);
                     timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, currentTime));
                     var insideWindow = timeDiff < JUDGE_UMM;
 
