@@ -37,8 +37,6 @@ namespace SCOdyssey.Game
         public RectTransform timelineParent;
         public Transform objectPoolParent;
 
-        private double currentTime;
-
         private bool m_showPerfect;
 
 
@@ -141,28 +139,50 @@ namespace SCOdyssey.Game
         /// </summary>
         public void SyncTime(double time)
         {
-            this.currentTime = time;
-
             // 현재 마디 종료 시각을 넘어서면 다음 마디로 전환하고 종료 조건도 확인
-            if (remainingChart.Count >= 0 && currentTime >= currentBarEndTime)
+            if (this.remainingChart.Count >= 0 && time >= this.currentBarEndTime)
             {
-                StartCurrentBar();
-                CheckGameClear();
+                this.StartCurrentBar();
+                this.CheckGameClear();
             }
 
             _chartState.SyncTime(
-                time: currentTime,
+                time: time,
                 onNeedToActivate: (targetNote) =>
                 {
-                    gameManager.OnNoteMissed();
+                    this.gameManager.OnNoteMissed();
 
                     EffectJudgement(JudgeType.Umm, targetNote);
                 },
-                applyJudgement: ApplyJudgement
+                applyJudgement: this.ApplyJudgement
             );
 
-            UpdateCountdowns();
+            /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1로 표시.
+            /// 목표 시각에 도달하면(남은 시간 &lt;= 0) 텍스트를 끄고 비활성화한다.
+            double beatDuration = this.barDuration / 4.0d;   // ¼마디 = 카운트다운 1칸
 
+            _chartState.UpdateCountdowns(
+                currentTime: time,
+                onTimeDiffMinus: (i) => this.countdownTexts[i].gameObject.SetActive(false),
+                onUpdateRemaining: (i, timeDiff) =>
+                {
+                    double remainingBeats = timeDiff / beatDuration;
+
+                    if (remainingBeats <= 3.01d) 
+                    {
+                        int displayNum = (int)Math.Ceiling(remainingBeats);
+
+                        if (displayNum > 0 && displayNum <= 3)
+                        {
+                            this.countdownTexts[i].text = displayNum.ToString();
+                        }
+                    }
+                    else
+                    {
+                        this.countdownTexts[i].text = "";
+                    }
+                }
+            );
         }
         
         /// <summary>
@@ -293,39 +313,6 @@ namespace SCOdyssey.Game
         }
 
         #endregion
-
-
-        /// <summary>
-        /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1로 표시.
-        /// 목표 시각에 도달하면(남은 시간 &lt;= 0) 텍스트를 끄고 비활성화한다.
-        /// </summary>
-        private void UpdateCountdowns()
-        {
-            double beatDuration = barDuration / 4.0d;   // ¼마디 = 카운트다운 1칸
-
-            _chartState.UpdateCountdowns(
-                currentTime: currentTime,
-                onTimeDiffMinus: (i) => countdownTexts[i].gameObject.SetActive(false),
-                onUpdateRemaining: (i, timeDiff) =>
-                {
-                    double remainingBeats = timeDiff / beatDuration;
-
-                    if (remainingBeats <= 3.01d) 
-                    {
-                        int displayNum = (int)Math.Ceiling(remainingBeats);
-
-                        if (displayNum > 0 && displayNum <= 3)
-                        {
-                            countdownTexts[i].text = displayNum.ToString();
-                        }
-                    }
-                    else
-                    {
-                        countdownTexts[i].text = "";
-                    }
-                }
-            );
-        }
 
 
         #region Timeline
@@ -582,7 +569,7 @@ namespace SCOdyssey.Game
                 shouldDequeue: (note) =>
                 {
                     var typeMatched = note.AnyOf(NoteType.Normal, NoteType.HoldStart);
-                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, currentTime));
+                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, inputGameTime));
                     var insideWindow = timeDiff < JUDGE_UMM;
 
                     return typeMatched && insideWindow;
@@ -625,7 +612,7 @@ namespace SCOdyssey.Game
                 shouldDequeue: (note) =>
                 {
                     var typeMatched = note.AnyOf(NoteType.HoldRelease);
-                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, currentTime));
+                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, inputGameTime));
                     var insideWindow = timeDiff < JUDGE_UMM;
 
                     return typeMatched && insideWindow;
