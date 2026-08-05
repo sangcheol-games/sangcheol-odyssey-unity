@@ -293,7 +293,17 @@ namespace SCOdyssey.Game
 
             foreach (int id in _groupsToRemoveBuffer) activeTimelines.Remove(id);
 
-            ActivateTimelines();
+            // 프리로드된 판정선을 activeTimelines로 승격(실제 이동 시작).
+            foreach (var (groupID, timeline) in preloadedTimelines)
+            {
+                if (!activeTimelines.TryAdd(groupID, timeline))
+                {
+                    Debug.LogWarning("Timeline 승격 중복 발생: 그룹 " + groupID);
+                    ReturnTimelineToPool(timeline.gameObject);
+                }
+            }
+
+            preloadedTimelines.Clear();
             _chartState.ActivateGhostNotes(
                 activeTimelines: activeTimelines,
                 tryJudgeInput: TryJudgeInput
@@ -327,7 +337,7 @@ namespace SCOdyssey.Game
             foreach (var laneData in nextBarLanes)
             {
                 int groupID = GetTrackGroupID(laneData.line - 1);
-                _nextGroupDirBuffer.TryAdd(groupID, laneData.isLTR);
+                _nextGroupDirBuffer[groupID] = laneData.isLTR;
             }
 
             double nextStartTime = currentBarNumber * barDuration;
@@ -374,23 +384,6 @@ namespace SCOdyssey.Game
                 countdownTexts[uiIndex].text = "";
             }
 
-        }
-
-        // 프리로드된 판정선을 activeTimelines로 승격(실제 이동 시작). StartCurrentBar에서 호출
-        private void ActivateTimelines()
-        {
-            foreach (var kvp in preloadedTimelines)
-            {
-                int groupID = kvp.Key;
-                TimelineController timeline = kvp.Value;
-                
-                if (!activeTimelines.TryAdd(groupID, timeline))
-                {
-                    Debug.LogWarning("Timeline 승격 중복 발생: 그룹 " + groupID);
-                    ReturnTimelineToPool(timeline.gameObject);
-                }
-            }
-            preloadedTimelines.Clear();
         }
 
         // 진행 방향에 따른 시작/끝 X 좌표. LTR이면 좌→우, RTL이면 우→좌 (엔드포인트 기준)
