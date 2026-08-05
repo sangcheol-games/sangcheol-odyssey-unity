@@ -85,7 +85,7 @@ namespace SCOdyssey.Game
         private ChartState _chartState;
 
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
-        private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
+        // private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
         private readonly Dictionary<int, bool> _nextGroupDirBuffer = new Dictionary<int, bool>(); // 그룹별 진행 방향(isLTR)
         private readonly List<int> _groupsToRemoveBuffer = new List<int>();          // 이번 전환에서 비활성화할 그룹 목록
 
@@ -253,13 +253,11 @@ namespace SCOdyssey.Game
             }
 
             // 2) 이번 마디에 등장할 그룹과 방향 수집
-            _nextGroupsBuffer.Clear();
             _nextGroupDirBuffer.Clear();
 
             foreach (var lane in nextBarLanes)
             {
                 int groupID = GetTrackGroupID(lane.line - 1);
-                _nextGroupsBuffer.Add(groupID);
                 _nextGroupDirBuffer[groupID] = lane.isLTR;
             }
 
@@ -271,7 +269,7 @@ namespace SCOdyssey.Game
                 int groupID = kvp.Key;
                 TimelineController timeline = kvp.Value;
 
-                if (_nextGroupsBuffer.Contains(groupID) && timeline.isLTR != _nextGroupDirBuffer[groupID])
+                if (_nextGroupDirBuffer.ContainsKey(groupID) && timeline.isLTR != _nextGroupDirBuffer[groupID])
                 {
                     // 재활용: 풀에 반환하지 않고 방향을 뒤집어 새 마디로 다시 Init (캐릭터 중복 교차 방지)
                     bool isLTR = _nextGroupDirBuffer[groupID];
@@ -324,22 +322,17 @@ namespace SCOdyssey.Game
         /// </summary>
         private void PreloadTimelines()
         {
-            _nextGroupsBuffer.Clear();
             _nextGroupDirBuffer.Clear();
 
             foreach (var laneData in nextBarLanes)
             {
                 int groupID = GetTrackGroupID(laneData.line - 1);
-                if (!_nextGroupsBuffer.Contains(groupID))
-                {
-                    _nextGroupsBuffer.Add(groupID);
-                    _nextGroupDirBuffer[groupID] = laneData.isLTR;
-                }
+                _nextGroupDirBuffer.TryAdd(groupID, laneData.isLTR);
             }
 
             double nextStartTime = currentBarNumber * barDuration;
 
-            foreach (int groupID in _nextGroupsBuffer)
+            foreach (var (groupID, isLTR) in _nextGroupDirBuffer)
             {
                 // 이미 이동 중인 판정선이 방향만 반대면 재활용 대상 → 여기서는 새로 만들지 않음
                 bool isReused = false;
@@ -355,9 +348,7 @@ namespace SCOdyssey.Game
                     timeline.transform.SetParent(timelineParent, false);
                     timeline.transform.position = timelineTransforms[groupID].position;
 
-                    bool isLTR = _nextGroupDirBuffer[groupID];
-                    float startX, endX;
-                    GetTimelinePositions(isLTR, out startX, out endX);
+                    GetTimelinePositions(isLTR, out float startX, out float endX);
 
                     timeline.Init(
                         nextStartTime,
