@@ -87,7 +87,6 @@ namespace SCOdyssey.Game
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         // private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
         private readonly Dictionary<int, bool> _nextGroupDirBuffer = new Dictionary<int, bool>(); // 그룹별 진행 방향(isLTR)
-        private readonly List<int> _groupsToRemoveBuffer = new List<int>();          // 이번 전환에서 비활성화할 그룹 목록
 
 
         void Awake()
@@ -262,7 +261,7 @@ namespace SCOdyssey.Game
             }
 
             // 3) 이미 이동 중인 판정선 처리: 같은 그룹인데 방향이 반대면 재활용(유턴), 그 외는 제거 목록에
-            _groupsToRemoveBuffer.Clear();
+            Span<bool> groupsToRemove = stackalloc bool[2]{false, false}; // GroupID는 0 or 1
 
             foreach (var kvp in activeTimelines)
             {
@@ -287,11 +286,14 @@ namespace SCOdyssey.Game
                 }
                 else
                 {
-                    _groupsToRemoveBuffer.Add(groupID);   // 이번 마디에 안 쓰거나 방향 동일 → activeTimelines에서 뺌
+                    groupsToRemove[groupID] = true;   // 이번 마디에 안 쓰거나 방향 동일 → activeTimelines에서 뺌
                 }
             }
 
-            foreach (int id in _groupsToRemoveBuffer) activeTimelines.Remove(id);
+            for(int i=0; i<groupsToRemove.Length; ++i)
+            {
+                if(groupsToRemove[i]) activeTimelines.Remove(i);
+            }
 
             // 프리로드된 판정선을 activeTimelines로 승격(실제 이동 시작).
             foreach (var (groupID, timeline) in preloadedTimelines)
