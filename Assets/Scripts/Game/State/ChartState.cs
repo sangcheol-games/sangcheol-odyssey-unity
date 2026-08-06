@@ -79,8 +79,30 @@ namespace SCOdyssey.Game
 
                 return queue.Dequeue();
             }
+
+            public void ActivateGhostNotes(TimelineController timeline)
+            {
+                while (ghostNotes.Count > 0)
+                {
+                    NoteController note = ghostNotes.Dequeue();
+                    note.SetState(NoteState.Active);
+
+                    activeNotes.Enqueue(note);
+
+                    // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
+                    // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
+                    if (note.noteData.noteType == NoteType.HoldStart)
+                    {
+                        if (timeline != null)
+                        {
+                            note.TrackTimeline(timeline);
+                        }
+                    }
+                }
+            }
         }
 
+        // Helper class for Enumerating LaneStates
         private class LaneList: IEnumerable<(Lane, LaneState)>
         {
             private readonly LaneState[] lanes = new LaneState[LANE_COUNT]
@@ -106,26 +128,6 @@ namespace SCOdyssey.Game
 
             System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
                 => GetEnumerator();
-
-            public void Reset()
-            {
-                for(int i=0; i<LANE_COUNT; ++i)
-                {
-                    lanes[i].Reset();
-                }
-            }
-
-            public bool IsAnyNotesRemain()
-            {
-                for (int i = 0; i < LANE_COUNT; i++)
-                {
-                    if (lanes[i].IsAnyNotesRemain) return true;
-                }
-
-                return false;
-            }
-
-            
         };
 
         private readonly LaneList lanes = new();
@@ -133,12 +135,23 @@ namespace SCOdyssey.Game
 
         public void Init(double judgementOffsetSec)
         {
-            lanes.Reset();
+            foreach(var (_, state) in lanes)
+            {
+                state.Reset();
+            }
 
             _judgementOffsetSec = judgementOffsetSec;
         }
 
-        public bool IsGameClear() => lanes.IsAnyNotesRemain();
+        public bool IsGameClear()
+        {
+            foreach(var (_, state) in lanes)
+            {
+                if (state.IsAnyNotesRemain) return true;
+            }
+
+            return false;
+        }
 
         public void UpdateCountdowns(
             double currentTime,
@@ -283,24 +296,10 @@ namespace SCOdyssey.Game
         ){
             foreach(var (lane, state) in lanes)
             {
-                while (state.ghostNotes.Count > 0)
-                {
-                    NoteController note = state.ghostNotes.Dequeue();
-                    note.SetState(NoteState.Active);
+                var groupID = LaneExtensions.GetGroup(lane);
+                var timeline = activeTimelines[groupID];
 
-                    // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
-                    // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
-                    if (note.noteData.noteType == NoteType.HoldStart)
-                    {
-                        var groupID = LaneExtensions.GetGroup(lane);
-                        if (activeTimelines.TryGetValue(groupID, out var timeline))
-                        {
-                            note.TrackTimeline(timeline);
-                        }
-                    }
-
-                    state.activeNotes.Enqueue(note);
-                }
+                state.ActivateGhostNotes(timeline);
 
                 // 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
                 // press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
