@@ -124,6 +124,8 @@ namespace SCOdyssey.Game
 
                 return false;
             }
+
+            
         };
 
         private readonly LaneList lanes = new();
@@ -272,27 +274,6 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
-        /// press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
-        /// </summary>
-        private void FlushBufferedInput(
-            Lane lane,
-            Action<double> onFlush
-        ){
-            var bufferedInput = lanes[lane].TakeFlushBufferedInput();
-            if (!bufferedInput.HasValue) return;
-            if (!lanes[lane].isHolding) return; // 이미 손을 뗀 경우 폐기
-
-            onFlush((double)bufferedInput);
-        }
-
-        // 레인 인덱스(0~3) → 그룹 ID. 0~1 = 그룹0(상단), 2~3 = 그룹1(하단)
-        private int GetTrackGroupID(int laneIndex)
-        {
-            return laneIndex <= 1 ? 0 : 1;
-        }
-
-        /// <summary>
         /// 마디 시작 시, 모든 레인의 ghostNotes를 Active로 올려 activeNotes(판정 대상)로 이동시킨다.
         /// HoldStart는 홀드바 fill 애니메이션을 위해 판정선 추적을 연결하고, 선입력 버퍼가 있으면 flush한다.
         /// </summary>
@@ -319,10 +300,15 @@ namespace SCOdyssey.Game
                     }
 
                     state.activeNotes.Enqueue(note);
-                    FlushBufferedInput(
-                        lane: lane,
-                        onFlush: (inputTime) => tryJudgeInput((int)lane + 1, inputTime)
-                    );
+                }
+
+                // 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
+                // press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
+                var bufferedInput = state.TakeFlushBufferedInput();
+
+                if(bufferedInput.HasValue && state.isHolding)
+                {
+                    tryJudgeInput((int)lane + 1, (double)bufferedInput);
                 }
             }
         }
