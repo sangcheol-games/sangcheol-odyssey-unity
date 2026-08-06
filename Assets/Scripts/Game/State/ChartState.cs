@@ -12,8 +12,7 @@ namespace SCOdyssey.Game
             public readonly Queue<NoteController> ghostNotes = new();
             public bool isHolding;
             public double? bufferedInput;
-            public double countdownTargetTime;
-            public bool isCountdownActive;
+            public double? countdownTargetTime;
         }
         private readonly LaneState[] _lanes;
 
@@ -34,7 +33,6 @@ namespace SCOdyssey.Game
                 _lanes[i].ghostNotes.Clear();
                 _lanes[i].isHolding = false;
                 _lanes[i].bufferedInput = null;
-                _lanes[i].isCountdownActive = false;
             }
 
             _judgementOffsetSec = judgementOffsetSec;
@@ -58,14 +56,14 @@ namespace SCOdyssey.Game
         ){
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                if (!_lanes[i].isCountdownActive) continue;
+                if (_lanes[i].countdownTargetTime == null) continue;
 
-                double timeDiff = _lanes[i].countdownTargetTime - currentTime;
+                double timeDiff = _lanes[i].countdownTargetTime.Value - currentTime;
 
                 if (timeDiff <= 0)
                 {
                     onTimeDiffMinus(i);
-                    _lanes[i].isCountdownActive = false;
+                    _lanes[i].countdownTargetTime = null;
                     continue;
                 }
 
@@ -162,7 +160,6 @@ namespace SCOdyssey.Game
         public void ActivateCountdown(int index, double targetTime)
         {
             _lanes[index].countdownTargetTime = targetTime;
-            _lanes[index].isCountdownActive = true;
         }
 
         public void SetLaneHolding(int listIndex, bool value)
