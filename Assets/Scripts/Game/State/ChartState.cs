@@ -201,11 +201,11 @@ namespace SCOdyssey.Game
             return ToNoteLocalTime(note, currentTime) < -window;
         }
 
-        public void SyncTime(
+        public void CheckNoteMissed(
             double time,
-            Action<NoteController> onNeedToActivate,
-            Action<NoteController, Lane, JudgeType> applyJudgement
-        ){
+            Action<NoteController> onNoteMissed
+        )
+        {
             foreach(var (_, state) in lanes)
             {
                 if(state.TryDequeueActiveNotes(
@@ -214,10 +214,16 @@ namespace SCOdyssey.Game
                 ))
                 {
                     note.OnMiss();
-                    onNeedToActivate(note);
+                    onNoteMissed(note);
                 }
             }
+        }
 
+        public void CheckNoteHolding(
+            double time,
+            Action<NoteController, Lane, JudgeType> applyJudgement
+        )
+        {
             foreach(var (lane, state) in lanes)
             {
                 if(!state.isHolding) continue;

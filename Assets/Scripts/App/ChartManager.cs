@@ -145,15 +145,19 @@ namespace SCOdyssey.Game
                 this.CheckGameClear();
             }
 
-            _chartState.SyncTime(
+            _chartState.CheckNoteMissed(
                 time: time,
-                onNeedToActivate: (targetNote) =>
+                onNoteMissed: (note) =>
                 {
                     this.gameManager.OnNoteMissed();
 
-                    EffectJudgement(JudgeType.Umm, targetNote);
-                },
-                applyJudgement: this.ApplyJudgement
+                    EffectJudgement(JudgeType.Umm, note);
+                }
+            );
+
+            _chartState.CheckNoteHolding(
+                time: time,
+                applyJudgement: ApplyJudgement
             );
 
             /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1로 표시.
@@ -347,7 +351,7 @@ namespace SCOdyssey.Game
                 // 이미 이동 중인 판정선이 방향만 반대면 재활용 대상 → 여기서는 새로 만들지 않음
                 bool isReused = false;
                 if (activeTimelines.TryGetValue(groupID, out var existing) &&
-                    existing.isLTR != _nextGroupDirBuffer[groupID])
+                    existing.isLTR != isLTR)
                 {
                     isReused = true;
                 }
@@ -373,7 +377,7 @@ namespace SCOdyssey.Game
                 }
 
                 // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐: 그룹당 2슬롯 중 LTR=0, RTL=1
-                int uiIndex = ((int)groupID * 2) + (_nextGroupDirBuffer[groupID] ? 0 : 1);
+                int uiIndex = ((int)groupID * 2) + (isLTR ? 0 : 1);
 
                 _chartState.ActivateCountdown(
                     lane: (Lane)uiIndex,
