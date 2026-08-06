@@ -11,8 +11,6 @@ namespace SCOdyssey.Game
         Bottom,
     };
 
-    
-
     public enum Lane
     {
         TopUpper = 0,
@@ -30,23 +28,24 @@ namespace SCOdyssey.Game
     public class ChartState{
         private class LaneState
         {
-            public readonly Queue<NoteController> activeNotes = new();
-            public readonly Queue<NoteController> ghostNotes = new();
-            public bool IsAnyNotesRemain => activeNotes.Count > 0 || ghostNotes.Count > 0;
+            private readonly Queue<NoteController> activeNotes = new();
+            internal readonly Queue<NoteController> ghostNotes = new();
+            internal bool IsActiveNotesRemain => activeNotes.Count > 0;
+            internal bool IsAnyNotesRemain => IsActiveNotesRemain || ghostNotes.Count > 0;
 
-            public bool isHolding = false;
+            internal bool isHolding = false;
             private double? bufferedInput = null;
-            public double BufferedInput
+            internal double BufferedInput
             {
                 set{ bufferedInput = value; }
             }
             private double? countdownTargetTime = null;
-            public double CountdownTargetTime
+            internal double CountdownTargetTime
             {
                 set{ countdownTargetTime = value; }
             }
 
-            public void Reset()
+            internal void Reset()
             {
                 activeNotes.Clear();
                 ghostNotes.Clear();
@@ -55,32 +54,37 @@ namespace SCOdyssey.Game
                 countdownTargetTime = null;
             }
 
-            public double? TakeFlushBufferedInput()
+            internal double? TakeFlushBufferedInput()
             {
                 var result = bufferedInput;
                 bufferedInput = null;
                 return result;
             }
 
-            public double? TakeCountdownTargetTime()
+            internal double? TakeCountdownTargetTime()
             {
                 var result = countdownTargetTime;
                 countdownTargetTime = null;
                 return result;
             }
 
-            public NoteController TryDequeueActiveNotes(
-                Predicate<NoteController> shouldDequeue
+            internal bool TryDequeueActiveNotes(
+                Predicate<NoteController> shouldDequeue,
+                out NoteController note
             ){
                 var queue = activeNotes;
 
-                if(queue.Count == 0) return null;
-                if(!shouldDequeue(queue.Peek())) return null;
+                if(queue.Count == 0 || !shouldDequeue(queue.Peek()))
+                {
+                    note = default;
+                    return false;
+                }
 
-                return queue.Dequeue();
+                note = queue.Dequeue();
+                return true;
             }
 
-            public void ActivateGhostNotes(TimelineController timeline)
+            internal void ActivateGhostNotes(TimelineController timeline)
             {
                 while (ghostNotes.Count > 0)
                 {
@@ -113,12 +117,12 @@ namespace SCOdyssey.Game
                 new()
             };
 
-            public LaneState this[Lane lane]
+            internal LaneState this[Lane lane]
             {
                 get => lanes[(int)lane];
             }
 
-            public int Count => lanes.Length;
+            internal int Count => lanes.Length;
 
             public IEnumerator<(Lane, LaneState)> GetEnumerator()
             {
@@ -204,11 +208,10 @@ namespace SCOdyssey.Game
         ){
             foreach(var (_, state) in lanes)
             {
-                var note = state.TryDequeueActiveNotes(
-                    shouldDequeue: (note) => IsPastWindow(note, time, JUDGE_UMM)
-                );
-
-                if(note != null)
+                if(state.TryDequeueActiveNotes(
+                    shouldDequeue: (note) => IsPastWindow(note, time, JUDGE_UMM),
+                    out var note
+                ))
                 {
                     note.OnMiss();
                     onNeedToActivate(note);
@@ -219,17 +222,16 @@ namespace SCOdyssey.Game
             {
                 if(!state.isHolding) continue;
 
-                var note = state.TryDequeueActiveNotes(
+                if(state.TryDequeueActiveNotes(
                     shouldDequeue: (note) =>
                     {
                         var typeMatched = note.AnyOf(NoteType.Holding, NoteType.HoldEnd);
                         var insideWindow = IsWithinWindow(note, time, JUDGE_PERFECT); 
 
                         return typeMatched && insideWindow;
-                    }
-                );
-
-                if(note != null)
+                    },
+                    out var note
+                ))
                 {
                     //Debug.Log($"Note Judged: {type}");
                     note.OnHit();
@@ -238,17 +240,80 @@ namespace SCOdyssey.Game
             }
         }
 
-        public NoteController TryDequeueActiveNotes(
+        public bool TryJudgeInput(
             Lane lane,
-            Predicate<NoteController> shouldDequeue
+            double inputGameTime,
+            out NoteController judgedNote,
+            out JudgeType judgeResult
         )
         {
-            var queue = lanes[lane].activeNotes;
+            var state = lanes[lane];
 
-            if(queue.Count == 0) return null;
-            if(!shouldDequeue(queue.Peek())) return null;
+            state.isHolding = true;
 
-            return queue.Dequeue();
+            if (!state.IsActiveNotesRemain)
+            {
+                // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
+                state.BufferedInput = inputGameTime;
+
+                judgedNote = default;
+                judgeResult = default;
+                return false;
+            }
+
+            double timeDiff = 0.0;
+            if(state.TryDequeueActiveNotes(
+                shouldDequeue: (note) =>
+                {
+                    var typeMatched = note.AnyOf(NoteType.Normal, NoteType.HoldStart);
+                    timeDiff = Math.Abs(ToNoteLocalTime(note, inputGameTime));
+                    var insideWindow = timeDiff < JUDGE_UMM;
+
+                    return typeMatched && insideWindow;
+                },
+                out judgedNote
+            ))
+            {
+                judgeResult = GetJudgeType(timeDiff);
+                return true;
+            }
+
+            judgedNote = default;
+            judgeResult = default;
+            return false;
+        }
+
+        public bool TryJudgeRelease(
+            Lane lane,
+            double inputGameTime,
+            out NoteController judgedNote,
+            out JudgeType judgeResult
+        )
+        {
+            var state = lanes[lane];
+
+            state.isHolding = false;
+
+            double timeDiff = 0.0;
+            if(state.TryDequeueActiveNotes(
+                shouldDequeue: (note) =>
+                {
+                    var typeMatched = note.AnyOf(NoteType.HoldRelease);
+                    timeDiff = Math.Abs(ToNoteLocalTime(note, inputGameTime));
+                    var insideWindow = timeDiff < JUDGE_UMM;
+
+                    return typeMatched && insideWindow;
+                },
+                out judgedNote
+            ))
+            {
+                judgeResult = GetJudgeType(timeDiff);
+                return true;
+            }
+
+            judgedNote = default;
+            judgeResult = default;
+            return false;
         }
 
         // 타이밍 오차(절댓값, 초)를 판정 등급으로 매핑. 윈도우 상수는 Constants.cs
@@ -266,24 +331,9 @@ namespace SCOdyssey.Game
             lanes[lane].CountdownTargetTime = targetTime;
         }
 
-        public void SetLaneHolding(Lane lane, bool value)
-        {
-            lanes[lane].isHolding = value;
-        }
-
-        public Queue<NoteController> GetActiveNotes(Lane lane)
-        {
-            return lanes[lane].activeNotes;
-        }
-
         public void EnqueueGhostNotes(Lane lane, NoteController note)
         {
             lanes[lane].ghostNotes.Enqueue(note);
-        }
-
-        public void SetBufferedInput(Lane lane, double inputGameTime)
-        {
-            lanes[lane].BufferedInput = inputGameTime;
         }
 
         /// <summary>
@@ -297,9 +347,14 @@ namespace SCOdyssey.Game
             foreach(var (lane, state) in lanes)
             {
                 var groupID = LaneExtensions.GetGroup(lane);
-                var timeline = activeTimelines[groupID];
 
-                state.ActivateGhostNotes(timeline);
+                if(activeTimelines.TryGetValue(
+                    key: groupID,
+                    out var timeline
+                ))
+                {
+                    state.ActivateGhostNotes(timeline);
+                }
 
                 // 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
                 // press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).

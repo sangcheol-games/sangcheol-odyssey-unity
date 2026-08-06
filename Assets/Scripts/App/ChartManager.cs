@@ -445,6 +445,7 @@ namespace SCOdyssey.Game
 
                     // 어댑터가 노트 타입에 맞는 컨트롤러 컴포넌트를 활성화해 반환(하나의 프리팹이 모든 타입 보유)
                     NoteController noteController = noteAdapter.ActivateAndGet(noteData.noteType);
+                    _chartState.EnqueueGhostNotes((Lane)(lane.line - 1), noteController);
 
                     // 배치 위치: 시작점 + 간격 × 노트 인덱스 × 방향부호. y는 레인 기준점
                     Vector2 spawnPos = new Vector2(
@@ -512,8 +513,6 @@ namespace SCOdyssey.Game
                         // 충돌 없음: 바로 반투명 노출
                         noteController.SetState(NoteState.Ghost);
                     }
-
-                    _chartState.EnqueueGhostNotes((Lane)(lane.line - 1), noteController);
                 }
             }
         }
@@ -530,51 +529,20 @@ namespace SCOdyssey.Game
         {
             var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
             var group = LaneExtensions.GetGroup(lane);
-            _chartState.SetLaneHolding(lane, true);
-
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
             gameManager.OnLaneInput(GetNotePosition((int)lane), (int)group);
 
-            var queue = _chartState.GetActiveNotes(lane);
-            if (queue.Count == 0)
-            {
-                // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
-                _chartState.SetBufferedInput(
-                    lane: lane,
-                    inputGameTime: inputGameTime
-                );
-                return;
-            }
-
-            double timeDiff = 0.0;
-            var note = _chartState.TryDequeueActiveNotes(
+            if(_chartState.TryJudgeInput(
                 lane: lane,
-                shouldDequeue: (note) =>
-                {
-                    var typeMatched = note.AnyOf(NoteType.Normal, NoteType.HoldStart);
-                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, inputGameTime));
-                    var insideWindow = timeDiff < JUDGE_UMM;
-
-                    return typeMatched && insideWindow;
-                }
-            );
-
-            if(note != null)
+                inputGameTime: inputGameTime,
+                out var judgedNote,
+                out var judgeResult
+            ))
             {
                 //Debug.Log($"Note Judged: {type}");
-                note.OnHit();
-                ApplyJudgement(note, lane, GetJudgeType(timeDiff));
+                judgedNote.OnHit();
+                ApplyJudgement(judgedNote, lane, judgeResult);
             }
-        }
-
-        // Duplicate of ChartState.GetJudgeType
-        private static JudgeType GetJudgeType(double timeDiff)
-        {
-            if (timeDiff <= JUDGE_PERFECT) return JudgeType.Perfect;
-            if (timeDiff <= JUDGE_MASTER)  return JudgeType.Master;
-            if (timeDiff <= JUDGE_IDEAL)   return JudgeType.Ideal;
-            if (timeDiff <= JUDGE_KIND)    return JudgeType.Kind;
-            return JudgeType.Umm;
         }
 
         /// <summary>
@@ -585,29 +553,20 @@ namespace SCOdyssey.Game
         {
             var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
             var group = LaneExtensions.GetGroup(lane);
-            _chartState.SetLaneHolding(lane, false);
 
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
             gameManager.OnHoldRelease(GetNotePosition((int)lane), (int)group);
 
-            double timeDiff = 0.0;
-            var note = _chartState.TryDequeueActiveNotes(
+            if(_chartState.TryJudgeRelease(
                 lane: lane,
-                shouldDequeue: (note) =>
-                {
-                    var typeMatched = note.AnyOf(NoteType.HoldRelease);
-                    timeDiff = Math.Abs(_chartState.ToNoteLocalTime(note, inputGameTime));
-                    var insideWindow = timeDiff < JUDGE_UMM;
-
-                    return typeMatched && insideWindow;
-                }
-            );
-
-            if(note != null)
+                inputGameTime: inputGameTime,
+                out var judgedNote,
+                out var judgeResult
+            ))
             {
                 //Debug.Log($"Note Judged: {type}");
-                note.OnHit();
-                ApplyJudgement(note, lane, GetJudgeType(timeDiff));
+                judgedNote.OnHit();
+                ApplyJudgement(judgedNote, lane, judgeResult);
             }
         }
 
