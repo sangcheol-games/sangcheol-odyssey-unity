@@ -341,8 +341,7 @@ namespace SCOdyssey.Game
         /// HoldStart는 홀드바 fill 애니메이션을 위해 판정선 추적을 연결하고, 선입력 버퍼가 있으면 flush한다.
         /// </summary>
         public void ActivateGhostNotes(
-            Dictionary<LaneGroup, TimelineController> activeTimelines,
-            Action<int, double> tryJudgeInput
+            Dictionary<LaneGroup, TimelineController> activeTimelines
         ){
             foreach(var (lane, state) in lanes)
             {
@@ -355,14 +354,30 @@ namespace SCOdyssey.Game
                 {
                     state.ActivateGhostNotes(timeline);
                 }
+            }
+        }
 
+        public void ConsumeBufferedInput(
+            Action<NoteController, Lane, JudgeType> applyJudgement
+        )
+        {
+            foreach(var (lane, state) in lanes)
+            {
                 // 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
                 // press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
                 var bufferedInput = state.TakeFlushBufferedInput();
 
-                if(bufferedInput.HasValue && state.isHolding)
+                if(!bufferedInput.HasValue || !state.isHolding) continue;
+
+                if(TryJudgeInput(
+                    lane: lane,
+                    (double) bufferedInput,
+                    out var judgedNote,
+                    out var judgeResult
+                ))
                 {
-                    tryJudgeInput((int)lane + 1, (double)bufferedInput);
+                    judgedNote.OnHit();
+                    applyJudgement(judgedNote, lane, judgeResult);
                 }
             }
         }

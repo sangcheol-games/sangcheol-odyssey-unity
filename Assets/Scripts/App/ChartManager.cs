@@ -303,8 +303,10 @@ namespace SCOdyssey.Game
 
             preloadedTimelines.Clear();
             _chartState.ActivateGhostNotes(
-                activeTimelines: activeTimelines,
-                tryJudgeInput: TryJudgeInput
+                activeTimelines: activeTimelines
+            );
+            _chartState.ConsumeBufferedInput(
+                applyJudgement: ApplyJudgement
             );
 
             // 5) 마디 번호 증가 후, 그 다음 마디를 다시 선행 준비 (항상 한 마디 앞서 준비 유지)
@@ -525,13 +527,8 @@ namespace SCOdyssey.Game
         /// 키를 눌렀을 때 호출(GameManager가 라우팅). 해당 레인 activeNotes의 맨 앞 노트를 판정 윈도우로 판정한다.
         /// 노트가 아직 없으면 선입력으로 버퍼링. Normal/HoldStart만 눌러서 판정(홀드 본체/릴리즈는 별도 경로).
         /// </summary>
-        public void TryJudgeInput(int laneIndex, double inputGameTime)
+        public void TryJudgeInput(Lane lane, double inputGameTime)
         {
-            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
-            var group = LaneExtensions.GetGroup(lane);
-            // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            gameManager.OnLaneInput(GetNotePosition((int)lane), (int)group);
-
             if(_chartState.TryJudgeInput(
                 lane: lane,
                 inputGameTime: inputGameTime,
@@ -549,14 +546,8 @@ namespace SCOdyssey.Game
         /// 키를 뗐을 때 호출. 홀드 상태를 해제하고, 맨 앞 노트가 HoldRelease면 떼는 타이밍을 윈도우로 판정한다.
         /// (HoldRelease가 아니면 릴리즈 판정 없이 상태 해제만)
         /// </summary>
-        public void TryJudgeRelease(int laneIndex, double inputGameTime)
+        public void TryJudgeRelease(Lane lane, double inputGameTime)
         {
-            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
-            var group = LaneExtensions.GetGroup(lane);
-
-            // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            gameManager.OnHoldRelease(GetNotePosition((int)lane), (int)group);
-
             if(_chartState.TryJudgeRelease(
                 lane: lane,
                 inputGameTime: inputGameTime,

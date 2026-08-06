@@ -236,14 +236,32 @@ namespace SCOdyssey.App
         private void HandleLaneInput(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
-            chartManager.TryJudgeInput(laneIndex, inputDspTime - globalStartTime);
+
+            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
+            var group = LaneExtensions.GetGroup(lane);
+            // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
+            OnLaneInput(GetNotePosition((int)lane), (int)group);
+
+            chartManager.TryJudgeInput(lane, inputDspTime - globalStartTime);
         }
 
         private void HandleLaneRelease(int laneIndex, double inputDspTime)
         {
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {laneIndex} Released");
-            chartManager.TryJudgeRelease(laneIndex, inputDspTime - globalStartTime);
+
+            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
+            var group = LaneExtensions.GetGroup(lane);
+            // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
+            OnHoldRelease(GetNotePosition((int)lane), (int)group);
+
+            chartManager.TryJudgeRelease(lane, inputDspTime - globalStartTime);
+        }
+
+        private static NotePosition GetNotePosition(int listIndex)
+        {
+            // 각 그룹 내 첫 번째 레인(짝수 인덱스) = Top, 두 번째(홀수) = Bottom
+            return listIndex % 2 == 0 ? NotePosition.Top : NotePosition.Bottom;
         }
 
         private void HandleRestart()
