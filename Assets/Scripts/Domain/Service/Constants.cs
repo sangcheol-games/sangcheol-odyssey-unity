@@ -3,6 +3,7 @@ namespace SCOdyssey.Domain.Service
 {
     public static class Constants
     {
+        public const int LANE_GROUP_COUNT = 2;
         public const int LANE_COUNT = 4;   // 레인 수. ChartManager의 _lanes/countdownTexts 배열 크기
 
 

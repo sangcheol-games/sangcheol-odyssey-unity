@@ -58,10 +58,10 @@ namespace SCOdyssey.Game
         [Header("판정선")]
         public GameObject timelinePrefab; // 판정선 프리팹
         private Queue<GameObject> timelinePool = new Queue<GameObject>();
-        public RectTransform[] timelineTransforms = new RectTransform[2];   // 판정선의 상하 위치 좌표
+        public RectTransform[] timelineTransforms = new RectTransform[LANE_GROUP_COUNT];   // 판정선의 상하 위치 좌표
         // 판정선 상태 2단계: preloaded(다음 마디용으로 생성만 됨) → active(현재 마디에서 실제 이동 중). key = 그룹ID(0/1)
-        private Dictionary<int, TimelineController> activeTimelines = new Dictionary<int, TimelineController>();
-        private Dictionary<int, TimelineController> preloadedTimelines = new Dictionary<int, TimelineController>();
+        private Dictionary<LaneGroup, TimelineController> activeTimelines = new();
+        private Dictionary<LaneGroup, TimelineController> preloadedTimelines = new();
 
 
 
@@ -86,7 +86,7 @@ namespace SCOdyssey.Game
 
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         // private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
-        private readonly Dictionary<int, bool> _nextGroupDirBuffer = new Dictionary<int, bool>(); // 그룹별 진행 방향(isLTR)
+        private readonly Dictionary<LaneGroup, bool> _nextGroupDirBuffer = new(); // 그룹별 진행 방향(isLTR)
 
 
         void Awake()
@@ -162,8 +162,8 @@ namespace SCOdyssey.Game
 
             _chartState.UpdateCountdowns(
                 currentTime: time,
-                onTimeDiffMinus: (i) => this.countdownTexts[i].gameObject.SetActive(false),
-                onUpdateRemaining: (i, timeDiff) =>
+                onTimeDiffMinus: (lane) => this.countdownTexts[(int)lane].gameObject.SetActive(false),
+                onUpdateRemaining: (lane, timeDiff) =>
                 {
                     double remainingBeats = timeDiff / beatDuration;
 
@@ -173,12 +173,12 @@ namespace SCOdyssey.Game
 
                         if (displayNum > 0 && displayNum <= 3)
                         {
-                            this.countdownTexts[i].text = displayNum.ToString();
+                            this.countdownTexts[(int)lane].text = displayNum.ToString();
                         }
                     }
                     else
                     {
-                        this.countdownTexts[i].text = "";
+                        this.countdownTexts[(int)lane].text = "";
                     }
                 }
             );
@@ -256,24 +256,20 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                int groupID = GetTrackGroupID(lane.line - 1);
+                var groupID = LaneExtensions.GetGroup((Lane)(lane.line - 1));
                 _nextGroupDirBuffer[groupID] = lane.isLTR;
             }
 
             // 3) 이미 이동 중인 판정선 처리: 같은 그룹인데 방향이 반대면 재활용(유턴), 그 외는 제거 목록에
             Span<bool> groupsToRemove = stackalloc bool[2]{false, false}; // GroupID는 0 or 1
 
-            foreach (var kvp in activeTimelines)
+            foreach (var (groupID, timeline) in activeTimelines)
             {
-                int groupID = kvp.Key;
-                TimelineController timeline = kvp.Value;
-
                 if (_nextGroupDirBuffer.ContainsKey(groupID) && timeline.isLTR != _nextGroupDirBuffer[groupID])
                 {
                     // 재활용: 풀에 반환하지 않고 방향을 뒤집어 새 마디로 다시 Init (캐릭터 중복 교차 방지)
                     bool isLTR = _nextGroupDirBuffer[groupID];
-                    float startX, endX;
-                    GetTimelinePositions(isLTR, out startX, out endX);
+                    GetTimelinePositions(isLTR, out float startX, out float endX);
 
                     timeline.Init(
                         startTime,
@@ -281,18 +277,18 @@ namespace SCOdyssey.Game
                         startX,
                         endX,
                         (timeline) => { ReturnTimelineToPool(timeline.gameObject); },
-                        groupID: groupID
+                        groupID: (int)groupID
                     );
                 }
                 else
                 {
-                    groupsToRemove[groupID] = true;   // 이번 마디에 안 쓰거나 방향 동일 → activeTimelines에서 뺌
+                    groupsToRemove[(int)groupID] = true;   // 이번 마디에 안 쓰거나 방향 동일 → activeTimelines에서 뺌
                 }
             }
 
             for(int i=0; i<groupsToRemove.Length; ++i)
             {
-                if(groupsToRemove[i]) activeTimelines.Remove(i);
+                if(groupsToRemove[i]) activeTimelines.Remove((LaneGroup)i);
             }
 
             // 프리로드된 판정선을 activeTimelines로 승격(실제 이동 시작).
@@ -336,10 +332,10 @@ namespace SCOdyssey.Game
         {
             _nextGroupDirBuffer.Clear();
 
-            foreach (var laneData in nextBarLanes)
+            foreach (var lane in nextBarLanes)
             {
-                int groupID = GetTrackGroupID(laneData.line - 1);
-                _nextGroupDirBuffer[groupID] = laneData.isLTR;
+                var groupID = LaneExtensions.GetGroup((Lane)(lane.line - 1));
+                _nextGroupDirBuffer[groupID] = lane.isLTR;
             }
 
             double nextStartTime = currentBarNumber * barDuration;
@@ -358,7 +354,7 @@ namespace SCOdyssey.Game
                 {
                     TimelineController timeline = GetTimelineFromPool();
                     timeline.transform.SetParent(timelineParent, false);
-                    timeline.transform.position = timelineTransforms[groupID].position;
+                    timeline.transform.position = timelineTransforms[(int)groupID].position;
 
                     GetTimelinePositions(isLTR, out float startX, out float endX);
 
@@ -368,17 +364,17 @@ namespace SCOdyssey.Game
                         startX,
                         endX,
                         (timeline) => { ReturnTimelineToPool(timeline.gameObject); },
-                        groupID: groupID
+                        groupID: (int)groupID
                     );
 
                     preloadedTimelines.Add(groupID, timeline);
                 }
 
                 // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐: 그룹당 2슬롯 중 LTR=0, RTL=1
-                int uiIndex = (groupID * 2) + (_nextGroupDirBuffer[groupID] ? 0 : 1);
+                int uiIndex = ((int)groupID * 2) + (_nextGroupDirBuffer[groupID] ? 0 : 1);
 
                 _chartState.ActivateCountdown(
-                    index: uiIndex,
+                    lane: (Lane)uiIndex,
                     targetTime: nextStartTime
                 );
 
@@ -425,7 +421,7 @@ namespace SCOdyssey.Game
                 // 노트 배치 시작점 x좌표 위치
                 float laneStartX = lane.isLTR ? leftEndpoint.anchoredPosition.x : rightEndpoint.anchoredPosition.x;
 
-                int groupID = GetTrackGroupID(lane.line - 1);
+                var groupID = LaneExtensions.GetGroup((Lane)(lane.line - 1));
 
                 // 충돌 = 현재 이동 중인 판정선과 같은 그룹을 다음 마디에서도 사용하는 경우(고난이도).
                 // 이때 다음 마디 노트를 그냥 Ghost로 띄우면 현재 판정선과 겹쳐 난잡 → Hidden으로 숨겼다가 판정선이 지난 뒤 Ghost로 전환.
@@ -517,7 +513,7 @@ namespace SCOdyssey.Game
                         noteController.SetState(NoteState.Ghost);
                     }
 
-                    _chartState.EnqueueGhostNotes(lane.line - 1, noteController);
+                    _chartState.EnqueueGhostNotes((Lane)(lane.line - 1), noteController);
                 }
             }
         }
@@ -532,18 +528,19 @@ namespace SCOdyssey.Game
         /// </summary>
         public void TryJudgeInput(int laneIndex, double inputGameTime)
         {
-            int listIndex = laneIndex - 1;  // 인덱스 보정
-            _chartState.SetLaneHolding(listIndex, true);
+            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
+            var group = LaneExtensions.GetGroup(lane);
+            _chartState.SetLaneHolding(lane, true);
 
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            gameManager.OnLaneInput(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
+            gameManager.OnLaneInput(GetNotePosition((int)lane), (int)group);
 
-            var queue = _chartState.GetActiveNotes(listIndex);
+            var queue = _chartState.GetActiveNotes(lane);
             if (queue.Count == 0)
             {
                 // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
                 _chartState.SetBufferedInput(
-                    listIndex: listIndex,
+                    lane: lane,
                     inputGameTime: inputGameTime
                 );
                 return;
@@ -551,7 +548,7 @@ namespace SCOdyssey.Game
 
             double timeDiff = 0.0;
             var note = _chartState.TryDequeueActiveNotes(
-                listIndex: listIndex,
+                lane: lane,
                 shouldDequeue: (note) =>
                 {
                     var typeMatched = note.AnyOf(NoteType.Normal, NoteType.HoldStart);
@@ -566,7 +563,7 @@ namespace SCOdyssey.Game
             {
                 //Debug.Log($"Note Judged: {type}");
                 note.OnHit();
-                ApplyJudgement(note, listIndex, GetJudgeType(timeDiff));
+                ApplyJudgement(note, lane, GetJudgeType(timeDiff));
             }
         }
 
@@ -586,15 +583,16 @@ namespace SCOdyssey.Game
         /// </summary>
         public void TryJudgeRelease(int laneIndex, double inputGameTime)
         {
-            int listIndex = laneIndex - 1;
-            _chartState.SetLaneHolding(listIndex: listIndex, false);
+            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
+            var group = LaneExtensions.GetGroup(lane);
+            _chartState.SetLaneHolding(lane, false);
 
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            gameManager.OnHoldRelease(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
+            gameManager.OnHoldRelease(GetNotePosition((int)lane), (int)group);
 
             double timeDiff = 0.0;
             var note = _chartState.TryDequeueActiveNotes(
-                listIndex: listIndex,
+                lane: lane,
                 shouldDequeue: (note) =>
                 {
                     var typeMatched = note.AnyOf(NoteType.HoldRelease);
@@ -609,7 +607,7 @@ namespace SCOdyssey.Game
             {
                 //Debug.Log($"Note Judged: {type}");
                 note.OnHit();
-                ApplyJudgement(note, listIndex, GetJudgeType(timeDiff));
+                ApplyJudgement(note, lane, GetJudgeType(timeDiff));
             }
         }
 
@@ -625,8 +623,9 @@ namespace SCOdyssey.Game
         /// 판정 확정 공통 처리. 노트를 activeNotes에서 제거하고 OnHit → GameManager로 판정/홀드 콜백 발화 → 이펙트 출력.
         /// GameManager 콜백이 ScoreManager·CharacterAnimator로 전파된다.
         /// </summary>
-        private void ApplyJudgement(NoteController targetNote, int listIndex, JudgeType type)
+        private void ApplyJudgement(NoteController targetNote, Lane lane, JudgeType type)
         {
+            var listIndex = (int)lane;
             NotePosition pos = GetNotePosition(listIndex);
             int groupID = GetTrackGroupID(listIndex);
             gameManager.OnNoteJudged(type, pos, groupID);

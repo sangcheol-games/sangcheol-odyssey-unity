@@ -5,69 +5,158 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    public enum LaneGroup
+    {
+        Top,
+        Bottom,
+    };
+
+    
+
+    public enum Lane
+    {
+        TopUpper = 0,
+        TopLower = 1,
+        BottomUpper = 2,
+        BottomLower = 3,
+    };
+
+    public static class LaneExtensions
+    {
+        public static LaneGroup GetGroup(this Lane lane)
+            => (int)lane < 2 ? LaneGroup.Top : LaneGroup.Bottom;
+    };
+
     public class ChartState{
         private class LaneState
         {
             public readonly Queue<NoteController> activeNotes = new();
             public readonly Queue<NoteController> ghostNotes = new();
-            public bool isHolding;
-            public double? bufferedInput;
-            public double? countdownTargetTime;
+            public bool IsAnyNotesRemain => activeNotes.Count > 0 || ghostNotes.Count > 0;
+
+            public bool isHolding = false;
+            private double? bufferedInput = null;
+            public double BufferedInput
+            {
+                set{ bufferedInput = value; }
+            }
+            private double? countdownTargetTime = null;
+            public double CountdownTargetTime
+            {
+                set{ countdownTargetTime = value; }
+            }
+
+            public void Reset()
+            {
+                activeNotes.Clear();
+                ghostNotes.Clear();
+                isHolding = false;
+                bufferedInput = null;
+                countdownTargetTime = null;
+            }
+
+            public double? TakeFlushBufferedInput()
+            {
+                var result = bufferedInput;
+                bufferedInput = null;
+                return result;
+            }
+
+            public double? TakeCountdownTargetTime()
+            {
+                var result = countdownTargetTime;
+                countdownTargetTime = null;
+                return result;
+            }
+
+            public NoteController TryDequeueActiveNotes(
+                Predicate<NoteController> shouldDequeue
+            ){
+                var queue = activeNotes;
+
+                if(queue.Count == 0) return null;
+                if(!shouldDequeue(queue.Peek())) return null;
+
+                return queue.Dequeue();
+            }
         }
-        private readonly LaneState[] _lanes;
 
-        private double _judgementOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
-
-        public ChartState()
+        private class LaneList: IEnumerable<(Lane, LaneState)>
         {
-            _lanes = new LaneState[LANE_COUNT];
-            for (int i = 0; i < LANE_COUNT; i++)
-                _lanes[i] = new LaneState();
-        }
+            private readonly LaneState[] lanes = new LaneState[LANE_COUNT]
+            {
+                new(),
+                new(),
+                new(),
+                new()
+            };
+
+            public LaneState this[Lane lane]
+            {
+                get => lanes[(int)lane];
+            }
+
+            public int Count => lanes.Length;
+
+            public IEnumerator<(Lane, LaneState)> GetEnumerator()
+            {
+                for (int i = 0; i < lanes.Length; i++)
+                    yield return ((Lane)i, lanes[i]);
+            }
+
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+                => GetEnumerator();
+
+            public void Reset()
+            {
+                for(int i=0; i<LANE_COUNT; ++i)
+                {
+                    lanes[i].Reset();
+                }
+            }
+
+            public bool IsAnyNotesRemain()
+            {
+                for (int i = 0; i < LANE_COUNT; i++)
+                {
+                    if (lanes[i].IsAnyNotesRemain) return true;
+                }
+
+                return false;
+            }
+        };
+
+        private readonly LaneList lanes = new();
+        private double _judgementOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
 
         public void Init(double judgementOffsetSec)
         {
-            for(int i=0; i<LANE_COUNT; ++i)
-            {
-                _lanes[i].activeNotes.Clear();
-                _lanes[i].ghostNotes.Clear();
-                _lanes[i].isHolding = false;
-                _lanes[i].bufferedInput = null;
-            }
+            lanes.Reset();
 
             _judgementOffsetSec = judgementOffsetSec;
         }
 
-        public bool IsGameClear()
-        {
-            for (int i = 0; i < LANE_COUNT; i++)
-            {
-                if (_lanes[i].activeNotes.Count > 0) return true;
-                if (_lanes[i].ghostNotes.Count > 0) return true;
-            }
-
-            return false;
-        }
+        public bool IsGameClear() => lanes.IsAnyNotesRemain();
 
         public void UpdateCountdowns(
             double currentTime,
-            Action<int> onTimeDiffMinus,
-            Action<int, double> onUpdateRemaining
+            Action<Lane> onTimeDiffMinus,
+            Action<Lane, double> onUpdateRemaining
         ){
-            for (int i = 0; i < LANE_COUNT; i++)
+            foreach(var (lane, state) in lanes)
             {
-                if (_lanes[i].countdownTargetTime == null) continue;
+                var countdownTargetTime = state.TakeCountdownTargetTime();
+                if(!countdownTargetTime.HasValue) continue;
 
-                double timeDiff = _lanes[i].countdownTargetTime.Value - currentTime;
-
-                if (timeDiff <= 0)
+                double timeDiff = countdownTargetTime.Value - currentTime;
+                if(timeDiff < 0)
                 {
-                    onTimeDiffMinus(i);
-                    _lanes[i].countdownTargetTime = null;
-                    continue;
+                    onTimeDiffMinus(lane);
                 }
-
-                onUpdateRemaining(i, timeDiff);
+                else
+                {
+                    onUpdateRemaining(lane, timeDiff);
+                }
             }
         }
 
@@ -96,12 +185,11 @@ namespace SCOdyssey.Game
         public void SyncTime(
             double time,
             Action<NoteController> onNeedToActivate,
-            Action<NoteController, int, JudgeType> applyJudgement
+            Action<NoteController, Lane, JudgeType> applyJudgement
         ){
-            for (int i = 0; i < LANE_COUNT; i++)
+            foreach(var (_, state) in lanes)
             {
-                var note = TryDequeueActiveNotes(
-                    listIndex: i,
+                var note = state.TryDequeueActiveNotes(
                     shouldDequeue: (note) => IsPastWindow(note, time, JUDGE_UMM)
                 );
 
@@ -110,36 +198,37 @@ namespace SCOdyssey.Game
                     note.OnMiss();
                     onNeedToActivate(note);
                 }
+            }
 
-                if (_lanes[i].isHolding)
-                {
-                    note = TryDequeueActiveNotes(
-                        listIndex: i,
-                        shouldDequeue: (note) =>
-                        {
-                            var typeMatched = note.AnyOf(NoteType.Holding, NoteType.HoldEnd);
-                            var insideWindow = IsWithinWindow(note, time, JUDGE_PERFECT); 
+            foreach(var (lane, state) in lanes)
+            {
+                if(!state.isHolding) continue;
 
-                            return typeMatched && insideWindow;
-                        }
-                    );
-
-                    if(note != null)
+                var note = state.TryDequeueActiveNotes(
+                    shouldDequeue: (note) =>
                     {
-                        //Debug.Log($"Note Judged: {type}");
-                        note.OnHit();
-                        applyJudgement(note, i, JudgeType.Perfect);
+                        var typeMatched = note.AnyOf(NoteType.Holding, NoteType.HoldEnd);
+                        var insideWindow = IsWithinWindow(note, time, JUDGE_PERFECT); 
+
+                        return typeMatched && insideWindow;
                     }
+                );
+
+                if(note != null)
+                {
+                    //Debug.Log($"Note Judged: {type}");
+                    note.OnHit();
+                    applyJudgement(note, lane, JudgeType.Perfect);
                 }
             }
         }
 
         public NoteController TryDequeueActiveNotes(
-            int listIndex,
-            Func<NoteController, bool> shouldDequeue
+            Lane lane,
+            Predicate<NoteController> shouldDequeue
         )
         {
-            var queue = _lanes[listIndex].activeNotes;
+            var queue = lanes[lane].activeNotes;
 
             if(queue.Count == 0) return null;
             if(!shouldDequeue(queue.Peek())) return null;
@@ -157,29 +246,29 @@ namespace SCOdyssey.Game
             return JudgeType.Umm;
         }
 
-        public void ActivateCountdown(int index, double targetTime)
+        public void ActivateCountdown(Lane lane, double targetTime)
         {
-            _lanes[index].countdownTargetTime = targetTime;
+            lanes[lane].CountdownTargetTime = targetTime;
         }
 
-        public void SetLaneHolding(int listIndex, bool value)
+        public void SetLaneHolding(Lane lane, bool value)
         {
-            _lanes[listIndex].isHolding = value;
+            lanes[lane].isHolding = value;
         }
 
-        public Queue<NoteController> GetActiveNotes(int listIndex)
+        public Queue<NoteController> GetActiveNotes(Lane lane)
         {
-            return _lanes[listIndex].activeNotes;
+            return lanes[lane].activeNotes;
         }
 
-        public void EnqueueGhostNotes(int index, NoteController note)
+        public void EnqueueGhostNotes(Lane lane, NoteController note)
         {
-            _lanes[index].ghostNotes.Enqueue(note);
+            lanes[lane].ghostNotes.Enqueue(note);
         }
 
-        public void SetBufferedInput(int listIndex, double inputGameTime)
+        public void SetBufferedInput(Lane lane, double inputGameTime)
         {
-            _lanes[listIndex].bufferedInput = inputGameTime;
+            lanes[lane].BufferedInput = inputGameTime;
         }
 
         /// <summary>
@@ -187,17 +276,14 @@ namespace SCOdyssey.Game
         /// press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
         /// </summary>
         private void FlushBufferedInput(
-            int listIndex,
+            Lane lane,
             Action<double> onFlush
         ){
-            if (!_lanes[listIndex].bufferedInput.HasValue) return;
+            var bufferedInput = lanes[lane].TakeFlushBufferedInput();
+            if (!bufferedInput.HasValue) return;
+            if (!lanes[lane].isHolding) return; // 이미 손을 뗀 경우 폐기
 
-            double inputTime = _lanes[listIndex].bufferedInput.Value;
-            _lanes[listIndex].bufferedInput = null;
-
-            if (!_lanes[listIndex].isHolding) return; // 이미 손을 뗀 경우 폐기
-
-            onFlush(inputTime);
+            onFlush((double)bufferedInput);
         }
 
         // 레인 인덱스(0~3) → 그룹 ID. 0~1 = 그룹0(상단), 2~3 = 그룹1(하단)
@@ -211,31 +297,31 @@ namespace SCOdyssey.Game
         /// HoldStart는 홀드바 fill 애니메이션을 위해 판정선 추적을 연결하고, 선입력 버퍼가 있으면 flush한다.
         /// </summary>
         public void ActivateGhostNotes(
-            Dictionary<int, TimelineController> activeTimelines,
+            Dictionary<LaneGroup, TimelineController> activeTimelines,
             Action<int, double> tryJudgeInput
         ){
-            for (int i = 0; i < LANE_COUNT; i++)
+            foreach(var (lane, state) in lanes)
             {
-                while (_lanes[i].ghostNotes.Count > 0)
+                while (state.ghostNotes.Count > 0)
                 {
-                    NoteController note = _lanes[i].ghostNotes.Dequeue();
+                    NoteController note = state.ghostNotes.Dequeue();
                     note.SetState(NoteState.Active);
 
                     // HoldStart만 타임라인 추적: 홀드바 fill 애니메이션에 사용
                     // Holding/HoldEnd는 비주얼 없으므로 추적 불필요
                     if (note.noteData.noteType == NoteType.HoldStart)
                     {
-                        int groupID = GetTrackGroupID(i);
+                        var groupID = LaneExtensions.GetGroup(lane);
                         if (activeTimelines.TryGetValue(groupID, out var timeline))
                         {
                             note.TrackTimeline(timeline);
                         }
                     }
 
-                    _lanes[i].activeNotes.Enqueue(note);
+                    state.activeNotes.Enqueue(note);
                     FlushBufferedInput(
-                        listIndex: i,
-                        onFlush: (inputTime) => tryJudgeInput(i + 1, inputTime)
+                        lane: lane,
+                        onFlush: (inputTime) => tryJudgeInput((int)lane + 1, inputTime)
                     );
                 }
             }
