@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using SCOdyssey.Dialogue;
 
 
 namespace SCOdyssey.App
@@ -11,12 +10,20 @@ namespace SCOdyssey.App
         public event Action OnDialogueSubmit;
         public event Action OnDialogueCancel;
 
+        public event Action<bool> OnDialogueLoaded;
 
-        bool LoadConversationData();
-        // 무슨 데이터로 받아야할까
+        event Action OnConversationEnd;
+
 
         void LoadDialogueScene(bool isFloating);
+        void LoadDialogueScene(bool isFloating, string name, bool fromResource = false);
 
-        void DialogueOnConversationEnd();
+        void UnloadDialogueScene(bool isFloating);
+
+
+        void LoadDialogue(string name, bool fromResource = false);
+
+        bool PlayConversation(string conversation);
+        void QuitConversation();
     }
 }

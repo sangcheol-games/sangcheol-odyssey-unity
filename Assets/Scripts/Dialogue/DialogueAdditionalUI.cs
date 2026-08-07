@@ -1,12 +1,19 @@
+using PixelCrushers.DialogueSystem;
+using SCOdyssey.App;
+using SCOdyssey.Core;
 using UnityEngine;
 using UnityEngine.UI;
-using PixelCrushers.DialogueSystem;
 
 
 namespace SCOdyssey.Dialogue
 {
     public class DialogueAdditionalUI : MonoBehaviour
     {
+        private IDialogueManager _SCODialogueManager;
+
+
+        private bool isAuto;
+
         [Header("Buttons")]
         public Button autoPlay;
         public Button backLog;
@@ -30,11 +37,13 @@ namespace SCOdyssey.Dialogue
         public Button approveSkip;
 
 
-        private bool isAuto;
-
 
         private void OnEnable()
         {
+            if (!ServiceLocator.TryGet<IDialogueManager>(out _SCODialogueManager))
+                Debug.LogError("[DialogueAdditionalUI] IDialogueManager not found in ServiceLocator!");
+
+
             // 기본값 세팅
             DialogueManager.displaySettings.subtitleSettings.subtitleCharsPerSecond = 40;
             DialogueManager.displaySettings.subtitleSettings.minSubtitleSeconds = 3;
@@ -147,8 +156,7 @@ namespace SCOdyssey.Dialogue
 
         private void OnApproveSkipTriggered()
         {
-            // 래퍼쪽에 호출주는게 낫겠지 (추후)
-            DialogueManager.StopAllConversations();
+            _SCODialogueManager.QuitConversation();
         }
 
 
