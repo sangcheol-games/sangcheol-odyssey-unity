@@ -64,10 +64,10 @@ namespace SCOdyssey.Dialogue
             backLogClose.onClick.AddListener(OnBackLogCloseTriggered);
             backLogCloseBg.onClick.AddListener(OnBackLogCloseTriggered);    // 투명버튼
 
-            showUI.onClick.AddListener(OnHideUITriggered);      // 투명버튼
+            showUI.onClick.AddListener(OnHideUITriggered);                  // 투명버튼
 
             cancelSkip.onClick.AddListener(OnCancelSkipTriggered);
-            cancelSkipBg.onClick.AddListener(OnCancelSkipTriggered);    // 투명버튼
+            cancelSkipBg.onClick.AddListener(OnCancelSkipTriggered);        // 투명버튼
             approveSkip.onClick.AddListener(OnApproveSkipTriggered);
 
 

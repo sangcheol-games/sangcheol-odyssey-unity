@@ -36,7 +36,7 @@ namespace SCOdyssey.App
             else
             {
                 SceneManager.LoadScene("DialogueScene", LoadSceneMode.Single);
-                // 카메라 옮겨오기? 필요한가
+                // 기존 방식대로 Single
             }
 
             _inputManager.SwitchToDialogue();
@@ -47,10 +47,15 @@ namespace SCOdyssey.App
             LoadDialogueScene(isFloating);
 
             LoadDialogue(name, fromResource);
+            // 비동기(플로팅) 처리 시 안전하지 않음
         }
 
         public void UnloadDialogueScene(bool isFloating)
         {
+            if (continueButton != null)
+                continueButton = null;
+
+
             if (currentDialogue != null)
                 DialogueManager.RemoveDatabase(currentDialogue);
 
@@ -78,7 +83,7 @@ namespace SCOdyssey.App
             currentDialogue = null;
             isLoading = true;
 
-            // StreamingAssets (추후수정)
+            // StreamingAssets (서버 연동 시 수정)
             if (!fromResource)
             {
                 string bundlePath = System.IO.Path.Combine(Application.streamingAssetsPath, "Dialogue", name);
@@ -139,7 +144,17 @@ namespace SCOdyssey.App
                     OnDialogueLoaded?.Invoke(true);
                 };
             }
-            
+
+
+
+            var currentUI = DialogueManager.dialogueUI as StandardDialogueUI;
+            if (currentUI == null)
+            {
+                Debug.LogError($"[SCODialogueManager] LoadDialogue 다이얼로그UI 획득 실패");
+                return;
+            }
+
+            continueButton = currentUI.GetComponentInChildren<StandardUIContinueButtonFastForward>();
         }
 
 
@@ -213,15 +228,13 @@ namespace SCOdyssey.App
 
         private void HandleDialogueSelect(Vector2 input)
         {
-            // ? 어케쓰지
+            //
         }
 
         private void HandleDialogueSubmit()
         {
             if (DialogueManager.isConversationActive && continueButton != null)
-            {
                 continueButton.OnFastForward();
-            }
         }
 
         private void HandleDialogueCancel()

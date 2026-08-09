@@ -51,6 +51,9 @@ namespace SCOdyssey.App
             ServiceLocator.TryRegister<IAudioManager>(fmodAudio);
 
             // targetFrameRate는 SettingsManager.Apply()에서 설정값으로 적용됨
+
+            var dialManager = new SCODialogueManager();
+            ServiceLocator.TryRegister<IDialogueManager>(dialManager);
         }
 
 
