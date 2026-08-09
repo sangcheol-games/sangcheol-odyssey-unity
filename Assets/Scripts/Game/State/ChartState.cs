@@ -40,8 +40,9 @@ namespace SCOdyssey.Game
                 set{ bufferedInput = value; }
             }
             private double? countdownTargetTime = null;
-            internal double CountdownTargetTime
+            internal double? CountdownTargetTime
             {
+                get{ return countdownTargetTime; }
                 set{ countdownTargetTime = value; }
             }
 
@@ -58,13 +59,6 @@ namespace SCOdyssey.Game
             {
                 var result = bufferedInput;
                 bufferedInput = null;
-                return result;
-            }
-
-            internal double? TakeCountdownTargetTime()
-            {
-                var result = countdownTargetTime;
-                countdownTargetTime = null;
                 return result;
             }
 
@@ -147,14 +141,17 @@ namespace SCOdyssey.Game
             _judgementOffsetSec = judgementOffsetSec;
         }
 
-        public bool IsGameClear()
+        public bool HasRemainingNotes
         {
-            foreach(var (_, state) in lanes)
+            get
             {
-                if (state.IsAnyNotesRemain) return true;
-            }
+                foreach(var (_, state) in lanes)
+                {
+                    if (state.IsAnyNotesRemain) return true;
+                }
 
-            return false;
+                return false;
+            }
         }
 
         public void UpdateCountdowns(
@@ -164,13 +161,14 @@ namespace SCOdyssey.Game
         ){
             foreach(var (lane, state) in lanes)
             {
-                var countdownTargetTime = state.TakeCountdownTargetTime();
+                var countdownTargetTime = state.CountdownTargetTime;
                 if(!countdownTargetTime.HasValue) continue;
 
                 double timeDiff = countdownTargetTime.Value - currentTime;
-                if(timeDiff < 0)
+                if(timeDiff <= 0)
                 {
                     onTimeDiffMinus(lane);
+                    state.CountdownTargetTime = null;
                 }
                 else
                 {

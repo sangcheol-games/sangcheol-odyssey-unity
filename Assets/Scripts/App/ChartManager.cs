@@ -139,7 +139,7 @@ namespace SCOdyssey.Game
         public void SyncTime(double time)
         {
             // 현재 마디 종료 시각을 넘어서면 다음 마디로 전환하고 종료 조건도 확인
-            if (this.remainingChart.Count >= 0 && time >= this.currentBarEndTime)
+            if (time >= this.currentBarEndTime)
             {
                 this.StartCurrentBar();
                 this.CheckGameClear();
@@ -200,7 +200,7 @@ namespace SCOdyssey.Game
             if (remainingChart.Count > 0) return;
             if (nextBarLanes.Count > 0) return;
 
-            if(_chartState.IsGameClear()) return;
+            if (_chartState.HasRemainingNotes) return;
 
             // 음악이 아직 재생 중이면 대기
             if (gameManager.IsAudioPlaying) return;
