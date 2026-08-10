@@ -9,12 +9,16 @@ namespace SCOdyssey.Dialogue
 {
     public class DialogueAdditionalUI : MonoBehaviour
     {
-        private IDialogueManager _SCODialogueManager;
+        private IDialogueManager _SCODialogueManager = null;
+
+        private StandardDialogueUI standardDialogueUI = null;
+        private StandardUIContinueButtonFastForward stdContinueButton = null;
 
 
         private bool isAuto;
 
-        [Header("Buttons")]
+
+        [Header("Button")]
         public Button autoPlay;
         public Button backLog;
         public Button hideUI;
@@ -28,7 +32,8 @@ namespace SCOdyssey.Dialogue
         [Header("HideUI")]
         public CanvasGroup dialoguePanel;
         public CanvasGroup topMenuPanel;
-        public Button showUI;
+        public CanvasGroup showUI;
+        public Button showUIBtn;
 
         [Header("Skip")]
         public CanvasGroup skipAlertPanel;
@@ -36,6 +41,10 @@ namespace SCOdyssey.Dialogue
         public Button cancelSkipBg;
         public Button approveSkip;
 
+        [Header("ETC")]
+        public Image endLineUI;
+        public TextMeshProTypewriterEffect typewriter;
+        public GameObject skipBtnObject;
 
 
         private void OnEnable()
@@ -44,9 +53,19 @@ namespace SCOdyssey.Dialogue
                 Debug.LogError("[DialogueAdditionalUI] IDialogueManager not found in ServiceLocator!");
 
 
-            // 기본값 세팅
-            DialogueManager.displaySettings.subtitleSettings.subtitleCharsPerSecond = 40;
-            DialogueManager.displaySettings.subtitleSettings.minSubtitleSeconds = 3;
+            if (!gameObject.TryGetComponent<StandardDialogueUI>(out standardDialogueUI))
+                standardDialogueUI = DialogueManager.dialogueUI as StandardDialogueUI;
+
+            if (standardDialogueUI == null)
+                Debug.LogError("[DialogueAdditionalUI] StandardDialogueUI not found");
+
+
+            stdContinueButton = standardDialogueUI.GetComponentInChildren<StandardUIContinueButtonFastForward>();
+
+
+            // 기본 에디터에서 수정 (Dialogue Manager 오브젝트 -> Subtitle Settings)
+            //DialogueManager.displaySettings.subtitleSettings.subtitleCharsPerSecond = 40;
+            //DialogueManager.displaySettings.subtitleSettings.minSubtitleSeconds = 3;
 
 
             isAuto = false;
@@ -54,6 +73,9 @@ namespace SCOdyssey.Dialogue
             ToggleUI(backLogPanel, false);
 
             ToggleUI(skipAlertPanel, false);
+
+            ToggleUI(showUI, false);
+            
 
 
             autoPlay.onClick.AddListener(OnAutoPlayTriggered);
@@ -64,14 +86,34 @@ namespace SCOdyssey.Dialogue
             backLogClose.onClick.AddListener(OnBackLogCloseTriggered);
             backLogCloseBg.onClick.AddListener(OnBackLogCloseTriggered);    // 투명버튼
 
-            showUI.onClick.AddListener(OnHideUITriggered);                  // 투명버튼
+            showUIBtn.onClick.AddListener(OnHideUITriggered);               // 투명버튼
 
             cancelSkip.onClick.AddListener(OnCancelSkipTriggered);
             cancelSkipBg.onClick.AddListener(OnCancelSkipTriggered);        // 투명버튼
             approveSkip.onClick.AddListener(OnApproveSkipTriggered);
 
 
-            // 매니저 찾아다가 호출..
+            // 마침 UI 표시설정
+            endLineUI.enabled = false;
+
+            if (typewriter != null)
+            {
+                typewriter.onBegin.AddListener(() =>
+                {
+                    endLineUI.enabled = false;
+                });
+
+                typewriter.onEnd.AddListener(() =>
+                {
+                    endLineUI.enabled = true;
+
+                    // 효과재생 시 UX
+                    if (DialogueManager.isConversationActive && DialogueManager.conversationView.sequencer != null)
+                    {
+                        DialogueManager.conversationView.sequencer.Stop();
+                    }
+                });
+            }
         }
 
         private void OnDisable()
@@ -82,9 +124,12 @@ namespace SCOdyssey.Dialogue
             skip.onClick.RemoveAllListeners();
 
             backLogClose.onClick.RemoveAllListeners();
-            showUI.onClick.RemoveAllListeners();
+            showUIBtn.onClick.RemoveAllListeners();
             cancelSkip.onClick.RemoveAllListeners();
             approveSkip.onClick.RemoveAllListeners();
+
+            typewriter.onBegin.RemoveAllListeners();
+            typewriter.onEnd.RemoveAllListeners();
         }
 
 
@@ -98,7 +143,7 @@ namespace SCOdyssey.Dialogue
                     = DisplaySettings.SubtitleSettings.ContinueButtonMode.Never;
 
                 if (DialogueManager.isConversationActive)
-                    (DialogueManager.dialogueUI as StandardDialogueUI)?.OnContinueConversation();
+                    standardDialogueUI.OnContinueConversation();
             }
             else
             {
@@ -130,7 +175,7 @@ namespace SCOdyssey.Dialogue
 
                 ToggleUI(topMenuPanel, false);
 
-                showUI.interactable = true;
+                ToggleUI(showUI, true);
             }
             // 보이기
             else
@@ -139,7 +184,7 @@ namespace SCOdyssey.Dialogue
 
                 ToggleUI(topMenuPanel, true);
 
-                showUI.interactable = false;
+                ToggleUI(showUI, false);
             }
         }
 

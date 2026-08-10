@@ -14,11 +14,39 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp-firstpass::PixelCrushers.Wrappers.TextTable
   m_languageKeys:
   - Default
-  - ko
-  - en
-  - jp
+  - ko-KR
+  - ja-JP
+  - en-US
   m_languageValues: 00000000010000000200000003000000
-  m_fieldKeys: 
-  m_fieldValues: []
+  m_fieldKeys: 01000000020000000300000004000000
+  m_fieldValues:
+  - m_fieldName: Auto
+    m_keys: 01000000020000000300000000000000
+    m_values:
+    - "\uC790\uB3D9"
+    - Auto
+    - "\uC77C\uBCF8\uC5B4"
+    - 
+  - m_fieldName: BackLog
+    m_keys: 01000000020000000300000000000000
+    m_values:
+    - "\uB85C\uADF8"
+    - BackLog
+    - 
+    - 
+  - m_fieldName: HideUI
+    m_keys: 01000000020000000300000000000000
+    m_values:
+    - "\uC228\uAE30\uAE30"
+    - HideUI
+    - 
+    - 
+  - m_fieldName: Skip
+    m_keys: 01000000020000000300000000000000
+    m_values:
+    - "\uC2A4\uD0B5"
+    - Skip
+    - "\uBAA8\uB984"
+    - 
   m_nextLanguageID: 4
-  m_nextFieldID: 1
+  m_nextFieldID: 5

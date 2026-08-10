@@ -281,18 +281,18 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2012144290}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dddab24af7a02a54c9631fd5c532d7c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  inputDevice: 0
-  joystickKeyCodesToCheck: 4a0100004b0100004c01000051010000
+  inputDevice: 2
+  joystickKeyCodesToCheck: 
   joystickButtonsToCheck: []
   joystickAxesToCheck: []
   joystickAxisThreshold: 0.5
   keyButtonsToCheck: []
-  keyCodesToCheck: 1b000000
+  keyCodesToCheck: 
   keyInputSwitchesModeTo: 1
   alwaysAutoFocus: 0
   detectMouseControl: 1
@@ -324,13 +324,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2012144290}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e168378c6dd4b8408a51d7be3b9c422, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp-firstpass::PixelCrushers.Wrappers.UILocalizationManager
-  m_currentLanguagePlayerPrefsKey: Language
-  m_textTable: {fileID: 0}
+  m_currentLanguagePlayerPrefsKey: 
+  m_textTable: {fileID: 11400000, guid: 015194a2cffbd7b4cbde6140e85164d1, type: 2}
   m_additionalTextTables: []
   m_localizedFonts: {fileID: 0}
   m_saveLanguageInPlayerPrefs: 1
@@ -359,10 +359,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 666481558848520769, guid: 539d015409d5fd745bba517bba26466b, type: 3}
-      propertyPath: m_Enabled
-      value: 0
-      objectReference: {fileID: 0}
+    - target: {fileID: 252055996324592960, guid: 539d015409d5fd745bba517bba26466b, type: 3}
+      propertyPath: displaySettings.cameraSettings.sequencerCamera
+      value: 
+      objectReference: {fileID: 1103884319}
     - target: {fileID: 6707478028107086438, guid: 539d015409d5fd745bba517bba26466b, type: 3}
       propertyPath: m_Camera
       value: 
@@ -411,8 +411,7 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 666481558848520769, guid: 539d015409d5fd745bba517bba26466b, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

@@ -11,7 +11,6 @@ namespace SCOdyssey.Dialogue
         private Queue<GameObject> backLogTextQueue;
         public int maxLogCount = 200;
 
-        // 풀링 적용하기?
         public GameObject backLogText;
 
 
@@ -19,12 +18,12 @@ namespace SCOdyssey.Dialogue
         {
             backLogTextQueue = new Queue<GameObject>();
 
-            DialogueManager.instance.conversationLinePrepared += OnConversationLine;
+            DialogueManager.instance.conversationLinePrepared += RecordToBacklog;
         }
 
         private void OnDisable()
         {
-            DialogueManager.instance.conversationLinePrepared -= OnConversationLine;
+            DialogueManager.instance.conversationLinePrepared -= RecordToBacklog;
 
             foreach (GameObject go in backLogTextQueue)
             {
@@ -35,10 +34,10 @@ namespace SCOdyssey.Dialogue
         }
 
 
-        private void OnConversationLine(Subtitle subtitle)
+        private void RecordToBacklog(Subtitle subtitle)
         {
             if (subtitle == null || subtitle.formattedText == null || string.IsNullOrEmpty(subtitle.formattedText.text)) return;
-            string speakerName = (subtitle.speakerInfo != null && subtitle.speakerInfo.transform != null) ? subtitle.speakerInfo.Name : "(null speaker)";
+            string speakerName = (subtitle.speakerInfo != null) ? subtitle.speakerInfo.Name : "(null speaker)";
 
             string lineText = subtitle.formattedText.text;
 

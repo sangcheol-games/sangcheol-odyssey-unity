@@ -6,11 +6,7 @@ namespace SCOdyssey.App
 {
     public interface IDialogueManager
     {
-        public event Action<Vector2> OnDialogueSelect;
-        public event Action OnDialogueSubmit;
-        public event Action OnDialogueCancel;
-
-        public event Action<bool> OnDialogueLoaded;
+        public event Action<bool> OnDialogueLoaded;     // 인자로 성공/실패 반환
 
         event Action OnConversationEnd;
 
