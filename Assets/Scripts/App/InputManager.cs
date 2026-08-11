@@ -15,6 +15,10 @@ namespace SCOdyssey.App
         public event Action OnRestart;
         public event Action OnPause;
 
+        public event Action<Vector2> OnDialogueSelect;
+        public event Action OnDialogueSubmit;
+        public event Action OnDialogueCancel;
+
         public bool IsInputActive { get; private set; } = true;
 
         private double _dspAtSync;
@@ -41,6 +45,10 @@ namespace SCOdyssey.App
             inputActions.UI.Select.performed += ctx => HandleSelect(ctx.ReadValue<Vector2>());
             inputActions.UI.Submit.performed += _ => HandleSubmit();
             inputActions.UI.Cancel.performed += _ => HandleCancel();
+
+            inputActions.Dialogue.Select.performed += ctx => HandleDialogueSelect(ctx.ReadValue<Vector2>());
+            inputActions.Dialogue.Submit.performed += _ => HandleDialogueSubmit();
+            inputActions.Dialogue.Cancel.performed += _ => HandleDialogueSkip();
         }
 
         private void HandleSelect(Vector2 dir) { if(IsInputActive) OnSelect?.Invoke(dir); }
@@ -50,18 +58,35 @@ namespace SCOdyssey.App
         private void HandleLaneRelease(int lane, double ctxTime) { if (IsInputActive) OnLaneReleased?.Invoke(lane, ConvertToDspTime(ctxTime)); }
         private void HandleRestart() { if (IsInputActive) OnRestart?.Invoke(); }
         private void HandlePause()   { if (IsInputActive) OnPause?.Invoke(); }
-        
+
+        // 다이얼로그
+        private void HandleDialogueSelect(Vector2 dir) { if (IsInputActive) OnDialogueSelect?.Invoke(dir); }
+        private void HandleDialogueSubmit() { if (IsInputActive) OnDialogueSubmit?.Invoke(); }
+        private void HandleDialogueSkip() { if (IsInputActive) OnDialogueCancel?.Invoke(); }
+
 
         public void SwitchToUI()
         {
             inputActions.Game.Disable();
+            inputActions.Dialogue.Disable();
+
             inputActions.UI.Enable();
         }
 
         public void SwitchToGameplay()
         {
             inputActions.UI.Disable();
+            inputActions.Dialogue.Disable();
+
             inputActions.Game.Enable();
+        }
+
+        public void SwitchToDialogue()
+        {
+            inputActions.UI.Disable();
+            inputActions.Game.Disable();
+
+            inputActions.Dialogue.Enable();
         }
 
 
@@ -74,6 +99,7 @@ namespace SCOdyssey.App
         {
             inputActions.Game.Disable();
             inputActions.UI.Disable();
+            inputActions.Dialogue.Disable();
         }
 
         public void SetInputActive(bool isActive) => IsInputActive = isActive;

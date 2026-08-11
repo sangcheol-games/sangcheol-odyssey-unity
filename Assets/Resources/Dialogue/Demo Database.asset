@@ -650,7 +650,7 @@ MonoBehaviour:
           m_Calls: []
       canvasRect:
         serializedVersion: 2
-        x: 720
+        x: 721
         y: 84
         width: 160
         height: 30
@@ -2723,7 +2723,7 @@ MonoBehaviour:
         type: 0
         typeString: 
       conversationID: 6
-      isRoot: 0
+      isRoot: 1
       isGroup: 0
       nodeColor: 
       delaySimStatus: 0

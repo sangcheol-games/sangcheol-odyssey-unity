@@ -12,7 +12,12 @@ namespace SCOdyssey.App
         public event Action<int, double> OnLaneReleased; // 1~4번 레인 입력 해제 이벤트 (laneIndex, inputDspTime)
         public event Action OnRestart; // 게임 중 재시작 이벤트
         public event Action OnPause;   // 게임 중 일시정지 이벤트
-        
+
+        // 다이얼로그
+        public event Action<Vector2> OnDialogueSelect;
+        public event Action OnDialogueSubmit;
+        public event Action OnDialogueCancel;
+
         public bool IsInputActive { get; }
         public void SetInputActive(bool isActive);
 
@@ -20,6 +25,7 @@ namespace SCOdyssey.App
 
         public void SwitchToUI();
         public void SwitchToGameplay();
+        public void SwitchToDialogue();
 
         public void Enable();
         public void Disable();
