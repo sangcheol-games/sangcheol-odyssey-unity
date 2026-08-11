@@ -593,6 +593,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3cb99567c73ecb84382c1402c9e83705, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::waefjag
+  floating: 1
+  fromResource: 1
+  dialogueName: Test
+  conversationName: Test
 --- !u!1001 &1583034949
 PrefabInstance:
   m_ObjectHideFlags: 0

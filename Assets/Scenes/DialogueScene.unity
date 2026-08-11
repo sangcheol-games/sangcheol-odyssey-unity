@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 1103884319}
   - component: {fileID: 1103884318}
   - component: {fileID: 1103884317}
+  - component: {fileID: 1103884321}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -197,7 +198,7 @@ Camera:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1103884316}
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 2
   m_ClearFlags: 1
   m_BackGroundColor: {r: 0.19215687, g: 0.3019608, b: 0.4745098, a: 0}
@@ -256,6 +257,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1103884321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1103884316}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb93c99e1e6928d4b92d9c6194714f6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueCameraSetup
+  canvas: {fileID: 9214146126738967508}
 --- !u!1 &2012144290
 GameObject:
   m_ObjectHideFlags: 0
@@ -366,7 +380,11 @@ PrefabInstance:
     - target: {fileID: 6707478028107086438, guid: 539d015409d5fd745bba517bba26466b, type: 3}
       propertyPath: m_Camera
       value: 
-      objectReference: {fileID: 1103884319}
+      objectReference: {fileID: 0}
+    - target: {fileID: 6707478028107086438, guid: 539d015409d5fd745bba517bba26466b, type: 3}
+      propertyPath: m_RenderMode
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6731391587211149617, guid: 539d015409d5fd745bba517bba26466b, type: 3}
       propertyPath: m_Name
       value: Dialogue Manager
@@ -416,6 +434,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 539d015409d5fd745bba517bba26466b, type: 3}
+--- !u!223 &9214146126738967508 stripped
+Canvas:
+  m_CorrespondingSourceObject: {fileID: 6707478028107086438, guid: 539d015409d5fd745bba517bba26466b, type: 3}
+  m_PrefabInstance: {fileID: 9214146126738967507}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

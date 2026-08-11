@@ -5,15 +5,22 @@ using UnityEngine;
 
 public class DialSceneTest : MonoBehaviour
 {
+    public bool floating = false;
+    public bool fromResource = true;
+
+    public string dialogueName;
+    public string conversationName;
+
+
     public void dialSceneTest()
     {
         if (ServiceLocator.TryGet<IDialogueManager>(out var _dialogueManager))
         {
-            _dialogueManager.LoadDialogueScene(false, "Test", true);
+            _dialogueManager.LoadDialogueScene(true, dialogueName, true);
             _dialogueManager.OnDialogueLoaded += ((val) =>
             {
                 if (val)
-                    _dialogueManager.PlayConversation("Test");
+                    _dialogueManager.PlayConversation(conversationName);
             });
         }
     }

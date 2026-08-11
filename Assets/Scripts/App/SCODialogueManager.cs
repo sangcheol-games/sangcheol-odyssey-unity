@@ -123,6 +123,13 @@ namespace SCOdyssey.App
 
         public void LoadDialogueScene(bool isFloating)
         {
+            if (SceneManager.GetSceneByName("DialogueScene").IsValid())
+            {
+                Debug.Log($"[SCODialogueManager] LoadDialogue æ¿ ¿ÃπÃ ∑ŒµÂµ ");
+                return;
+            }
+
+
             if (isFloating)
                 SceneManager.LoadSceneAsync("DialogueScene", LoadSceneMode.Additive);
             else
