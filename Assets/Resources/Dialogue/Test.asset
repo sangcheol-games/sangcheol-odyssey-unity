@@ -248,7 +248,7 @@ MonoBehaviour:
         type: 5
         typeString: CustomFieldType_Actor
       - title: Conversant
-        value: 1
+        value: 2
         type: 5
         typeString: CustomFieldType_Actor
       - title: Menu Text
@@ -272,7 +272,7 @@ MonoBehaviour:
         type: 0
         typeString: CustomFieldType_Text
       - title: Sequence
-        value: Test(0.5)
+        value: SetPanel(NPC2); Test(0.5)
         type: 0
         typeString: CustomFieldType_Text
       conversationID: 1
@@ -404,7 +404,7 @@ MonoBehaviour:
         type: 0
         typeString: CustomFieldType_Text
       - title: Dialogue Text
-        value: "\u3157"
+        value: "\u3134\u3134"
         type: 0
         typeString: CustomFieldType_Text
       - title: Parenthetical
@@ -467,7 +467,7 @@ MonoBehaviour:
         type: 5
         typeString: CustomFieldType_Actor
       - title: Conversant
-        value: 1
+        value: 3
         type: 5
         typeString: CustomFieldType_Actor
       - title: Menu Text
@@ -603,7 +603,7 @@ MonoBehaviour:
         type: 5
         typeString: CustomFieldType_Actor
       - title: Conversant
-        value: 1
+        value: 3
         type: 5
         typeString: CustomFieldType_Actor
       - title: Menu Text

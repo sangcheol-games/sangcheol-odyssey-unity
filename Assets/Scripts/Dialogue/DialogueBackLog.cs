@@ -19,18 +19,15 @@ namespace SCOdyssey.Dialogue
             backLogTextQueue = new Queue<GameObject>();
 
             DialogueManager.instance.conversationLinePrepared += RecordToBacklog;
+            DialogueManager.instance.conversationEnded += ClearBackLogText;
         }
 
         private void OnDisable()
         {
+            DialogueManager.instance.conversationEnded -= ClearBackLogText;
             DialogueManager.instance.conversationLinePrepared -= RecordToBacklog;
 
-            foreach (GameObject go in backLogTextQueue)
-            {
-                Destroy(go);
-            }
-
-            backLogTextQueue.Clear();
+            ClearBackLogText(transform);
         }
 
 
@@ -56,6 +53,16 @@ namespace SCOdyssey.Dialogue
             {
                 Destroy(backLogTextQueue.Dequeue());
             }
+        }
+
+        private void ClearBackLogText(Transform tr)
+        {
+            foreach (GameObject go in backLogTextQueue)
+            {
+                Destroy(go);
+            }
+
+            backLogTextQueue.Clear();
         }
     }
 }

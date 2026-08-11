@@ -1,12 +1,11 @@
 using System;
-using UnityEngine;
 
 
 namespace SCOdyssey.App
 {
     public interface IDialogueManager
     {
-        public event Action<bool> OnDialogueLoaded;     // 인자로 성공/실패 반환
+        event Action<bool> OnDialogueLoaded;     // 인자로 성공/실패 반환
 
         event Action OnConversationEnd;
 
