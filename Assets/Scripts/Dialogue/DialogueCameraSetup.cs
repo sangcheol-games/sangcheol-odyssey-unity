@@ -11,19 +11,18 @@ public class DialogueCameraSetup : MonoBehaviour
     {
         dialogueCamera = GetComponent<Camera>();
 
-        if (Camera.main != null && Camera.main != dialogueCamera)
-        {
-            dialogueCamera.gameObject.SetActive(false);
+        dialogueCamera.gameObject.SetActive(false);
 
-            canvas = GetComponentInParent<Canvas>();
-            if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
-            {
-                canvas.worldCamera = Camera.main;
-            }
-        }
-        else
+
+        if (Camera.main == null)
         {
             dialogueCamera.gameObject.SetActive(true);
+        }
+
+
+        if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
+        {
+            canvas.worldCamera = Camera.main;
         }
     }
 }

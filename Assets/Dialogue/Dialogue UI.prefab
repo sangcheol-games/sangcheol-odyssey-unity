@@ -834,8 +834,8 @@ MonoBehaviour:
   subtitleText:
     m_uiText: {fileID: 0}
     m_textMeshProUGUI: {fileID: 3887819882538967432}
-  addSpeakerName: 1
-  addSpeakerNameFormat: '{0}: {1}'
+  addSpeakerName: 0
+  addSpeakerNameFormat: 
   accumulateText: 0
   maxLines: 100
   delayTypewriterUntilOpen: 0
@@ -1422,8 +1422,8 @@ MonoBehaviour:
   subtitleText:
     m_uiText: {fileID: 0}
     m_textMeshProUGUI: {fileID: 3887819882538967432}
-  addSpeakerName: 1
-  addSpeakerNameFormat: '{0}: {1}'
+  addSpeakerName: 0
+  addSpeakerNameFormat: 
   accumulateText: 0
   maxLines: 100
   delayTypewriterUntilOpen: 0
@@ -3349,8 +3349,8 @@ MonoBehaviour:
   subtitleText:
     m_uiText: {fileID: 0}
     m_textMeshProUGUI: {fileID: 3887819882538967432}
-  addSpeakerName: 1
-  addSpeakerNameFormat: '{0}: {1}'
+  addSpeakerName: 0
+  addSpeakerNameFormat: 
   accumulateText: 0
   maxLines: 100
   delayTypewriterUntilOpen: 0
@@ -4151,7 +4151,7 @@ MonoBehaviour:
     - {fileID: 11490218}
     - {fileID: 11400054}
     defaultNPCSubtitlePanel: {fileID: 11478606}
-    defaultPCSubtitlePanel: {fileID: 11490218}
+    defaultPCSubtitlePanel: {fileID: 0}
     allowOpenSubtitlePanelsOnStartConversation: 1
     allowDialogueActorCustomPanels: 1
     menuPanels:
