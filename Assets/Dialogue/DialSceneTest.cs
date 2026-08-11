@@ -16,7 +16,7 @@ public class DialSceneTest : MonoBehaviour
     {
         if (ServiceLocator.TryGet<IDialogueManager>(out var _dialogueManager))
         {
-            _dialogueManager.LoadDialogueScene(true, dialogueName, true);
+            _dialogueManager.LoadDialogueScene(floating, dialogueName, fromResource);
             _dialogueManager.OnDialogueLoaded += ((val) =>
             {
                 if (val)
