@@ -4,7 +4,6 @@ using SCOdyssey.App;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
-using UnityEditor.Localization.Plugins.XLIFF.V12;
 
 namespace SCOdyssey.Game
 {
