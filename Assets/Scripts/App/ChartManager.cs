@@ -78,6 +78,7 @@ namespace SCOdyssey.Game
 
         private int currentBarNumber = 0;      // 현재 마디 인덱스(0부터). StartCurrentBar 승격 시 ++
         private double currentBarEndTime = 0f; // 현재 마디의 종료 시간. SyncTime에서 currentTime이 이 값을 넘으면 다음 마디로 전환
+        private bool endOfChartLogged = false; // 채보 종료 로그 1회 제한 (StartCurrentBar가 매 프레임 재진입하므로)
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
         public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[LANE_COUNT];
@@ -104,6 +105,7 @@ namespace SCOdyssey.Game
             this.gameManager = gameManager;
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
+            endOfChartLogged = false;   // 재시작 시 로그 1회 제한 초기화
 
             double judgementOffsetSec = 0;
 
@@ -251,7 +253,11 @@ namespace SCOdyssey.Game
 
             if (nextBarLanes.Count == 0)
             {
-                Debug.Log("End of Chart Reached.");
+                if (!endOfChartLogged)
+                {
+                    Debug.Log("End of Chart Reached.");
+                    endOfChartLogged = true;
+                }
                 return;
             }
 
