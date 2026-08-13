@@ -81,7 +81,7 @@ namespace SCOdyssey.Game
         private bool endOfChartLogged = false; // 채보 종료 로그 1회 제한 (StartCurrentBar가 매 프레임 재진입하므로)
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
-        public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[LANE_COUNT];
+        public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[COUNTDOWN_SLOT_COUNT];
 
         private ChartState _chartState;
 
@@ -127,7 +127,7 @@ namespace SCOdyssey.Game
 
             _chartState.Init(judgementOffsetSec: judgementOffsetSec);
 
-            for (int i = 0; i < LANE_COUNT; i++)
+            for (int i = 0; i < COUNTDOWN_SLOT_COUNT; i++)
             {
                 countdownTexts[i].gameObject.SetActive(false);
                 countdownTexts[i].text = "";
@@ -205,23 +205,23 @@ namespace SCOdyssey.Game
 
             _chartState.UpdateCountdowns(
                 currentTime: time,
-                onTimeDiffMinus: (lane) => this.countdownTexts[(int)lane].gameObject.SetActive(false),
-                onUpdateRemaining: (lane, timeDiff) =>
+                onTimeDiffMinus: (slot) => this.countdownTexts[(int)slot].gameObject.SetActive(false),
+                onUpdateRemaining: (slot, timeDiff) =>
                 {
                     double remainingBeats = timeDiff / beatDuration;
 
-                    if (remainingBeats <= 3.01d) 
+                    if (remainingBeats <= 3.01d)
                     {
                         int displayNum = (int)Math.Ceiling(remainingBeats);
 
                         if (displayNum > 0 && displayNum <= 3)
                         {
-                            this.countdownTexts[(int)lane].text = displayNum.ToString();
+                            this.countdownTexts[(int)slot].text = displayNum.ToString();
                         }
                     }
                     else
                     {
-                        this.countdownTexts[(int)lane].text = "";
+                        this.countdownTexts[(int)slot].text = "";
                     }
                 }
             );
@@ -419,16 +419,16 @@ namespace SCOdyssey.Game
                     preloadedTimelines.Add(groupID, timeline);
                 }
 
-                // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐: 그룹당 2슬롯 중 LTR=0, RTL=1
-                int uiIndex = ((int)groupID * 2) + (isLTR ? 0 : 1);
+                // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐
+                CountdownSlot slot = groupID.ToCountdownSlot(isLTR);
 
                 _chartState.ActivateCountdown(
-                    lane: (Lane)uiIndex,
+                    slot: slot,
                     targetTime: nextStartTime
                 );
 
-                countdownTexts[uiIndex].gameObject.SetActive(true);
-                countdownTexts[uiIndex].text = "";
+                countdownTexts[(int)slot].gameObject.SetActive(true);
+                countdownTexts[(int)slot].text = "";
             }
 
         }

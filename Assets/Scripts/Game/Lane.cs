@@ -26,10 +26,24 @@ namespace SCOdyssey.Game
         public static Lane FromInputIndex(int index) => (Lane)(index - FIRST_LANE);
     }
 
+    // 카운트다운 텍스트 슬롯. (그룹 x 진행방향, 레인x)
+    // countdownTexts 배열 인덱스와 1:1 대응.
+    public enum CountdownSlot
+    {
+        TopLTR = 0,
+        TopRTL = 1,
+        BottomLTR = 2,
+        BottomRTL = 3,
+    };
+
     public static class LaneExtensions
     {
         // 어느 판정선/캐릭터 소속인가. 레인 1~2 = Top, 3~4 = Bottom
         public static LaneGroup GetGroup(this Lane lane)
             => (int)lane < 2 ? LaneGroup.Top : LaneGroup.Bottom;
+
+        // 그룹당 2슬롯. LTR이 앞
+        public static CountdownSlot ToCountdownSlot(this LaneGroup group, bool isLTR)
+            => (CountdownSlot)(((int)group * 2) + (isLTR ? 0 : 1));
     };
 }

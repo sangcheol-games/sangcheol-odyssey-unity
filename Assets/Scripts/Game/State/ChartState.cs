@@ -20,20 +20,12 @@ namespace SCOdyssey.Game
             {
                 set{ bufferedInput = value; }
             }
-            private double? countdownTargetTime = null;
-            internal double? CountdownTargetTime
-            {
-                get{ return countdownTargetTime; }
-                set{ countdownTargetTime = value; }
-            }
-
             internal void Reset()
             {
                 activeNotes.Clear();
                 ghostNotes.Clear();
                 isHolding = false;
                 bufferedInput = null;
-                countdownTargetTime = null;
             }
 
             internal double? TakeFlushBufferedInput()
@@ -110,6 +102,10 @@ namespace SCOdyssey.Game
         };
 
         private readonly LaneList lanes = new();
+
+        // 카운트다운은 레인이 아니라 슬롯(그룹 x 진행방향) 단위라서 LaneState와 따로
+        private readonly double?[] countdownTargets = new double?[COUNTDOWN_SLOT_COUNT];
+
         private double _judgementOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
 
         public void Init(double judgementOffsetSec)
@@ -118,6 +114,8 @@ namespace SCOdyssey.Game
             {
                 state.Reset();
             }
+
+            Array.Clear(countdownTargets, 0, countdownTargets.Length);
 
             _judgementOffsetSec = judgementOffsetSec;
         }
@@ -137,23 +135,22 @@ namespace SCOdyssey.Game
 
         public void UpdateCountdowns(
             double currentTime,
-            Action<Lane> onTimeDiffMinus,
-            Action<Lane, double> onUpdateRemaining
+            Action<CountdownSlot> onTimeDiffMinus,
+            Action<CountdownSlot, double> onUpdateRemaining
         ){
-            foreach(var (lane, state) in lanes)
+            for(int i = 0; i < countdownTargets.Length; i++)
             {
-                var countdownTargetTime = state.CountdownTargetTime;
-                if(!countdownTargetTime.HasValue) continue;
+                if(!countdownTargets[i].HasValue) continue;
 
-                double timeDiff = countdownTargetTime.Value - currentTime;
+                double timeDiff = countdownTargets[i].Value - currentTime;
                 if(timeDiff <= 0)
                 {
-                    onTimeDiffMinus(lane);
-                    state.CountdownTargetTime = null;
+                    onTimeDiffMinus((CountdownSlot)i);
+                    countdownTargets[i] = null;
                 }
                 else
                 {
-                    onUpdateRemaining(lane, timeDiff);
+                    onUpdateRemaining((CountdownSlot)i, timeDiff);
                 }
             }
         }
@@ -311,9 +308,9 @@ namespace SCOdyssey.Game
             return JudgeType.Umm;
         }
 
-        public void ActivateCountdown(Lane lane, double targetTime)
+        public void ActivateCountdown(CountdownSlot slot, double targetTime)
         {
-            lanes[lane].CountdownTargetTime = targetTime;
+            countdownTargets[(int)slot] = targetTime;
         }
 
         public void EnqueueGhostNotes(Lane lane, NoteController note)
