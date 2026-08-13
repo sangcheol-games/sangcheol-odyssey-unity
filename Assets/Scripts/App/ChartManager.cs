@@ -85,6 +85,9 @@ namespace SCOdyssey.Game
 
         private ChartState _chartState;
 
+        // 판정용 flat 트랙. 아직 판정에 쓰지 않는다. (일단 대조만)
+        private JudgeNote[] _judgeTrack;
+
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         // private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
         private readonly Dictionary<LaneGroup, bool> _nextGroupDirBuffer = new(); // 그룹별 진행 방향(isLTR)
@@ -106,6 +109,9 @@ namespace SCOdyssey.Game
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
             endOfChartLogged = false;   // 재시작 시 로그 1회 제한 초기화
+
+            _judgeTrack = chartData.BuildJudgeTrack();
+            LogJudgeTrackSummary(chartData);
 
             double judgementOffsetSec = 0;
 
@@ -132,6 +138,37 @@ namespace SCOdyssey.Game
 
             // barDuration만큼 음원 재생을 지연 → 0번 빈 마디가 흐르는 동안 1번 마디를 준비할 시간을 확보
             gameManager.StartMusic(barDuration);
+        }
+
+        // flat 트랙 대조용 임시 메서드
+        private void LogJudgeTrackSummary(ChartData chartData)
+        {
+            int viewNoteCount = 0;
+            foreach (LaneData lane in chartData.GetFullChartList())
+                viewNoteCount += lane.Notes.Count;
+
+            // 시간 오름차순인지 확인
+            int unsortedAt = -1;
+            for (int i = 1; i < _judgeTrack.Length; i++)
+            {
+                if (_judgeTrack[i - 1].Time > _judgeTrack[i].Time)
+                {
+                    unsortedAt = i;
+                    break;
+                }
+            }
+
+            var kindCount = new int[(int)NoteType.HoldRelease + 1];
+            foreach (JudgeNote note in _judgeTrack) kindCount[(int)note.Kind]++;
+
+            Debug.Log(
+                $"[JudgeTrack] {_judgeTrack.Length}개 (뷰 경로 {viewNoteCount}개 / 헤더 #NOTES {chartData.totalNotes})\n" +
+                $"  정렬: {(unsortedAt < 0 ? "OK" : $"깨짐! index {unsortedAt}")}\n" +
+                $"  타입: Normal={kindCount[(int)NoteType.Normal]}, " +
+                $"HoldStart={kindCount[(int)NoteType.HoldStart]}, " +
+                $"Holding={kindCount[(int)NoteType.Holding]}, " +
+                $"HoldEnd={kindCount[(int)NoteType.HoldEnd]}, " +
+                $"HoldRelease={kindCount[(int)NoteType.HoldRelease]}");
         }
 
         /// <summary>

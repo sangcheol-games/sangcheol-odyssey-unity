@@ -5,25 +5,6 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
-    public enum LaneGroup
-    {
-        Top,
-        Bottom,
-    };
-
-    public enum Lane
-    {
-        TopUpper = 0,
-        TopLower = 1,
-        BottomUpper = 2,
-        BottomLower = 3,
-    };
-
-    public static class LaneExtensions
-    {
-        public static LaneGroup GetGroup(this Lane lane)
-            => (int)lane < 2 ? LaneGroup.Top : LaneGroup.Bottom;
-    };
 
     public class ChartState{
         private class LaneState
