@@ -9,7 +9,7 @@ namespace SCOdyssey.Game
 {
     // ── 흐름 (이벤트 구동 상태 머신) ──────────────────────────────────────────
     //
-    //  Start()에서 GameManager의 On*Event(입력/판정/홀드)를 구독한다(OnDestroy에서 해제).
+    //  Start()에서 IJudgementBus(입력/판정/홀드)를 구독한다(OnDestroy에서 해제).
     //
     //  이벤트 수신: 각 라우터(OnLaneInputEvent 등)는 LaneGroup으로 자기 그룹만 통과시킨 뒤 핸들러로 넘긴다.
     //        OnLaneInput -> HandleLaneInput(),  OnNoteJudged -> HandleNoteJudged(),  OnHoldStart/Release -> UpdateHoldState()
@@ -47,7 +47,7 @@ namespace SCOdyssey.Game
         private NotePosition _lastInputPos;
 
         private ICharacterAnimationHandler _handler;
-        private IGameManager _gameManager;
+        private IJudgementBus _judgementBus;
 
         // ─────────────────────────────────────────────
         // Lifecycle
@@ -62,27 +62,27 @@ namespace SCOdyssey.Game
                     LoadCharacter(skin);
             }
 
-            // 이벤트 출처: ChartManager 판정/입력 → GameManager On*() 콜백 → 여기 *Event 구독.
             // 각 핸들러는 LaneGroup으로 필터링해 자기 그룹(판정선) 이벤트만 처리한다.
-            if (ServiceLocator.TryGet<IGameManager>(out _gameManager))
+            // 에디터 프리뷰처럼 버스가 없는 씬에서는 구독이 생기지 않는다.
+            if (ServiceLocator.TryGet<IJudgementBus>(out _judgementBus))
             {
-                _gameManager.OnLaneInputEvent    += OnLaneInputEvent;
-                _gameManager.OnNoteJudgedEvent   += OnNoteJudgedEvent;
-                _gameManager.OnHoldStartEvent    += OnHoldStartEvent;
-                _gameManager.OnHoldEndEvent      += OnHoldEndEvent;
-                _gameManager.OnHoldReleaseEvent  += OnHoldReleaseEvent;
+                _judgementBus.LaneInput     += OnLaneInputEvent;
+                _judgementBus.NoteJudged    += OnNoteJudgedEvent;
+                _judgementBus.HoldStarted   += OnHoldStartEvent;
+                _judgementBus.HoldEnded     += OnHoldEndEvent;
+                _judgementBus.HoldReleased  += OnHoldReleaseEvent;
             }
         }
 
         private void OnDestroy()
         {
-            if (_gameManager != null)
+            if (_judgementBus != null)
             {
-                _gameManager.OnLaneInputEvent    -= OnLaneInputEvent;
-                _gameManager.OnNoteJudgedEvent   -= OnNoteJudgedEvent;
-                _gameManager.OnHoldStartEvent    -= OnHoldStartEvent;
-                _gameManager.OnHoldEndEvent      -= OnHoldEndEvent;
-                _gameManager.OnHoldReleaseEvent  -= OnHoldReleaseEvent;
+                _judgementBus.LaneInput     -= OnLaneInputEvent;
+                _judgementBus.NoteJudged    -= OnNoteJudgedEvent;
+                _judgementBus.HoldStarted   -= OnHoldStartEvent;
+                _judgementBus.HoldEnded     -= OnHoldEndEvent;
+                _judgementBus.HoldReleased  -= OnHoldReleaseEvent;
             }
         }
 

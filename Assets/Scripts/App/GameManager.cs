@@ -17,7 +17,7 @@ namespace SCOdyssey.App
     //        Start()에서 IInputManager의 입력 이벤트와 ScoreManager의 UI 이벤트를 구독한다.
     //
     //  게임 시작: GameDataLoader가 StartGame()을 호출한다.
-    //        chartManager.Init() -> scoreManager.Init() -> globalStartTime 기록(현재 DSP 시각) -> 입력 동기점 설정
+    //        scoreManager.Init() -> chartManager.Init() -> globalStartTime 기록(현재 DSP 시각) -> 입력 동기점 설정
     //
     //  시간: GetCurrentTime()은 (현재 DSP - globalStartTime), 즉 게임 상대시간을 돌려준다.
     //        일시정지 중에는 _pauseDspTime 기준으로 고정하고, 재개 시 흐른 만큼 globalStartTime을 보정한다.
@@ -28,8 +28,8 @@ namespace SCOdyssey.App
     //  입력: HandleLaneInput()/HandleLaneRelease() -> chartManager.TryJudgeInput()/TryJudgeRelease()
     //        (입력 DSP 시각을 globalStartTime 기준 상대시간으로 변환해 전달한다)
     //
-    //  판정 수신: ChartManager가 OnNoteJudged()/OnNoteMissed()/OnHoldStart() 등을 호출하면
-    //        scoreManager.ProcessJudge()로 점수를 넘기고, *Event를 발행해 CharacterAnimator에 전파한다.
+    //  판정 전파: JudgementBus를 소유만 하고 직접 중계하지는 않는다.
+    //        ChartManager가 판정을, 여기가 키 입력을 발행하면 ScoreManager와 CharacterAnimator가 각자 구독해 받는다.
     //
     //  종료: 채보와 음원이 끝나면 ChartManager가 OnGameFinished()를 호출한다 -> 클리어 연출 -> ResultUI 표시.
     // ──────────────────────────────────────────────────────────────────────────
@@ -45,13 +45,9 @@ namespace SCOdyssey.App
         [Header("BGA")]
         public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
 
-        // 캐릭터 애니메이터 구독용 이벤트. 아래 On* 콜백(ChartManager가 호출)이 이 이벤트를 발행하고,
-        // CharacterAnimator가 LaneGroup으로 필터링해 자기 그룹 이벤트만 처리한다.
-        public event Action<JudgeType, NotePosition, LaneGroup> OnNoteJudgedEvent;
-        public event Action<NotePosition, LaneGroup> OnHoldStartEvent;
-        public event Action<NotePosition, LaneGroup> OnHoldEndEvent;
-        public event Action<NotePosition, LaneGroup> OnHoldReleaseEvent;
-        public event Action<NotePosition, LaneGroup> OnLaneInputEvent;
+        // 판정/입력 결과를 뿌리는 버스. ChartManager(판정)와 여기(입력)가 발행하고
+        // ScoreManager·CharacterAnimator가 각자 구독한다.
+        private readonly JudgementBus _judgementBus = new();
 
 
         [Header("게임 상태")]
@@ -73,6 +69,7 @@ namespace SCOdyssey.App
         private void Awake()
         {
             ServiceLocator.TryRegister<IGameManager>(this);
+            ServiceLocator.TryRegister<IJudgementBus>(_judgementBus);
             if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
                 Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
 
@@ -108,6 +105,7 @@ namespace SCOdyssey.App
         private void OnDestroy()
         {
             ServiceLocator.Remove<IGameManager>();
+            ServiceLocator.Remove<IJudgementBus>();
 
             if (_inputManager != null)
             {
@@ -127,8 +125,9 @@ namespace SCOdyssey.App
                 return;
             }
 
-            chartManager.Init(chartData, this);
-            scoreManager.Init(chartData.totalNotes);
+            // 점수 구독을 먼저 붙인 뒤 채보를 준비한다
+            scoreManager.Init(chartData.totalNotes, _judgementBus);
+            chartManager.Init(chartData, this, _judgementBus);
 
             globalStartTime = _audioManager.GetDSPTime();
 
@@ -239,7 +238,7 @@ namespace SCOdyssey.App
 
             var group = lane.GetGroup();
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            OnLaneInput(GetNotePosition((int)lane), group);
+            _judgementBus.PublishLaneInput(GetNotePosition((int)lane), group);
 
             chartManager.TryJudgeInput(lane, inputDspTime - globalStartTime);
         }
@@ -251,7 +250,7 @@ namespace SCOdyssey.App
 
             var group = lane.GetGroup();
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            OnHoldRelease(GetNotePosition((int)lane), group);
+            _judgementBus.PublishHoldReleased(GetNotePosition((int)lane), group);
 
             chartManager.TryJudgeRelease(lane, inputDspTime - globalStartTime);
         }
@@ -267,42 +266,6 @@ namespace SCOdyssey.App
             if (!IsGameRunning) return;
             SceneManager.LoadScene("GameScene");
         }
-
-
-        // ── ChartManager 판정 결과 콜백 (IGameManager) ──
-        // ChartManager.ApplyJudgment/CheckMissedNotes/TryJudge*가 호출.
-        // 점수는 ScoreManager로, 연출은 *Event로 CharacterAnimator에 전달한다.
-        public void OnNoteJudged(JudgeType judgeType, NotePosition pos, LaneGroup group)
-        {
-            scoreManager.ProcessJudge(judgeType);
-            OnNoteJudgedEvent?.Invoke(judgeType, pos, group);
-        }
-
-        public void OnNoteMissed()
-        {
-            scoreManager.ProcessJudge(JudgeType.Umm);
-        }
-
-        public void OnHoldStart(NotePosition pos, LaneGroup group)
-        {
-            OnHoldStartEvent?.Invoke(pos, group);
-        }
-
-        public void OnHoldEnd(NotePosition pos, LaneGroup group)
-        {
-            OnHoldEndEvent?.Invoke(pos, group);
-        }
-
-        public void OnHoldRelease(NotePosition pos, LaneGroup group)
-        {
-            OnHoldReleaseEvent?.Invoke(pos, group);
-        }
-
-        public void OnLaneInput(NotePosition pos, LaneGroup group)
-        {
-            OnLaneInputEvent?.Invoke(pos, group);
-        }
-
 
 
         public void UpdateScore(int score)

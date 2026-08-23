@@ -35,6 +35,7 @@ namespace SCOdyssey.Game
     public class ChartManager : MonoBehaviour
     {
         private IGameManager gameManager;
+        private JudgementBus _judgementBus;
 
         public RectTransform noteParent;
         public RectTransform timelineParent;
@@ -110,9 +111,10 @@ namespace SCOdyssey.Game
         /// 첫 마디를 준비/시작하고 음원 재생을 예약한다.
         /// 흐름: 설정 로드 → barDuration 계산 → PrepareNextBar → StartCurrentBar → StartMusic.
         /// </summary>
-        public void Init(ChartData chartData, IGameManager gameManager)
+        public void Init(ChartData chartData, IGameManager gameManager, JudgementBus judgementBus)
         {
             this.gameManager = gameManager;
+            _judgementBus = judgementBus;
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
             endOfChartLogged = false;   // 재시작 시 로그 1회 제한 초기화
@@ -599,7 +601,7 @@ namespace SCOdyssey.Game
             if (judged.IsMiss)
             {
                 view?.OnMiss();
-                gameManager.OnNoteMissed();
+                _judgementBus.PublishNoteMissed();
                 if (view != null) EffectJudgement(JudgeType.Umm, view);
                 return;
             }
@@ -625,18 +627,18 @@ namespace SCOdyssey.Game
             var listIndex = (int)judged.Lane;
             NotePosition pos = GetNotePosition(listIndex);
             LaneGroup group = judged.Lane.GetGroup();
-            gameManager.OnNoteJudged(judged.Judge, pos, group);
+            _judgementBus.PublishNoteJudged(judged.Judge, pos, group);
 
             // 홀드 관련 이벤트 발화
             // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
             // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
             // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
             if (judged.Kind == NoteType.HoldStart || judged.Kind == NoteType.Holding)
-                gameManager.OnHoldStart(pos, group);
+                _judgementBus.PublishHoldStarted(pos, group);
             else if (judged.Kind == NoteType.HoldEnd)
-                gameManager.OnHoldEnd(pos, group);
+                _judgementBus.PublishHoldEnded(pos, group);
             else if (judged.Kind == NoteType.HoldRelease)
-                gameManager.OnHoldRelease(pos, group);
+                _judgementBus.PublishHoldReleased(pos, group);
 
             if (view == null) return;   // 스폰 전이거나 이미 회수된 노트. 점수/이벤트는 위에서 이미 나갔다
 
