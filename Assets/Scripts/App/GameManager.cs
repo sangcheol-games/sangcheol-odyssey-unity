@@ -237,8 +237,8 @@ namespace SCOdyssey.App
         {
             if (!IsGameRunning) return;
 
-            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
-            var group = LaneExtensions.GetGroup(lane);
+            var lane = LaneMap.FromInputIndex(laneIndex);
+            var group = lane.GetGroup();
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
             OnLaneInput(GetNotePosition((int)lane), (int)group);
 
@@ -250,8 +250,8 @@ namespace SCOdyssey.App
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {laneIndex} Released");
 
-            var lane = (Lane)(laneIndex - 1);  // 인덱스 보정
-            var group = LaneExtensions.GetGroup(lane);
+            var lane = LaneMap.FromInputIndex(laneIndex);
+            var group = lane.GetGroup();
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
             OnHoldRelease(GetNotePosition((int)lane), (int)group);
 

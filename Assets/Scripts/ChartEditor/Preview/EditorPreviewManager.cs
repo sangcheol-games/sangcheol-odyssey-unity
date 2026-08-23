@@ -222,7 +222,7 @@ namespace SCOdyssey.ChartEditor.Preview
 
             foreach (var lane in barLanes)
             {
-                int groupID = (lane.line <= 2) ? 0 : 1;
+                int groupID = (int)LaneMap.FromChartLine(lane.line).GetGroup();
 
                 // 타임라인 (그룹당 1개)
                 if (!spawnedGroups.Contains(groupID))
@@ -294,7 +294,7 @@ namespace SCOdyssey.ChartEditor.Preview
                 ? editorManager.leftEndpoint.anchoredPosition.x
                 : editorManager.rightEndpoint.anchoredPosition.x;
 
-            RectTransform laneRT = editorManager.laneTransforms[lane.line - 1];
+            RectTransform laneRT = editorManager.laneTransforms[(int)LaneMap.FromChartLine(lane.line)];
 
             foreach (var noteData in lane.Notes)
             {

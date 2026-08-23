@@ -301,7 +301,7 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                var groupID = LaneExtensions.GetGroup((Lane)(lane.line - 1));
+                var groupID = LaneMap.FromChartLine(lane.line).GetGroup();
                 _nextGroupDirBuffer[groupID] = lane.isLTR;
             }
 
@@ -356,12 +356,6 @@ namespace SCOdyssey.Game
             PrepareNextBar();
 
         }
-        // 레인 인덱스(0~3) → 그룹 ID. 0~1 = 그룹0(상단), 2~3 = 그룹1(하단)
-        private static int GetTrackGroupID(int laneIndex)
-        {
-            return laneIndex <= 1 ? 0 : 1;
-        }
-
         #endregion
 
 
@@ -378,7 +372,7 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                var groupID = LaneExtensions.GetGroup((Lane)(lane.line - 1));
+                var groupID = LaneMap.FromChartLine(lane.line).GetGroup();
                 _nextGroupDirBuffer[groupID] = lane.isLTR;
             }
 
@@ -461,11 +455,11 @@ namespace SCOdyssey.Game
                 float noteInterval = laneWidth / lane.beat;
 
                 // 레인 y좌표 기준점 획득
-                RectTransform laneRT = laneTransforms[lane.line - 1];
+                RectTransform laneRT = laneTransforms[(int)LaneMap.FromChartLine(lane.line)];
                 // 노트 배치 시작점 x좌표 위치
                 float laneStartX = lane.isLTR ? leftEndpoint.anchoredPosition.x : rightEndpoint.anchoredPosition.x;
 
-                var groupID = LaneExtensions.GetGroup((Lane)(lane.line - 1));
+                var groupID = LaneMap.FromChartLine(lane.line).GetGroup();
 
                 // 충돌 = 현재 이동 중인 판정선과 같은 그룹을 다음 마디에서도 사용하는 경우(고난이도).
                 // 이때 다음 마디 노트를 그냥 Ghost로 띄우면 현재 판정선과 겹쳐 난잡 → Hidden으로 숨겼다가 판정선이 지난 뒤 Ghost로 전환.
@@ -630,7 +624,7 @@ namespace SCOdyssey.Game
         {
             var listIndex = (int)judged.Lane;
             NotePosition pos = GetNotePosition(listIndex);
-            int groupID = GetTrackGroupID(listIndex);
+            int groupID = (int)judged.Lane.GetGroup();
             gameManager.OnNoteJudged(judged.Judge, pos, groupID);
 
             // 홀드 관련 이벤트 발화
