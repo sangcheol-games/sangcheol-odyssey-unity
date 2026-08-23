@@ -1,12 +1,9 @@
-using System;
 using System.Collections;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
 using SCOdyssey.UI;
-using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
@@ -14,7 +11,7 @@ namespace SCOdyssey.App
     // ── 흐름 (게임 오케스트레이터) ──────────────────────────────────────────
     //
     //  준비: Awake()에서 자신을 ServiceLocator에 등록하고 IAudioManager를 얻는다.
-    //        Start()에서 IInputManager의 입력 이벤트와 ScoreManager의 UI 이벤트를 구독한다.
+    //        Start()에서 IInputManager의 입력 이벤트를 구독하고 HudView를 ScoreManager에 연결한다.
     //
     //  게임 시작: GameDataLoader가 StartGame()을 호출한다.
     //        scoreManager.Init() -> chartManager.Init() -> globalStartTime 기록(현재 DSP 시각) -> 입력 동기점 설정
@@ -32,6 +29,9 @@ namespace SCOdyssey.App
     //        ChartManager가 판정을, 여기가 키 입력을 발행하면 ScoreManager와 CharacterAnimator가 각자 구독해 받는다.
     //
     //  종료: 채보와 음원이 끝나면 ChartManager가 OnGameFinished()를 호출한다 -> 클리어 연출 -> ResultUI 표시.
+    //
+    //  화면 표시는 직접 하지 않는다. 점수·콤보·게이지는 HudView가, 중앙 대형 텍스트는 GameBannerView가 맡고
+    //  여기는 "언제 무엇을 띄울지"의 순서만 코루틴으로 쥔다.
     // ──────────────────────────────────────────────────────────────────────────
     public class GameManager : MonoBehaviour, IGameManager
     {
@@ -59,17 +59,17 @@ namespace SCOdyssey.App
 
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
-        public TextMeshProUGUI scoreText;
-        public TextMeshProUGUI comboText;
-        public TextMeshProUGUI gaugeText;
-        public Image gaugeBar; // fillAmount로 게이지 바 표현 시
-        public TextMeshProUGUI clearEffectText; // 클리어 연출 텍스트
+        public HudView hudView;             // 점수·콤보·게이지 (비어 있으면 같은 오브젝트에서 찾는다)
+        public GameBannerView bannerView;   // 클리어 배너 + 재개 카운트다운
 
 
         private void Awake()
         {
             ServiceLocator.TryRegister<IGameManager>(this);
             ServiceLocator.TryRegister<IJudgementBus>(_judgementBus);
+
+            if (hudView == null) hudView = GetComponent<HudView>();
+            if (bannerView == null) bannerView = GetComponent<GameBannerView>();
             if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
                 Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
 
@@ -97,9 +97,7 @@ namespace SCOdyssey.App
                 Debug.LogError("[GameManager] IInputManager not found in ServiceLocator!");
             }
 
-            scoreManager.OnScoreChanged += UpdateScore;
-            scoreManager.OnComboChanged += UpdateCombo;
-            scoreManager.OnGaugeChanged += UpdateGauge;
+            hudView?.Bind(scoreManager);
         }
 
         private void OnDestroy()
@@ -202,16 +200,14 @@ namespace SCOdyssey.App
         private IEnumerator ResumeCountdownSequence()
         {
             _inputManager.SetInputActive(false); // 카운트다운 중 입력 차단
-            if (clearEffectText != null)
+            if (bannerView != null)
             {
-                clearEffectText.gameObject.SetActive(true);
                 for (int i = 3; i >= 1; i--)
                 {
-                    clearEffectText.text = i.ToString();
-                    clearEffectText.color = Color.white;
+                    bannerView.ShowCount(i);
                     yield return new WaitForSeconds(1f);
                 }
-                clearEffectText.gameObject.SetActive(false);
+                bannerView.Hide();
             }
 
             // 일시정지 동안 흐른 DSP 시간만큼 globalStartTime을 보정하여 채보 위치를 유지
@@ -268,41 +264,6 @@ namespace SCOdyssey.App
         }
 
 
-        public void UpdateScore(int score)
-        {
-            scoreText.text = score.ToString("D7");  // 7자리 숫자로 포맷 (0000000)
-        }
-
-        public void UpdateCombo(int combo)
-        {
-            if (combo > 0)
-            {
-                comboText.text = combo.ToString();
-                comboText.gameObject.SetActive(true);
-            }
-            else
-            {
-                comboText.gameObject.SetActive(false);
-            }
-        }
-
-        public void UpdateGauge(float percentage)
-        {
-            // 소수점 2자리까지 표시 (100.0%)
-            gaugeText.text = $"{percentage:F2}%";
-            
-            if (gaugeBar != null)
-            {
-                gaugeBar.fillAmount = percentage / 100f;
-            }
-            
-            // 색상 변경 로직 (선택사항)
-            if (percentage >= 100f) gaugeText.color = Color.cyan; // Perfect/Master 유지 중
-            else gaugeText.color = Color.white;
-        }
-
-
-
         // 게임 종료 처리
         public void OnGameFinished()
         {
@@ -329,38 +290,11 @@ namespace SCOdyssey.App
         // 클리어 연출 표시 (즉시 텍스트 표시 후 4초 대기)
         private IEnumerator ShowClearSequence(ClearType rank)
         {
-            // 클리어 텍스트 설정 및 즉시 표시
-            if (clearEffectText != null)
+            if (bannerView != null)
             {
-                clearEffectText.gameObject.SetActive(true);
-
-                switch (rank)
-                {
-                    case ClearType.AllPerfect:
-                        clearEffectText.text = "ALL PERFECT";
-                        clearEffectText.color = Color.cyan;
-                        break;
-                    case ClearType.OverMillion:
-                        clearEffectText.text = "OVER MILLION";
-                        clearEffectText.color = Color.yellow;
-                        break;
-                    case ClearType.FullCombo:
-                        clearEffectText.text = "FULL COMBO";
-                        clearEffectText.color = Color.green;
-                        break;
-                    case ClearType.Clear:
-                        clearEffectText.text = "CLEAR";
-                        clearEffectText.color = Color.white;
-                        break;
-                    case ClearType.Fail:
-                        clearEffectText.text = "FAILED";
-                        clearEffectText.color = Color.red;
-                        break;
-                }
-
-                // 4초 표시
+                bannerView.ShowClear(rank);
                 yield return new WaitForSeconds(4f);
-                clearEffectText.gameObject.SetActive(false);
+                bannerView.Hide();
             }
 
             // BGA 정지 후 GameScene Canvas 비활성화 및 결과 화면 표시
