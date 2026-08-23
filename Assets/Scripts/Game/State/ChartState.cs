@@ -64,8 +64,8 @@ namespace SCOdyssey.Game
         ){
             for(int i = 0; i < ghostNotes.Length; i++)
             {
-                var groupID = ((Lane)i).GetGroup();
-                activeTimelines.TryGetValue(groupID, out var timeline);
+                var group = ((Lane)i).GetGroup();
+                activeTimelines.TryGetValue(group, out var timeline);
 
                 var queue = ghostNotes[i];
                 while (queue.Count > 0)

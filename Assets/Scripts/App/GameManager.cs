@@ -46,12 +46,12 @@ namespace SCOdyssey.App
         public BGAController bgaController; // Inspector 연결 (없으면 BGA 비활성)
 
         // 캐릭터 애니메이터 구독용 이벤트. 아래 On* 콜백(ChartManager가 호출)이 이 이벤트를 발행하고,
-        // CharacterAnimator가 groupID로 필터링해 자기 그룹 이벤트만 처리한다.
-        public event Action<JudgeType, NotePosition, int> OnNoteJudgedEvent;
-        public event Action<NotePosition, int> OnHoldStartEvent;
-        public event Action<NotePosition, int> OnHoldEndEvent;
-        public event Action<NotePosition, int> OnHoldReleaseEvent;
-        public event Action<NotePosition, int> OnLaneInputEvent;
+        // CharacterAnimator가 LaneGroup으로 필터링해 자기 그룹 이벤트만 처리한다.
+        public event Action<JudgeType, NotePosition, LaneGroup> OnNoteJudgedEvent;
+        public event Action<NotePosition, LaneGroup> OnHoldStartEvent;
+        public event Action<NotePosition, LaneGroup> OnHoldEndEvent;
+        public event Action<NotePosition, LaneGroup> OnHoldReleaseEvent;
+        public event Action<NotePosition, LaneGroup> OnLaneInputEvent;
 
 
         [Header("게임 상태")]
@@ -233,27 +233,25 @@ namespace SCOdyssey.App
             // chartManager.Initialize(data); 
         }
 
-        private void HandleLaneInput(int laneIndex, double inputDspTime)
+        private void HandleLaneInput(Lane lane, double inputDspTime)
         {
             if (!IsGameRunning) return;
 
-            var lane = LaneMap.FromInputIndex(laneIndex);
             var group = lane.GetGroup();
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            OnLaneInput(GetNotePosition((int)lane), (int)group);
+            OnLaneInput(GetNotePosition((int)lane), group);
 
             chartManager.TryJudgeInput(lane, inputDspTime - globalStartTime);
         }
 
-        private void HandleLaneRelease(int laneIndex, double inputDspTime)
+        private void HandleLaneRelease(Lane lane, double inputDspTime)
         {
             if (!IsGameRunning) return;
-            //Debug.Log($"Lane {laneIndex} Released");
+            //Debug.Log($"Lane {lane} Released");
 
-            var lane = LaneMap.FromInputIndex(laneIndex);
             var group = lane.GetGroup();
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            OnHoldRelease(GetNotePosition((int)lane), (int)group);
+            OnHoldRelease(GetNotePosition((int)lane), group);
 
             chartManager.TryJudgeRelease(lane, inputDspTime - globalStartTime);
         }
@@ -274,10 +272,10 @@ namespace SCOdyssey.App
         // ── ChartManager 판정 결과 콜백 (IGameManager) ──
         // ChartManager.ApplyJudgment/CheckMissedNotes/TryJudge*가 호출.
         // 점수는 ScoreManager로, 연출은 *Event로 CharacterAnimator에 전달한다.
-        public void OnNoteJudged(JudgeType judgeType, NotePosition pos, int groupID)
+        public void OnNoteJudged(JudgeType judgeType, NotePosition pos, LaneGroup group)
         {
             scoreManager.ProcessJudge(judgeType);
-            OnNoteJudgedEvent?.Invoke(judgeType, pos, groupID);
+            OnNoteJudgedEvent?.Invoke(judgeType, pos, group);
         }
 
         public void OnNoteMissed()
@@ -285,24 +283,24 @@ namespace SCOdyssey.App
             scoreManager.ProcessJudge(JudgeType.Umm);
         }
 
-        public void OnHoldStart(NotePosition pos, int groupID)
+        public void OnHoldStart(NotePosition pos, LaneGroup group)
         {
-            OnHoldStartEvent?.Invoke(pos, groupID);
+            OnHoldStartEvent?.Invoke(pos, group);
         }
 
-        public void OnHoldEnd(NotePosition pos, int groupID)
+        public void OnHoldEnd(NotePosition pos, LaneGroup group)
         {
-            OnHoldEndEvent?.Invoke(pos, groupID);
+            OnHoldEndEvent?.Invoke(pos, group);
         }
 
-        public void OnHoldRelease(NotePosition pos, int groupID)
+        public void OnHoldRelease(NotePosition pos, LaneGroup group)
         {
-            OnHoldReleaseEvent?.Invoke(pos, groupID);
+            OnHoldReleaseEvent?.Invoke(pos, group);
         }
 
-        public void OnLaneInput(NotePosition pos, int groupID)
+        public void OnLaneInput(NotePosition pos, LaneGroup group)
         {
-            OnLaneInputEvent?.Invoke(pos, groupID);
+            OnLaneInputEvent?.Invoke(pos, group);
         }
 
 

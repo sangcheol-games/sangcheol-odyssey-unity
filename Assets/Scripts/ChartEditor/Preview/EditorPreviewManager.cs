@@ -218,17 +218,17 @@ namespace SCOdyssey.ChartEditor.Preview
             float laneWidth = rightX - leftX;
 
             // 타임라인 스폰 (그룹별 1개)
-            HashSet<int> spawnedGroups = new HashSet<int>();
+            HashSet<LaneGroup> spawnedGroups = new HashSet<LaneGroup>();
 
             foreach (var lane in barLanes)
             {
-                int groupID = (int)LaneMap.FromChartLine(lane.line).GetGroup();
+                LaneGroup group = LaneMap.FromChartLine(lane.line).GetGroup();
 
                 // 타임라인 (그룹당 1개)
-                if (!spawnedGroups.Contains(groupID))
+                if (!spawnedGroups.Contains(group))
                 {
-                    spawnedGroups.Add(groupID);
-                    SpawnTimeline(lane, groupID);
+                    spawnedGroups.Add(group);
+                    SpawnTimeline(lane, group);
                 }
 
                 // 노트 스폰
@@ -236,7 +236,7 @@ namespace SCOdyssey.ChartEditor.Preview
             }
         }
 
-        private void SpawnTimeline(LaneData lane, int groupID)
+        private void SpawnTimeline(LaneData lane, LaneGroup group)
         {
             GameObject timelineObj = GetFromPool(timelinePool, editorManager.timelinePrefab);
             if (timelineObj == null) return;
@@ -244,7 +244,7 @@ namespace SCOdyssey.ChartEditor.Preview
             timelineObj.transform.SetParent(editorManager.noteParent, false);
 
             // 타임라인 Y 위치 설정 (해당 그룹의 레인 위치 기반)
-            int timelineIndex = groupID; // 0=상단, 1=하단
+            int timelineIndex = (int)group;   // 0=상단, 1=하단
             // ChartManager와 동일하게 월드 좌표 사용 (anchoredPosition은 부모 좌표계에 종속되어 불일치 발생 가능)
             if (editorManager.laneTransforms.Length > timelineIndex * 2)
             {
@@ -279,7 +279,7 @@ namespace SCOdyssey.ChartEditor.Preview
                         activeTimelineObjects.Remove(tc.gameObject);
                         ReturnToPool(timelinePool, tc.gameObject);
                     },
-                    groupID: groupID,
+                    group: group,
                     timeProvider: timeProvider.GetCurrentTime   // 에디터 시간 소스 주입
                 );
             }

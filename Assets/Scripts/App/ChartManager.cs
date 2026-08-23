@@ -62,7 +62,7 @@ namespace SCOdyssey.Game
         public GameObject timelinePrefab; // 판정선 프리팹
         private Queue<GameObject> timelinePool = new Queue<GameObject>();
         public RectTransform[] timelineTransforms = new RectTransform[LANE_GROUP_COUNT];   // 판정선의 상하 위치 좌표
-        // 판정선 상태 2단계: preloaded(다음 마디용으로 생성만 됨) → active(현재 마디에서 실제 이동 중). key = 그룹ID(0/1)
+        // 판정선 상태 2단계: preloaded(다음 마디용으로 생성만 됨) → active(현재 마디에서 실제 이동 중)
         private Dictionary<LaneGroup, TimelineController> activeTimelines = new();
         private Dictionary<LaneGroup, TimelineController> preloadedTimelines = new();
 
@@ -301,19 +301,19 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                var groupID = LaneMap.FromChartLine(lane.line).GetGroup();
-                _nextGroupDirBuffer[groupID] = lane.isLTR;
+                var group = LaneMap.FromChartLine(lane.line).GetGroup();
+                _nextGroupDirBuffer[group] = lane.isLTR;
             }
 
             // 3) 이미 이동 중인 판정선 처리: 같은 그룹인데 방향이 반대면 재활용(유턴), 그 외는 제거 목록에
-            Span<bool> groupsToRemove = stackalloc bool[2]{false, false}; // GroupID는 0 or 1
+            Span<bool> groupsToRemove = stackalloc bool[2]{false, false}; 
 
-            foreach (var (groupID, timeline) in activeTimelines)
+            foreach (var (group, timeline) in activeTimelines)
             {
-                if (_nextGroupDirBuffer.ContainsKey(groupID) && timeline.isLTR != _nextGroupDirBuffer[groupID])
+                if (_nextGroupDirBuffer.ContainsKey(group) && timeline.isLTR != _nextGroupDirBuffer[group])
                 {
                     // 재활용: 풀에 반환하지 않고 방향을 뒤집어 새 마디로 다시 Init (캐릭터 중복 교차 방지)
-                    bool isLTR = _nextGroupDirBuffer[groupID];
+                    bool isLTR = _nextGroupDirBuffer[group];
                     GetTimelinePositions(isLTR, out float startX, out float endX);
 
                     timeline.Init(
@@ -322,12 +322,12 @@ namespace SCOdyssey.Game
                         startX,
                         endX,
                         (timeline) => { ReturnTimelineToPool(timeline.gameObject); },
-                        groupID: (int)groupID
+                        group: group
                     );
                 }
                 else
                 {
-                    groupsToRemove[(int)groupID] = true;   // 이번 마디에 안 쓰거나 방향 동일 → activeTimelines에서 뺌
+                    groupsToRemove[(int)group] = true;   // 이번 마디에 안 쓰거나 방향 동일 → activeTimelines에서 뺌
                 }
             }
 
@@ -337,11 +337,11 @@ namespace SCOdyssey.Game
             }
 
             // 프리로드된 판정선을 activeTimelines로 승격(실제 이동 시작).
-            foreach (var (groupID, timeline) in preloadedTimelines)
+            foreach (var (group, timeline) in preloadedTimelines)
             {
-                if (!activeTimelines.TryAdd(groupID, timeline))
+                if (!activeTimelines.TryAdd(group, timeline))
                 {
-                    Debug.LogWarning("Timeline 승격 중복 발생: 그룹 " + groupID);
+                    Debug.LogWarning("Timeline 승격 중복 발생: 그룹 " + group);
                     ReturnTimelineToPool(timeline.gameObject);
                 }
             }
@@ -372,17 +372,17 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                var groupID = LaneMap.FromChartLine(lane.line).GetGroup();
-                _nextGroupDirBuffer[groupID] = lane.isLTR;
+                var group = LaneMap.FromChartLine(lane.line).GetGroup();
+                _nextGroupDirBuffer[group] = lane.isLTR;
             }
 
             double nextStartTime = currentBarNumber * barDuration;
 
-            foreach (var (groupID, isLTR) in _nextGroupDirBuffer)
+            foreach (var (group, isLTR) in _nextGroupDirBuffer)
             {
                 // 이미 이동 중인 판정선이 방향만 반대면 재활용 대상 → 여기서는 새로 만들지 않음
                 bool isReused = false;
-                if (activeTimelines.TryGetValue(groupID, out var existing) &&
+                if (activeTimelines.TryGetValue(group, out var existing) &&
                     existing.isLTR != isLTR)
                 {
                     isReused = true;
@@ -392,7 +392,7 @@ namespace SCOdyssey.Game
                 {
                     TimelineController timeline = GetTimelineFromPool();
                     timeline.transform.SetParent(timelineParent, false);
-                    timeline.transform.position = timelineTransforms[(int)groupID].position;
+                    timeline.transform.position = timelineTransforms[(int)group].position;
 
                     GetTimelinePositions(isLTR, out float startX, out float endX);
 
@@ -402,14 +402,14 @@ namespace SCOdyssey.Game
                         startX,
                         endX,
                         (timeline) => { ReturnTimelineToPool(timeline.gameObject); },
-                        groupID: (int)groupID
+                        group: group
                     );
 
-                    preloadedTimelines.Add(groupID, timeline);
+                    preloadedTimelines.Add(group, timeline);
                 }
 
                 // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐
-                CountdownSlot slot = groupID.ToCountdownSlot(isLTR);
+                CountdownSlot slot = group.ToCountdownSlot(isLTR);
 
                 _chartState.ActivateCountdown(
                     slot: slot,
@@ -459,7 +459,7 @@ namespace SCOdyssey.Game
                 // 노트 배치 시작점 x좌표 위치
                 float laneStartX = lane.isLTR ? leftEndpoint.anchoredPosition.x : rightEndpoint.anchoredPosition.x;
 
-                var groupID = LaneMap.FromChartLine(lane.line).GetGroup();
+                var group = LaneMap.FromChartLine(lane.line).GetGroup();
 
                 // 충돌 = 현재 이동 중인 판정선과 같은 그룹을 다음 마디에서도 사용하는 경우(고난이도).
                 // 이때 다음 마디 노트를 그냥 Ghost로 띄우면 현재 판정선과 겹쳐 난잡 → Hidden으로 숨겼다가 판정선이 지난 뒤 Ghost로 전환.
@@ -467,7 +467,7 @@ namespace SCOdyssey.Game
                 bool isConflict = false;    // 현재 마디와 다음마디가 동일 그룹으 사용할 경우
                 bool currentIsLTR = true;
 
-                if (activeTimelines != null && activeTimelines.TryGetValue(groupID, out TimelineController timeline))
+                if (activeTimelines != null && activeTimelines.TryGetValue(group, out TimelineController timeline))
                 {
                     isConflict = true;
                     currentTimeline = timeline;
@@ -624,19 +624,19 @@ namespace SCOdyssey.Game
         {
             var listIndex = (int)judged.Lane;
             NotePosition pos = GetNotePosition(listIndex);
-            int groupID = (int)judged.Lane.GetGroup();
-            gameManager.OnNoteJudged(judged.Judge, pos, groupID);
+            LaneGroup group = judged.Lane.GetGroup();
+            gameManager.OnNoteJudged(judged.Judge, pos, group);
 
             // 홀드 관련 이벤트 발화
             // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
             // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
             // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
             if (judged.Kind == NoteType.HoldStart || judged.Kind == NoteType.Holding)
-                gameManager.OnHoldStart(pos, groupID);
+                gameManager.OnHoldStart(pos, group);
             else if (judged.Kind == NoteType.HoldEnd)
-                gameManager.OnHoldEnd(pos, groupID);
+                gameManager.OnHoldEnd(pos, group);
             else if (judged.Kind == NoteType.HoldRelease)
-                gameManager.OnHoldRelease(pos, groupID);
+                gameManager.OnHoldRelease(pos, group);
 
             if (view == null) return;   // 스폰 전이거나 이미 회수된 노트. 점수/이벤트는 위에서 이미 나갔다
 

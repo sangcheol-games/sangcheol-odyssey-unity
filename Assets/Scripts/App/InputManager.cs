@@ -1,4 +1,5 @@
 using System;
+using SCOdyssey.Game;
 using UnityEngine;
 
 namespace SCOdyssey.App
@@ -10,8 +11,8 @@ namespace SCOdyssey.App
         public event Action<Vector2> OnSelect;
         public event Action OnSubmit;
         public event Action OnCancel;
-        public event Action<int, double> OnLanePressed;
-        public event Action<int, double> OnLaneReleased;
+        public event Action<Lane, double> OnLanePressed;
+        public event Action<Lane, double> OnLaneReleased;
         public event Action OnRestart;
         public event Action OnPause;
 
@@ -46,8 +47,8 @@ namespace SCOdyssey.App
         private void HandleSelect(Vector2 dir) { if(IsInputActive) OnSelect?.Invoke(dir); }
         private void HandleSubmit() { if(IsInputActive) OnSubmit?.Invoke(); }
         private void HandleCancel() { if (IsInputActive) OnCancel?.Invoke(); }
-        private void HandleLaneInput(int lane, double ctxTime) { if (IsInputActive) OnLanePressed?.Invoke(lane, ConvertToDspTime(ctxTime)); }
-        private void HandleLaneRelease(int lane, double ctxTime) { if (IsInputActive) OnLaneReleased?.Invoke(lane, ConvertToDspTime(ctxTime)); }
+        private void HandleLaneInput(int lane, double ctxTime) { if (IsInputActive) OnLanePressed?.Invoke(LaneMap.FromInputIndex(lane), ConvertToDspTime(ctxTime)); }
+        private void HandleLaneRelease(int lane, double ctxTime) { if (IsInputActive) OnLaneReleased?.Invoke(LaneMap.FromInputIndex(lane), ConvertToDspTime(ctxTime)); }
         private void HandleRestart() { if (IsInputActive) OnRestart?.Invoke(); }
         private void HandlePause()   { if (IsInputActive) OnPause?.Invoke(); }
         
