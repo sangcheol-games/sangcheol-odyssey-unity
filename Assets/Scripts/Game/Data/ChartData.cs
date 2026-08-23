@@ -34,7 +34,7 @@ namespace SCOdyssey.Game
         // Holding/HoldEnd/HoldRelease도 전부 일반 원소로 담는다.
         public JudgeNote[] BuildJudgeTrack()
         {
-            var flat = new List<JudgeNote>(totalNotes > 0 ? totalNotes : 256);
+            var pairs = new List<(NoteData data, JudgeNote judge)>(totalNotes > 0 ? totalNotes : 256);
 
             foreach (LaneData laneData in chart)
             {
@@ -48,15 +48,24 @@ namespace SCOdyssey.Game
 
                 foreach (NoteData note in laneData.Notes)
                 {
-                    flat.Add(new JudgeNote(note.time, lane, note.noteType));
+                    pairs.Add((note, new JudgeNote(note.time, lane, note.noteType)));
                 }
             }
 
             // (참고) 파싱 순서는 "마디 → 그 마디의 레인들" 이라 시간 순이 아님.
-            return flat
-                .OrderBy(n => n.Time) // 시간 순 정렬
-                .ThenBy(n => (int)n.Lane)
+            var sorted = pairs
+                .OrderBy(p => p.judge.Time) // 시간 순 정렬
+                .ThenBy(p => (int)p.judge.Lane)
                 .ToArray();
+
+            var track = new JudgeNote[sorted.Length];
+            for (int i = 0; i < sorted.Length; i++)
+            {
+                sorted[i].data.id = i;   // 뷰가 판정 결과를 되찾아올 열쇠
+                track[i] = sorted[i].judge;
+            }
+
+            return track;
         }
     }
 }
