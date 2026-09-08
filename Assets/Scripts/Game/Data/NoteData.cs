@@ -7,6 +7,7 @@ namespace SCOdyssey.Game
     // index로 배치 X좌표 계산, holdBarBeats로 홀드바 길이를 정한다.
     public class NoteData
     {
+        public int id = -1;         // 판정 트랙 인덱스. BuildJudgeTrack이 정렬 후 부여, 판정 결과 ↔ 뷰 연결에 사용
         public int index;           // 채보 순서(마디 내 비트 인덱스). SpawnNextNotes의 X좌표 계산에 사용
         public double time;          // 판정 시간(게임 상대시간, 파싱 시 선계산). TryJudge/CheckMissed/CheckHoldingBody에서 읽음
         public NoteType noteType;   // 노트 타입(Normal/HoldStart/Holding/HoldEnd/HoldRelease)

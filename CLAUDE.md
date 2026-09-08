@@ -69,7 +69,14 @@ Charts live in `Assets/Charts/` as text files. Format (see `ChartParser.cs`):
 
 ### Judgement & character animation
 
-Judge windows (seconds) are in `Assets/Scripts/Domain/Service/Constants.cs`: `Perfect=0.021 / Master=0.042 / Ideal=0.084 / Kind=0.105 / Umm=0.126`. 4 lanes (indices 1–4 from Input System) map to 2 groups: lanes 1–2 = `NotePosition.Bottom`, lanes 3–4 = `NotePosition.Top`. `Middle` is derived only when both holds are active simultaneously.
+Judge windows (seconds) are in `Assets/Scripts/Domain/Service/Constants.cs`: `Perfect=0.021 / Master=0.042 / Ideal=0.084 / Kind=0.105 / Umm=0.126`.
+
+**Lane numbering is 1-based at the edges, 0-based internally.** Both the Input System (`InputManager` hardcodes `1`–`4`) and the chart file (`#001:`**`02`**`:...`) use lanes 1–4, but the `Lane` enum is 0-based (`TopUpper=0, TopLower=1, BottomUpper=2, BottomLower=3`) — call sites convert with `- 1`. Two *different* mappings derive from a lane; do not conflate them:
+
+- **`LaneGroup`** — which judgement line / character the lane belongs to. Lanes 1–2 = `Top`, lanes 3–4 = `Bottom` (`LaneExtensions.GetGroup`, 0-based `(int)lane < 2`). Passed around as a raw `int groupID` in most signatures.
+- **`NotePosition`** — position *within* the group; drives character Y. Alternates: lanes 1,3 = `Top`, lanes 2,4 = `Bottom` (`GetNotePosition`, `listIndex % 2 == 0`).
+
+So `Lane.TopLower` = group `Top`, position `Bottom`. `NotePosition.Middle` is never parsed from a chart — `CharacterAnimator` derives it at runtime two ways: both holds active simultaneously (`UpdateHoldState`), or opposite-position inputs within the same frame (`OnLaneInputEvent`).
 
 Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudgedEvent / OnHoldStartEvent / OnHoldEndEvent` and drives a 14-state machine (Idle, Hit0-3, Top/Middle/Bottom, Fall, *Hold, *HitWhile*Hold). It sets `_targetY` and lerps the root in `Update()` — animation clips provide only relative motion. See `Assets/Scripts/Game/Animation_mechanic.md` for the full state machine spec, AnimatorController setup, and CharacterSO authoring checklist — read it before touching animation code or creating character assets.
 

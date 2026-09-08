@@ -3,7 +3,9 @@ namespace SCOdyssey.Domain.Service
 {
     public static class Constants
     {
-        public const int LANE_COUNT = 4;   // 레인 수. ChartManager의 _lanes/countdownTexts 배열 크기
+        public const int LANE_GROUP_COUNT = 2;
+        public const int LANE_COUNT = 4;   // 레인 수
+        public const int COUNTDOWN_SLOT_COUNT = LANE_GROUP_COUNT * 2;   // 그룹 x 진행방향(LTR/RTL). countdownTexts 배열 크기
 
 
         // 판정 윈도우(초, 판정타이밍 기준 ±오차). ChartManager.GetJudgeType/CheckMissedNotes 등이 사용
@@ -39,6 +41,17 @@ namespace SCOdyssey.Domain.Service
             HoldEnd = 4,        // 끝점 플래그: 시각 없음, 누르고 있는지 판정
             HoldRelease = 5     // 릴리즈 판정: 헤드만 표시, 손을 떼는 판정 담당
         }
+
+        public static int Mask(params NoteType[] types)
+        {
+            int m = 0;
+            foreach(var t in types)
+                m |= 1 << (int)t;
+            return m;
+        }
+
+        public static bool Accepts(int mask, NoteType t)
+            => (mask & (1 << (int)t)) != 0;
 
         public enum JudgeType
         {

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SCOdyssey.Game;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -46,9 +47,13 @@ namespace SCOdyssey.App
             { JudgeType.Umm, 0 }
         };
 
+        private IJudgementBus judgementBus;
+
         // 게임 시작 시 총 노트 수를 받아 노트당 기본점수를 산정하고 상태를 초기화(GameManager.StartGame이 호출)
-        public void Init(int totalNotes)
+        public void Init(int totalNotes, IJudgementBus bus)
         {
+            BindBus(bus);
+
             totalNoteCount = totalNotes;
             if (totalNoteCount > 0)
             {
@@ -70,7 +75,34 @@ namespace SCOdyssey.App
             UpdateUI();
         }
 
-        // 노트 1개 판정마다 호출(GameManager 경유). 배율로 점수 가산, 판정별 카운트/콤보 갱신 후 UI 이벤트 발행
+        // 같은 버스면 재구독하지 않는다(Init이 두 번 불려도 중복 가산 없음)
+        private void BindBus(IJudgementBus bus)
+        {
+            if (ReferenceEquals(judgementBus, bus)) return;
+
+            UnbindBus();
+            judgementBus = bus;
+            if (judgementBus == null) return;
+
+            judgementBus.NoteJudged += OnNoteJudged;
+            judgementBus.NoteMissed += OnNoteMissed;
+        }
+
+        private void UnbindBus()
+        {
+            if (judgementBus == null) return;
+
+            judgementBus.NoteJudged -= OnNoteJudged;
+            judgementBus.NoteMissed -= OnNoteMissed;
+            judgementBus = null;
+        }
+
+        private void OnDestroy() => UnbindBus();
+
+        private void OnNoteJudged(JudgeType type, NotePosition pos, LaneGroup group) => ProcessJudge(type);
+        private void OnNoteMissed() => ProcessJudge(JudgeType.Umm);
+
+        // 노트 1개 판정마다 호출(버스 구독). 배율로 점수 가산, 판정별 카운트/콤보 갱신 후 UI 이벤트 발행
         public void ProcessJudge(JudgeType type)
         {
             float multiplier = 0f;

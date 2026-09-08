@@ -1,4 +1,5 @@
 using System;
+using SCOdyssey.Game;
 using UnityEngine;
 
 namespace SCOdyssey.App
@@ -8,8 +9,8 @@ namespace SCOdyssey.App
         public event Action<Vector2> OnSelect;
         public event Action OnSubmit;
         public event Action OnCancel;
-        public event Action<int, double> OnLanePressed; // 1~4번 레인 입력 이벤트 (laneIndex, inputDspTime)
-        public event Action<int, double> OnLaneReleased; // 1~4번 레인 입력 해제 이벤트 (laneIndex, inputDspTime)
+        public event Action<Lane, double> OnLanePressed;  // 레인 입력 이벤트 (lane, inputDspTime)
+        public event Action<Lane, double> OnLaneReleased; // 레인 입력 해제 이벤트 (lane, inputDspTime)
         public event Action OnRestart; // 게임 중 재시작 이벤트
         public event Action OnPause;   // 게임 중 일시정지 이벤트
         

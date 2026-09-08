@@ -149,5 +149,16 @@ namespace SCOdyssey.Game
             gameObject.SetActive(false);
             onReturn?.Invoke(this);
         }
+
+        public bool AnyOf(params NoteType[] types)
+        {
+            foreach(var type in types)
+            {
+                if(noteData.noteType == type)
+                    return true;
+            }
+
+            return false;
+        }
     }
 }

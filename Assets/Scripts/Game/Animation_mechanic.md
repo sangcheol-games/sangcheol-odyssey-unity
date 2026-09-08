@@ -16,13 +16,18 @@
 
 ```
 유저 입력
-  └─ ChartManager.ApplyJudgment()
-       ├─ gameManager.OnNoteJudged(type, pos)    ← NotePosition 포함
-       ├─ gameManager.OnHoldStart(pos)           ← HoldStart 노트 판정 시
-       └─ gameManager.OnHoldEnd(pos)             ← HoldRelease 노트 판정 시
+  └─ ChartManager.ApplyJudgement()
+       ├─ judgementBus.PublishNoteJudged(judge, pos, group)
+       ├─ judgementBus.PublishHoldStarted(pos, group)    ← HoldStart / Holding 판정 시
+       ├─ judgementBus.PublishHoldEnded(pos, group)      ← HoldEnd 판정 시
+       └─ judgementBus.PublishHoldReleased(pos, group)   ← HoldRelease 판정 시
 
-GameManager
-  └─ 이벤트 발화 (OnNoteJudgedEvent / OnHoldStartEvent / OnHoldEndEvent)
+GameManager (키 입력 자체)
+  ├─ judgementBus.PublishLaneInput(pos, group)
+  └─ judgementBus.PublishHoldReleased(pos, group)   ← 키를 뗀 순간(판정 성공 여부 무관)
+
+IJudgementBus
+  └─ 구독자: ScoreManager(점수) / CharacterAnimator(연출)
 
 CharacterAnimator (구독)
   ├─ OnNoteJudgedHandler → OnNoteHit(pos)
