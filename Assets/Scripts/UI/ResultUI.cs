@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using TMPro;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using static SCOdyssey.Domain.Service.Constants;
@@ -15,6 +14,9 @@ namespace SCOdyssey.UI
     {
         MusicSO currentMusic;
 
+        // 등급 도장 스프라이트. ScoreRank enum 순서(SSS, SS, S, A, B, C, F)와 인덱스가 일치해야 함
+        [SerializeField] private Sprite[] rankStampSprites;
+
         // 텍스트 enum
         private enum Texts
         {
@@ -22,7 +24,6 @@ namespace SCOdyssey.UI
             ArtistText,        // 아티스트
             ScoreText,          // 최종 점수
             TotalNotesText,     // 총 노트 수
-            RankText,           // 클리어 등급
             GaugeText,          // 게이지 퍼센트
             MaxComboText,       // 최대 콤보
             PerfectCountText,   // Perfect 개수
@@ -41,7 +42,8 @@ namespace SCOdyssey.UI
 
         private enum Images
         {
-            AlbumArt      // 앨범 아트
+            AlbumArt,     // 앨범 아트
+            RankStamp     // 클리어 등급 도장
         }
 
         private enum GameObjects
@@ -82,11 +84,9 @@ namespace SCOdyssey.UI
             // 점수 표시 (7자리 포맷)
             GetText((int)Texts.ScoreText).text = finalScore.ToString("N0");
 
-            // 등급 표시 (색상 포함)
+            // 등급 도장 표시
             ScoreRank scoreRank = GetScoreRank(finalScore);
-            TMP_Text rankText = GetText((int)Texts.RankText);
-            rankText.text = scoreRank.ToString().ToUpper();
-            rankText.color = GetRankColor(scoreRank);
+            GetImage((int)Images.RankStamp).sprite = rankStampSprites[(int)scoreRank];
 
             // 게이지 퍼센트 표시
             GetText((int)Texts.GaugeText).text = $"{gaugePercent:F2}%";
@@ -124,22 +124,6 @@ namespace SCOdyssey.UI
                 >= 800_000   => ScoreRank.B,
                 >= 700_000   => ScoreRank.C,
                 _            => ScoreRank.F
-            };
-        }
-
-        // 등급별 색상 반환
-        private Color GetRankColor(ScoreRank rank)
-        {
-            return rank switch
-            {
-                ScoreRank.SSS => new Color(1f, 0.84f, 0f), // gold
-                ScoreRank.SS  => new Color(1f, 0.84f, 0f), // gold
-                ScoreRank.S   => new Color(1f, 0.84f, 0f), // gold
-                ScoreRank.A   => Color.red,
-                ScoreRank.B   => Color.yellow,
-                ScoreRank.C   => Color.green,
-                ScoreRank.F   => Color.cyan,
-                _             => Color.white
             };
         }
 
