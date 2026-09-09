@@ -67,7 +67,13 @@ namespace SCOdyssey.App
         public TextMeshProUGUI comboText;
         public TextMeshProUGUI gaugeText;
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
-        public TextMeshProUGUI clearEffectText; // 클리어 연출 텍스트
+        public Image clearEffectImage; // 클리어 등급 / 재개 카운트다운 연출 이미지
+
+        // ClearType enum 순서(Fail, Clear, FullCombo, OverMillion, AllPerfect)와 인덱스가 일치해야 함
+        [SerializeField] private Sprite[] clearTypeSprites = new Sprite[5];
+
+        // 일시정지 재개 카운트다운. GameUI_Countdown_1~3, 인덱스 = 숫자 - 1
+        [SerializeField] private Sprite[] resumeCountdownSprites = new Sprite[3];
 
 
         private void Awake()
@@ -203,16 +209,16 @@ namespace SCOdyssey.App
         private IEnumerator ResumeCountdownSequence()
         {
             _inputManager.SetInputActive(false); // 카운트다운 중 입력 차단
-            if (clearEffectText != null)
+            if (clearEffectImage != null)
             {
-                clearEffectText.gameObject.SetActive(true);
+                clearEffectImage.color = Color.white;
+                clearEffectImage.gameObject.SetActive(true);
                 for (int i = 3; i >= 1; i--)
                 {
-                    clearEffectText.text = i.ToString();
-                    clearEffectText.color = Color.white;
+                    clearEffectImage.sprite = resumeCountdownSprites[i - 1];
                     yield return new WaitForSeconds(1f);
                 }
-                clearEffectText.gameObject.SetActive(false);
+                clearEffectImage.gameObject.SetActive(false);
             }
 
             // 일시정지 동안 흐른 DSP 시간만큼 globalStartTime을 보정하여 채보 위치를 유지
@@ -347,41 +353,23 @@ namespace SCOdyssey.App
             StartCoroutine(ShowClearSequence(rank));
         }
 
-        // 클리어 연출 표시 (즉시 텍스트 표시 후 4초 대기)
+        // 클리어 연출 표시 (즉시 등급 스프라이트 표시 후 4초 대기)
         private IEnumerator ShowClearSequence(ClearType rank)
         {
-            // 클리어 텍스트 설정 및 즉시 표시
-            if (clearEffectText != null)
+            // 클리어 등급 스프라이트 설정 및 즉시 표시. 등급별 색상은 스프라이트가 담당한다
+            if (clearEffectImage != null && (int)rank >= 0 && (int)rank < clearTypeSprites.Length)
             {
-                clearEffectText.gameObject.SetActive(true);
-
-                switch (rank)
-                {
-                    case ClearType.AllPerfect:
-                        clearEffectText.text = "ALL PERFECT";
-                        clearEffectText.color = Color.cyan;
-                        break;
-                    case ClearType.OverMillion:
-                        clearEffectText.text = "OVER MILLION";
-                        clearEffectText.color = Color.yellow;
-                        break;
-                    case ClearType.FullCombo:
-                        clearEffectText.text = "FULL COMBO";
-                        clearEffectText.color = Color.green;
-                        break;
-                    case ClearType.Clear:
-                        clearEffectText.text = "CLEAR";
-                        clearEffectText.color = Color.white;
-                        break;
-                    case ClearType.Fail:
-                        clearEffectText.text = "FAILED";
-                        clearEffectText.color = Color.red;
-                        break;
-                }
+                clearEffectImage.color = Color.white;
+                clearEffectImage.sprite = clearTypeSprites[(int)rank];
+                clearEffectImage.gameObject.SetActive(true);
 
                 // 4초 표시
                 yield return new WaitForSeconds(4f);
-                clearEffectText.gameObject.SetActive(false);
+                clearEffectImage.gameObject.SetActive(false);
+            }
+            else if (clearEffectImage != null)
+            {
+                Debug.LogWarning($"[GameManager] clearTypeSprites에 {rank} 등급 스프라이트가 없습니다. 클리어 연출을 건너뜁니다.");
             }
 
             // BGA 정지 후 GameScene Canvas 비활성화 및 결과 화면 표시

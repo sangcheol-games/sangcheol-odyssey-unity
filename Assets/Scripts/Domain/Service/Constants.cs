@@ -3,7 +3,7 @@ namespace SCOdyssey.Domain.Service
 {
     public static class Constants
     {
-        public const int LANE_COUNT = 4;   // 레인 수. ChartManager의 _lanes/countdownTexts 배열 크기
+        public const int LANE_COUNT = 4;   // 레인 수. ChartManager의 _lanes/countdownImages 배열 크기
 
 
         // 판정 윈도우(초, 판정타이밍 기준 ±오차). ChartManager.GetJudgeType/CheckMissedNotes 등이 사용

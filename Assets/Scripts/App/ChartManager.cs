@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
 using SCOdyssey.Core;
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
@@ -83,7 +83,10 @@ namespace SCOdyssey.Game
         private double currentBarEndTime = 0f; // 현재 마디의 종료 시간. SyncTime에서 currentTime이 이 값을 넘으면 다음 마디로 전환
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
-        public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[LANE_COUNT];
+        public Image[] countdownImages = new Image[LANE_COUNT];
+
+        // GameUI_Countdown_1~3. 인덱스 = 표시 숫자 - 1
+        [SerializeField] private Sprite[] countdownSprites = new Sprite[3];
 
         private LaneState[] _lanes;   // LANE_COUNT(=4) 크기. 레인별 런타임 상태
 
@@ -96,6 +99,7 @@ namespace SCOdyssey.Game
             public double? bufferedInput;      // 마디 전환 직전 선입력 시각(노트 활성화 후 FlushBufferedInput에서 재판정)
             public double countdownTargetTime; // 카운트다운이 0이 되는 목표 시각(다음 마디 시작 시각)
             public bool isCountdownActive;     // 카운트다운 UI 표시 중 여부
+            public int countdownDisplayNum;    // 현재 표시 중인 카운트다운 숫자(0 = 표시 없음). 중복 갱신 방지용
         }
 
 
@@ -145,8 +149,10 @@ namespace SCOdyssey.Game
                 _lanes[i].bufferedInput = null;
                 _lanes[i].isCountdownActive = false;
 
-                countdownTexts[i].gameObject.SetActive(false);
-                countdownTexts[i].text = "";
+                _lanes[i].countdownDisplayNum = 0;
+
+                countdownImages[i].enabled = false;
+                countdownImages[i].gameObject.SetActive(false);
             }
 
             PrepareNextBar();   // 0번(빈) 마디 이후 첫 마디를 미리 준비
@@ -317,8 +323,8 @@ namespace SCOdyssey.Game
 
 
         /// <summary>
-        /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1로 표시.
-        /// 목표 시각에 도달하면(남은 시간 &lt;= 0) 텍스트를 끄고 비활성화한다.
+        /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1 스프라이트로 표시.
+        /// 목표 시각에 도달하면(남은 시간 &lt;= 0) 이미지를 끄고 비활성화한다.
         /// </summary>
         private void UpdateCountdowns()
         {
@@ -332,37 +338,59 @@ namespace SCOdyssey.Game
 
                 if (timeDiff <= 0)
                 {
-                    countdownTexts[i].gameObject.SetActive(false);
+                    _lanes[i].countdownDisplayNum = 0;
+                    countdownImages[i].gameObject.SetActive(false);
                     _lanes[i].isCountdownActive = false;
                     continue;
                 }
 
                 double remainingBeats = timeDiff / beatDuration;
 
-                if (remainingBeats <= 3.01d) 
+                if (remainingBeats <= 3.01d)
                 {
                     int displayNum = (int)Math.Ceiling(remainingBeats);     // 올림 처리
 
                     if (displayNum > 0 && displayNum <= 3)
                     {
-                        countdownTexts[i].text = displayNum.ToString();
+                        SetCountdownNumber(i, displayNum);
                     }
                 }
                 else
                 {
-                    countdownTexts[i].text = "";
+                    SetCountdownNumber(i, 0);
                 }
 
             }
         }
-        
+
+        // 레인 카운트다운 표시 숫자를 갱신한다. num = 0 이면 이미지를 숨긴다.
+        // 값이 바뀔 때만 sprite를 대입해 ContentSizeFitter의 불필요한 레이아웃 리빌드를 막는다.
+        private void SetCountdownNumber(int laneIndex, int num)
+        {
+            if (_lanes[laneIndex].countdownDisplayNum == num) return;
+            _lanes[laneIndex].countdownDisplayNum = num;
+
+            Image image = countdownImages[laneIndex];
+
+            if (num <= 0 || num > countdownSprites.Length)
+            {
+                image.enabled = false;
+                return;
+            }
+
+            image.sprite = countdownSprites[num - 1];
+            image.enabled = true;
+        }
+
         // 특정 카운트다운 슬롯을 켠다. 이미 같은 목표 시각으로 켜져 있으면 중복 설정 방지
         private void ActivateCountdown(int index, double targetTime)
         {
             if (_lanes[index].isCountdownActive && Math.Abs(_lanes[index].countdownTargetTime - targetTime) < 0.01d) return;
 
-            countdownTexts[index].gameObject.SetActive(true);
-            countdownTexts[index].text = "";
+            _lanes[index].countdownDisplayNum = 0;
+
+            countdownImages[index].enabled = false;   // 3칸 이내로 들어올 때까지는 빈 상태
+            countdownImages[index].gameObject.SetActive(true);
 
             _lanes[index].countdownTargetTime = targetTime;
             _lanes[index].isCountdownActive = true;
