@@ -4686,6 +4686,7 @@ MonoBehaviour:
   bgaController: {fileID: 199462507}
   gameCanvas: {fileID: 1381600517}
   scoreText: {fileID: 1695755550}
+  comboRoot: {fileID: 673372712}
   comboText: {fileID: 263511529}
   gaugeText: {fileID: 1625766189}
   gaugeBar: {fileID: 462455277}

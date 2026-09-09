@@ -64,6 +64,7 @@ namespace SCOdyssey.App
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
         public TextMeshProUGUI scoreText;
+        public GameObject comboRoot;   // Combo 그룹 루트("Combo" 라벨 + 숫자 + 인디케이터). 콤보 0이면 통째로 숨긴다
         public TextMeshProUGUI comboText;
         public TextMeshProUGUI gaugeText;
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
@@ -302,14 +303,20 @@ namespace SCOdyssey.App
 
         public void UpdateCombo(int combo)
         {
+            // 숨기기 전에 텍스트를 먼저 갱신해야 다시 켜질 때 이전 값이 한 프레임 노출되지 않는다
             if (combo > 0)
             {
                 comboText.text = combo.ToString();
-                comboText.gameObject.SetActive(true);
+            }
+
+            // 콤보 0이면 Combo 하위(라벨/숫자/인디케이터)를 통째로 숨긴다
+            if (comboRoot != null)
+            {
+                comboRoot.SetActive(combo > 0);
             }
             else
             {
-                comboText.gameObject.SetActive(false);
+                comboText.gameObject.SetActive(combo > 0);   // comboRoot 미할당 시 기존 동작으로 폴백
             }
         }
 
