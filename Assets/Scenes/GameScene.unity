@@ -212,7 +212,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &78689220
 RectTransform:
   m_ObjectHideFlags: 0
@@ -349,7 +349,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &132016691
 RectTransform:
   m_ObjectHideFlags: 0
@@ -821,13 +821,14 @@ GameObject:
   - component: {fileID: 216342478}
   - component: {fileID: 216342477}
   - component: {fileID: 216342479}
+  - component: {fileID: 216342480}
   m_Layer: 5
   m_Name: CountDown2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!222 &216342477
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -853,7 +854,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 200}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &216342479
 MonoBehaviour:
@@ -885,6 +886,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &216342480
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 216342475}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 2
+  m_VerticalFit: 2
 --- !u!1 &222975564
 GameObject:
   m_ObjectHideFlags: 0
@@ -948,11 +963,15 @@ MonoBehaviour:
   - {fileID: 1643029733}
   - {fileID: 703962477}
   - {fileID: 1556746323}
-  countdownTexts:
-  - {fileID: 132016692}
-  - {fileID: 78689221}
-  - {fileID: 455034257}
-  - {fileID: 971288117}
+  countdownImages:
+  - {fileID: 1738271156}
+  - {fileID: 216342479}
+  - {fileID: 273070321}
+  - {fileID: 2029355839}
+  countdownSprites:
+  - {fileID: 21300000, guid: 4aaa6ed3ccdab6e4bab9a7f4989afb16, type: 3}
+  - {fileID: 21300000, guid: 2e4700d0d226b5040bf3badd075655d6, type: 3}
+  - {fileID: 21300000, guid: 41bbc67b9ac1e52458168e5ade05a05f, type: 3}
 --- !u!1 &228950466
 GameObject:
   m_ObjectHideFlags: 0
@@ -1178,13 +1197,14 @@ GameObject:
   - component: {fileID: 273070320}
   - component: {fileID: 273070319}
   - component: {fileID: 273070321}
+  - component: {fileID: 273070322}
   m_Layer: 5
   m_Name: CountDown3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!222 &273070319
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1210,7 +1230,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 200}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &273070321
 MonoBehaviour:
@@ -1242,6 +1262,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &273070322
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 273070317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 2
+  m_VerticalFit: 2
 --- !u!1 &298145259
 GameObject:
   m_ObjectHideFlags: 0
@@ -1615,7 +1649,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &455034256
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2623,13 +2657,14 @@ GameObject:
   - component: {fileID: 796260942}
   - component: {fileID: 796260944}
   - component: {fileID: 796260943}
+  - component: {fileID: 796260945}
   m_Layer: 5
-  m_Name: ClearEffectNew
+  m_Name: ClearEffectImage
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &796260942
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2647,7 +2682,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
   m_AnchoredPosition: {x: 0, y: -180}
-  m_SizeDelta: {x: 1050, y: 240}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &796260943
 MonoBehaviour:
@@ -2669,7 +2704,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 6d436699aed67964ead49a7ef4e57cd1, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2687,6 +2722,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 796260941}
   m_CullTransparentMesh: 1
+--- !u!114 &796260945
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 796260941}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 2
+  m_VerticalFit: 2
 --- !u!1 &811514396
 GameObject:
   m_ObjectHideFlags: 0
@@ -2862,7 +2911,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &971288116
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4216,13 +4265,14 @@ GameObject:
   - component: {fileID: 1738271155}
   - component: {fileID: 1738271154}
   - component: {fileID: 1738271156}
+  - component: {fileID: 1738271157}
   m_Layer: 5
   m_Name: CountDown1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!222 &1738271154
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4248,7 +4298,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 0, y: -200}
-  m_SizeDelta: {x: 200, y: 200}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
 --- !u!114 &1738271156
 MonoBehaviour:
@@ -4280,6 +4330,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &1738271157
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1738271152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 2
+  m_VerticalFit: 2
 --- !u!1 &1836128675
 GameObject:
   m_ObjectHideFlags: 0
@@ -4372,7 +4436,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1850569079
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4622,10 +4686,21 @@ MonoBehaviour:
   bgaController: {fileID: 199462507}
   gameCanvas: {fileID: 1381600517}
   scoreText: {fileID: 1695755550}
+  comboRoot: {fileID: 673372712}
   comboText: {fileID: 263511529}
   gaugeText: {fileID: 1625766189}
   gaugeBar: {fileID: 462455277}
-  clearEffectText: {fileID: 1850569080}
+  clearEffectImage: {fileID: 796260943}
+  clearTypeSprites:
+  - {fileID: 21300000, guid: a48d2b67d8cbe6547bcca4c2c8d0217c, type: 3}
+  - {fileID: 21300000, guid: 5b6785bcc7ffd404f90ba290bc846c25, type: 3}
+  - {fileID: 21300000, guid: 1e04879b5577b6b4993c8c8faea3ac32, type: 3}
+  - {fileID: 21300000, guid: ec5447f14d5078445972b6500cfbbad5, type: 3}
+  - {fileID: 21300000, guid: 95dddbfa6d4c8a04e9ff3a3f64567bf5, type: 3}
+  resumeCountdownSprites:
+  - {fileID: 21300000, guid: 4aaa6ed3ccdab6e4bab9a7f4989afb16, type: 3}
+  - {fileID: 21300000, guid: 2e4700d0d226b5040bf3badd075655d6, type: 3}
+  - {fileID: 21300000, guid: 41bbc67b9ac1e52458168e5ade05a05f, type: 3}
 --- !u!1 &1993549158
 GameObject:
   m_ObjectHideFlags: 0
@@ -4862,13 +4937,14 @@ GameObject:
   - component: {fileID: 2029355838}
   - component: {fileID: 2029355837}
   - component: {fileID: 2029355839}
+  - component: {fileID: 2029355840}
   m_Layer: 5
   m_Name: CountDown4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!222 &2029355837
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4894,7 +4970,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 200}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &2029355839
 MonoBehaviour:
@@ -4926,6 +5002,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &2029355840
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2029355835}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 2
+  m_VerticalFit: 2
 --- !u!1 &2049442148
 GameObject:
   m_ObjectHideFlags: 0
