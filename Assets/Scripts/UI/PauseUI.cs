@@ -2,6 +2,7 @@ using System;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -40,6 +41,13 @@ namespace SCOdyssey.UI
             GetButton((int)Buttons.Btn_Resume).onClick.AddListener(OnClickResumeButton);
             GetButton((int)Buttons.Btn_Retry).onClick.AddListener(OnClickRetryButton);
             GetButton((int)Buttons.Btn_Quit).onClick.AddListener(OnClickQuitButton);
+
+            // 마우스 호버로도 포커스가 따라오게 해서 키보드 하이라이트와 어긋나지 않도록 한다
+            for (int i = 0; i < ButtonCount; i++)
+            {
+                int index = i;  // 람다가 루프 변수를 공유하지 않도록 복사
+                BindEvent(GetButton(index).gameObject, EventTriggerType.PointerEnter, () => SetFocus(index));
+            }
         }
 
         protected override void OnEnable()
@@ -56,6 +64,8 @@ namespace SCOdyssey.UI
             return GetButton(index).transform.Find(ButtonBGName).GetComponent<Image>();
         }
 
+        // 조기 반환(_focusIndex == index면 return)을 넣지 말 것.
+        // _focusIndex 초기값이 0이라 OnEnable의 SetFocus(0)이 no-op이 되어 첫 표시 때 하이라이트가 안 걸린다.
         private void SetFocus(int index)
         {
             _focusIndex = index;
@@ -65,6 +75,8 @@ namespace SCOdyssey.UI
                 GetButtonBG(i).sprite = (i == _focusIndex) ? selectedSprite : normalSprite;
             }
         }
+
+        private static int WrapIndex(int index) => ((index % ButtonCount) + ButtonCount) % ButtonCount;
 
         private void OnClickResumeButton()
         {
@@ -84,8 +96,12 @@ namespace SCOdyssey.UI
             SceneManager.LoadScene("MainScene");
         }
 
-        // TODO: 포커스 이동 방식(방향키 / 마우스 호버) 확정 후 SetFocus 호출 구현
-        protected override void HandleSelect(Vector2 dir) { }
+        // 상하로 포커스 이동 (양 끝에서 순환). 좌우는 세로 3버튼 메뉴라 무시
+        protected override void HandleSelect(Vector2 dir)
+        {
+            if (dir.y > 0)      SetFocus(WrapIndex(_focusIndex - 1));
+            else if (dir.y < 0) SetFocus(WrapIndex(_focusIndex + 1));
+        }
         protected override void HandleSubmit() => GetButton(_focusIndex).onClick.Invoke();
         protected override void HandleCancel() => OnClickResumeButton(); // ESC로도 재개
     }
