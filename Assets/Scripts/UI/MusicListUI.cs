@@ -31,11 +31,11 @@ namespace SCOdyssey.UI
 
         private Image backgroundImage;  // 루트 배경 이미지
 
-        private static readonly Color SELECTED_BG_COLOR = new Color(0.15f, 0.15f, 0.4f, 1f);
-        private static readonly Color DEFAULT_BG_COLOR = new Color(0.047f, 0.047f, 0.192f, 1f);
-        private static readonly Color SELECTED_DIFFICULTY_COLOR = Color.yellow;
-        private static readonly Color DEFAULT_DIFFICULTY_COLOR = Color.white;
-        private static readonly Color UNAVAILABLE_DIFFICULTY_COLOR = new Color(0.4f, 0.4f, 0.4f, 0.6f);
+        private static readonly Color SELECTED_BG_COLOR = Color.white;
+        private static readonly Color DEFAULT_BG_COLOR = Color.white;
+        private static readonly Color SELECTED_DIFFICULTY_COLOR = Color.blue;
+        private static readonly Color DEFAULT_DIFFICULTY_COLOR = Color.black;
+        private static readonly Color UNAVAILABLE_DIFFICULTY_COLOR = Color.black;
 
         protected override void Awake()
         {
