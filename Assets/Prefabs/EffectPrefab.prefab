@@ -35,7 +35,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 320, y: 64}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &688026836460543360
 CanvasRenderer:
@@ -67,7 +67,7 @@ MonoBehaviour:
       m_Calls: []
   m_Sprite: {fileID: 0}
   m_Type: 0
-  m_PreserveAspect: 0
+  m_PreserveAspect: 1
   m_FillCenter: 1
   m_FillMethod: 4
   m_FillAmount: 1
@@ -92,7 +92,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2386469873221519367
 RectTransform:
   m_ObjectHideFlags: 0
@@ -275,13 +275,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb997966759ddaf4db0f75989fa2a188, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useText: 1
-  judgeText: {fileID: 8436011300696235840}
   judgeImage: {fileID: 4894797660148894667}
-  spritePerfect: {fileID: 0}
-  spriteMaster: {fileID: 0}
-  spriteIdeal: {fileID: 0}
-  spriteKind: {fileID: 0}
-  spriteUmm: {fileID: 0}
+  judgeSprites:
+  - {fileID: 21300000, guid: ad74e5f4d12f1de4294993afdc26ed00, type: 3}
+  - {fileID: 21300000, guid: af5c03ed945f69940b7b0a4a2336da30, type: 3}
+  - {fileID: 21300000, guid: be4b95f091918e64cae8ee44b4d61323, type: 3}
+  - {fileID: 21300000, guid: eafc4ca6c9ce6334aaef597ade0c1055, type: 3}
+  - {fileID: 21300000, guid: 1017a60ba7f4b9642abcac82c2703559, type: 3}
   floatSpeed: 100
   duration: 0.5

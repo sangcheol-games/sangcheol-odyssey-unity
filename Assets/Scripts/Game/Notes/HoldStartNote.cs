@@ -9,18 +9,7 @@ namespace SCOdyssey.Game
     public class HoldStartNote : NoteController
     {
         private Image holdImage;
-        public Animator noteAnim;
         private RectTransform holdBarTransform;
-
-
-        protected override void Awake()
-        {
-            rectTransform = GetComponent<RectTransform>();
-            if (noteImage == null)
-                noteImage = GetComponentInChildren<Image>();
-            if (noteAnim == null)
-                Debug.LogWarning("HoldReleaseNote: No attached Animator component");
-        }
 
         protected override void ApplyAlpha(float alpha)
         {
@@ -52,16 +41,14 @@ namespace SCOdyssey.Game
             holdBarTransform.sizeDelta = new Vector2(holdWidth, holdBarTransform.sizeDelta.y);
         }
 
-        // 판정 or Miss 시 시스템에서는 제거되지만, 홀드바 시각효과는 링거링으로 유지
+        // 판정 or Miss 시 시스템에서는 제거되지만, 홀드바 시각효과는 링거링으로 유지.
+        // 노트 반환(DeleteNote)은 홀드바가 다 소모되는 시점에 Update가 담당하므로 여기서는 호출하지 않는다.
         public override void OnHit()
         {
             if (isJudged) return;
             isJudged = true;
-            noteImage.enabled = false;  // 헤드 숨기기
             isHoldRemaining = true;     // 홀드바 잔여 표시 시작
-            noteAnim.enabled = true;
-            noteAnim.Play("Miss");
-            // TODO DeleteNote()는 애니메 에디터 쪽에서 연결해줘야할듯
+            PlayHitAnim(() => noteImage.enabled = false);   // 히트 애니메이션을 보여준 뒤 헤드 숨기기
         }
 
         public override void OnMiss()
@@ -70,8 +57,6 @@ namespace SCOdyssey.Game
             isJudged = true;
             noteImage.enabled = false;  // 헤드 숨기기
             isHoldRemaining = true;     // miss여도 홀드바는 판정선이 지나갈 때까지 유지
-            noteAnim.enabled = true;
-            noteAnim.Play("Hit");
         }
 
         protected override void Update()
