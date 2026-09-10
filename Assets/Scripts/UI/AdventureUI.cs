@@ -14,10 +14,14 @@ namespace SCOdyssey.UI
     {
         private const int DISPLAY_COUNT = 7;
         private const int CENTER_INDEX = 3; // 0-based, 4번째 슬롯
+        private const float ALBUM_ART_SPIN_DURATION = 8f; // 앨범아트 1바퀴에 걸리는 시간(초)
 
         private List<MusicSO> musicList;
         private MusicListUI[] slots;
         private Transform musicListContainer;
+
+        private RectTransform albumArtRect;
+        private float albumArtAngle; // 시계방향 누적 각도(양수, 0~360)
 
         private int selectedIndex;
         private MusicSO selectedMusic => musicList[selectedIndex];
@@ -41,7 +45,18 @@ namespace SCOdyssey.UI
 
             GetButton((int)Buttons.BackButton).onClick.AddListener(OnClickBackButton);
 
+            albumArtRect = GetImage((int)Images.AlbumArt).rectTransform;
+
             Init();
+        }
+
+        private void Update()
+        {
+            if (albumArtRect == null) return;
+
+            // 시계방향 = 음수 Z (UI 좌표계 기준)
+            albumArtAngle = Mathf.Repeat(albumArtAngle + (360f / ALBUM_ART_SPIN_DURATION) * Time.deltaTime, 360f);
+            albumArtRect.localRotation = Quaternion.Euler(0f, 0f, -albumArtAngle);
         }
 
         protected override void OnEnable()
@@ -125,6 +140,10 @@ namespace SCOdyssey.UI
         {
             // 곡 앨범아트 갱신
             GetImage((int)Images.AlbumArt).sprite = selectedMusic.albumArt;
+
+            // 곡이 바뀌면 회전을 0도부터 다시 시작
+            albumArtAngle = 0f;
+            albumArtRect.localRotation = Quaternion.identity;
 
             StartCoroutine(PlayPreviewAudio());
         }
