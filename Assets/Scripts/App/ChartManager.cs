@@ -49,7 +49,7 @@ namespace SCOdyssey.Game
         [Header("레이어 분리")]
         public RectTransform holdLayer;     // HoldBar용 Canvas (Inspector 할당)
         public RectTransform headLayer;     // NoteHead용 Canvas (Inspector 할당)
-        public GameObject holdBarPrefab;    // holdImage만 있는 별도 프리팹 (Inspector 할당)
+        public GameObject holdBarPrefab;    // 루트(RectMask2D 뷰포트) > Fill(아트) 2단 구조 프리팹 (Inspector 할당)
         private Queue<GameObject> holdBarPool = new Queue<GameObject>();
 
         [Header("이펙트 풀링")]
@@ -856,7 +856,9 @@ namespace SCOdyssey.Game
         private void ReturnToPool(Queue<GameObject> pool, GameObject go)
         {
             go.SetActive(false);
-            go.transform.SetParent(objectPoolParent);
+            // worldPositionStays=false: true면 월드 행렬이 local 값에 구워져 프리팹 localScale이 오염된다.
+            // 홀드바는 localScale(2배 제작 에셋 보정값)을 그대로 읽어 쓰므로 반드시 false여야 한다.
+            go.transform.SetParent(objectPoolParent, false);
             pool.Enqueue(go);
         }
 
