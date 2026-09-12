@@ -871,6 +871,11 @@ namespace FMODUnity
         // [SCOdyssey 추가] FMOD 업데이트 시 이 메서드를 다시 추가해야 함
         public void SetDSPBufferLength(int value) { Properties.DSPBufferLength.Value = value; Properties.DSPBufferLength.HasValue = true; }
         public int DSPBufferCount { get { return PropertyAccessors.DSPBufferCount.Get(this); } }
+        // [SCOdyssey 추가] FMOD 업데이트 시 이 메서드를 다시 추가해야 함
+        // RuntimeManager.Initialize()가 `DSPBufferLength > 0 && DSPBufferCount > 0`일 때만
+        // setDSPBufferSize를 호출하므로, Length만 설정하면 버퍼 설정이 통째로 무시된다.
+        // 반드시 Length와 짝으로 설정할 것. (FMODAudioPreInit 참고)
+        public void SetDSPBufferCount(int value) { Properties.DSPBufferCount.Value = value; Properties.DSPBufferCount.HasValue = true; }
         public List<string> Plugins { get { return PropertyAccessors.Plugins.Get(this); } }
         public List<string> StaticPlugins { get { return PropertyAccessors.StaticPlugins.Get(this); } }
         public PlatformCallbackHandler CallbackHandler { get { return PropertyAccessors.CallbackHandler.Get(this); } }

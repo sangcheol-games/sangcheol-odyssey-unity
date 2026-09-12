@@ -19,6 +19,10 @@ namespace SCOdyssey.App
         private bool _isLoaded;
         private bool _isLoading;
 
+        // 출력 샘플레이트. Awake에서 1회만 조회해 캐싱한다.
+        // GetDSPTime()은 매 프레임 호출되므로 여기서 getSoftwareFormat을 반복 호출하면 낭비다.
+        private int _sampleRate;
+
         // 출력 설정 - ConfigureOutput()에서 저장
         private AudioOutputConfig _outputConfig = new AudioOutputConfig
         {
@@ -39,6 +43,11 @@ namespace SCOdyssey.App
             // DSP 클록 조회용 시스템 마스터
             RuntimeManager.CoreSystem.getMasterChannelGroup(out _masterGroup);
 
+            // 샘플레이트 캐싱 (GetDSPTime에서 매 프레임 재조회하지 않도록)
+            RuntimeManager.CoreSystem.getSoftwareFormat(out _sampleRate, out _, out _);
+
+            LogAudioLatency();
+
             // 게임 볼륨 제어용 ChannelGroup 계층 생성
             RuntimeManager.CoreSystem.createChannelGroup("Master",   out _ourMasterGroup);
             RuntimeManager.CoreSystem.createChannelGroup("BGM",      out _bgmGroup);
@@ -51,6 +60,20 @@ namespace SCOdyssey.App
             // TODO(ASIO): _outputConfig.OutputType이 ASIO라면
             // 여기서 system.setOutput(FMOD.OUTPUTTYPE.ASIO) 적용
             // (단, RuntimeManager 수동 초기화 방식으로 전환 필요)
+        }
+
+        /// <summary>
+        /// 실제로 적용된 DSP 버퍼와 그로 인한 출력 지연을 시작 시 1회 기록한다.
+        /// 설정값(audioBufferIndex)이 FMOD에 반영됐는지 확인하는 유일한 수단이므로 상시 유지한다.
+        /// 평균 지연 공식은 FMOD System::setDSPBufferSize 문서 기준:
+        ///   블록(ms) = length * 1000 / sampleRate,  평균 지연 = 블록 * (count - 1.5)
+        /// </summary>
+        private void LogAudioLatency()
+        {
+            RuntimeManager.CoreSystem.getDSPBufferSize(out uint length, out int count);
+            float blockMs = length * 1000f / _sampleRate;
+            Debug.Log($"[FMODAudioManager] DSP 버퍼 {length} x {count} @{_sampleRate}Hz | " +
+                      $"블록 {blockMs:F2}ms, 평균 출력 지연 {blockMs * (count - 1.5f):F2}ms");
         }
 
         private void OnApplicationFocus(bool hasFocus)
@@ -157,10 +180,8 @@ namespace SCOdyssey.App
                 return;
             }
 
-            RuntimeManager.CoreSystem.getSoftwareFormat(out int sampleRate, out _, out _);
-
             // DSP 초 → 샘플 수 변환 (sample-accurate 스케줄링)
-            ulong startDspClock = (ulong)(dspStartTime * sampleRate);
+            ulong startDspClock = (ulong)(dspStartTime * _sampleRate);
 
             // 일시정지 상태로 재생 시작 후 정확한 클록에 딜레이 설정
             RuntimeManager.CoreSystem.playSound(_sound, _bgmGroup, true, out _channel);
@@ -190,8 +211,7 @@ namespace SCOdyssey.App
         {
             // masterGroup의 DSP 클록 = 오디오 출력 절대 샘플 위치 (AudioSettings.dspTime 동등)
             _masterGroup.getDSPClock(out ulong clock, out _);
-            RuntimeManager.CoreSystem.getSoftwareFormat(out int sampleRate, out _, out _);
-            return (double)clock / sampleRate;
+            return (double)clock / _sampleRate;   // sampleRate는 Awake에서 캐싱 (매 프레임 호출되는 경로)
         }
 
         public void ConfigureOutput(AudioOutputConfig config)
