@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using FMODUnity;
 using SCOdyssey.Core;
@@ -23,6 +24,28 @@ namespace SCOdyssey.App
         // GetDSPTime()은 매 프레임 호출되므로 여기서 getSoftwareFormat을 반복 호출하면 낭비다.
         private int _sampleRate;
 
+        // RuntimeManager.CoreSystem은 Instance getter 체인을 타므로 원샷 핫패스용으로 캐싱
+        private FMOD.System _coreSystem;
+
+        // AudioBus 인덱스와 1:1로 대응하는 출력 그룹. Awake에서 구성
+        private FMOD.ChannelGroup[] _busGroups;
+
+        // 원샷 사운드 슬롯. 로드 시점에만 늘어나고 게임 중에는 인덱싱만 한다.
+        // _oneShotSlots는 파일명 → 슬롯 매핑으로, RegisterOneShot을 멱등으로 만들어
+        // 씬 재진입·리트라이 시 중복 로드와 핸들 누수를 막는다.
+        private const int MAX_ONESHOT_SLOTS = 32;
+        private readonly FMOD.Sound[] _oneShots = new FMOD.Sound[MAX_ONESHOT_SLOTS];
+        private readonly Dictionary<string, int> _oneShotSlots = new Dictionary<string, int>();
+        private int _oneShotCount;
+
+        // 원샷 로드 모드. CREATESAMPLE이 핵심 — 아래 RegisterOneShot 주석 참고
+        private const FMOD.MODE ONESHOT_MODE =
+              FMOD.MODE.CREATESAMPLE
+            | FMOD.MODE._2D
+            | FMOD.MODE.LOOP_OFF
+            | FMOD.MODE.IGNORETAGS
+            | FMOD.MODE.LOWMEM;
+
         // 출력 설정 - ConfigureOutput()에서 저장
         private AudioOutputConfig _outputConfig = new AudioOutputConfig
         {
@@ -40,11 +63,14 @@ namespace SCOdyssey.App
         // -------------------------------------------------------
         private void Awake()
         {
+            // 코어 시스템 캐싱 (원샷 핫패스에서 Instance getter 체인을 타지 않도록)
+            _coreSystem = RuntimeManager.CoreSystem;
+
             // DSP 클록 조회용 시스템 마스터
-            RuntimeManager.CoreSystem.getMasterChannelGroup(out _masterGroup);
+            _coreSystem.getMasterChannelGroup(out _masterGroup);
 
             // 샘플레이트 캐싱 (GetDSPTime에서 매 프레임 재조회하지 않도록)
-            RuntimeManager.CoreSystem.getSoftwareFormat(out _sampleRate, out _, out _);
+            _coreSystem.getSoftwareFormat(out _sampleRate, out _, out _);
 
             LogAudioLatency();
 
@@ -56,6 +82,9 @@ namespace SCOdyssey.App
             _ourMasterGroup.addGroup(_bgmGroup,      false, out _);
             _ourMasterGroup.addGroup(_hitSoundGroup, false, out _);
             _ourMasterGroup.addGroup(_sfxGroup,      false, out _);
+
+            // AudioBus enum 값이 곧 이 배열의 인덱스 — 순서를 바꾸면 안 된다
+            _busGroups = new[] { _hitSoundGroup, _sfxGroup };
 
             // TODO(ASIO): _outputConfig.OutputType이 ASIO라면
             // 여기서 system.setOutput(FMOD.OUTPUTTYPE.ASIO) 적용
@@ -107,6 +136,13 @@ namespace SCOdyssey.App
         {
             Stop();
             if (_sound.hasHandle()) _sound.release();
+
+            // ChannelGroup보다 먼저 해제 — _busGroups가 아래 그룹들을 참조한다
+            for (int i = 0; i < _oneShotCount; i++)
+                if (_oneShots[i].hasHandle()) _oneShots[i].release();
+            _oneShotCount = 0;
+            _oneShotSlots.Clear();
+
             _bgmGroup.release();
             _hitSoundGroup.release();
             _sfxGroup.release();
@@ -184,13 +220,75 @@ namespace SCOdyssey.App
             ulong startDspClock = (ulong)(dspStartTime * _sampleRate);
 
             // 일시정지 상태로 재생 시작 후 정확한 클록에 딜레이 설정
-            RuntimeManager.CoreSystem.playSound(_sound, _bgmGroup, true, out _channel);
+            _coreSystem.playSound(_sound, _bgmGroup, true, out _channel);
             _channel.setDelay(startDspClock, 0, false);
             // -1 for inf, 0 for 1 loop, N for N+1 loop
             _channel.setLoopCount(loopPlay ? -1 : 0);
+            // 0 = 최고 우선순위. 타격음이 몰려도 BGM이 보이스 스틸링 대상이 되면 안 된다
+            _channel.setPriority(0);
             _channel.setPaused(false);
 
             Debug.Log($"[FMODAudioManager] 재생 예약 완료. DSP 클록: {startDspClock}");
+        }
+
+        /// <summary>
+        /// 원샷 사운드를 슬롯에 등록하고 인덱스를 반환. 로드 시점 전용(핫패스 아님).
+        /// fileName: StreamingAssets/HitSound/ 기준 파일명. 실패 시 -1.
+        /// 같은 파일명을 다시 등록하면 기존 슬롯을 그대로 돌려준다.
+        /// </summary>
+        public int RegisterOneShot(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return -1;
+
+            // 이미 로드된 파일이면 같은 슬롯 재사용 — 씬 재진입/리트라이 시 중복 로드·핸들 누수 방지
+            if (_oneShotSlots.TryGetValue(fileName, out int cached)) return cached;
+
+            if (_oneShotCount >= MAX_ONESHOT_SLOTS)
+            {
+                Debug.LogError($"[FMODAudioManager] 원샷 슬롯이 가득 찼습니다({MAX_ONESHOT_SLOTS}): {fileName}");
+                return -1;
+            }
+
+            // 주의: StreamingAssets는 Android에서 jar 내부 경로가 되어 직접 읽을 수 없다.
+            //       현재는 데스크톱 전용 (LoadAudio도 동일한 제약).
+            string fullPath = System.IO.Path.Combine(Application.streamingAssetsPath, "HitSound", fileName);
+
+            FMOD.CREATESOUNDEXINFO exInfo = new FMOD.CREATESOUNDEXINFO();
+            exInfo.cbsize = Marshal.SizeOf(exInfo);
+
+            // CREATESAMPLE: 전체를 PCM으로 디코드해 메모리 상주 → 재생 시점 디스크 I/O·디코드 0.
+            // CREATESTREAM을 쓰면 안 되는 이유는 두 가지다.
+            //  1) 재생할 때마다 디스크 읽기 + 디코드가 발생해 지연이 튄다.
+            //  2) 스트림 Sound 하나는 동시에 한 채널로만 재생된다 → 4레인 연타 시 이전 타격음이 끊긴다.
+            // NONBLOCKING을 쓰지 않는 이유: 파일이 작아 동기 로드가 1ms 남짓이고,
+            // 폴링 상태 기계를 두면 "첫 노트인데 아직 안 올라왔다" 레이스가 생긴다.
+            FMOD.RESULT result = _coreSystem.createSound(fullPath, ONESHOT_MODE, ref exInfo, out FMOD.Sound sound);
+
+            if (result != FMOD.RESULT.OK)
+            {
+                Debug.LogError($"[FMODAudioManager] 원샷 로드 실패: {result} | 경로: {fullPath}");
+                return -1;
+            }
+
+            _oneShots[_oneShotCount] = sound;
+            _oneShotSlots[fileName] = _oneShotCount;
+            return _oneShotCount++;
+        }
+
+        /// <summary>
+        /// 등록된 원샷을 즉시 재생. 입력 판정 경로에서 불리는 핫패스라 할당·문자열 조회·로그가 없다.
+        /// </summary>
+        public void PlayOneShot(int slot, AudioBus bus, float volume)
+        {
+            // 음수(로드 실패 -1)와 범위 초과를 부호없는 비교 한 번으로 걸러낸다
+            if ((uint)slot >= (uint)_oneShotCount) return;
+
+            // paused:false로 바로 시작 — setDelay를 쓰지 않으므로 pause→unpause 왕복이 불필요하다.
+            // 믹서가 다음 블록 경계에서 픽업하는 것이 달성 가능한 최소 지연이다.
+            // (입력 시각으로 setDelay를 걸어봐야 그 시각은 이미 믹스 커서가 지나간 과거라 의미가 없다)
+            _coreSystem.playSound(_oneShots[slot], _busGroups[(int)bus], false, out FMOD.Channel channel);
+
+            if (volume != 1f) channel.setVolume(volume);   // 기본 볼륨이면 P/Invoke 한 번을 절약
         }
 
         public void Stop()

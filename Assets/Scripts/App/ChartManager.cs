@@ -105,6 +105,22 @@ namespace SCOdyssey.Game
 
         private double _judgmentOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
 
+        // 판정 등급별 타격음 파일명. 인덱스 = (int)JudgeType (Perfect/Master/Ideal/Kind/Umm 순) — 순서를 바꾸면 안 된다.
+        // StreamingAssets/HitSound/ 기준. 소리를 바꾸려면 같은 이름으로 WAV를 덮어쓰면 코드 수정 없이 교체된다.
+        // TODO: 노트 스킨별 타격음을 지원하게 되면 이 테이블을 NoteSkinSO로 올리고
+        //       Init()에서 GetCurrentSkin()으로 파일명을 받아오도록 바꾼다(오디오 API는 그대로).
+        private static readonly string[] HitSoundFiles =
+        {
+            "hit_perfect.wav",
+            "hit_master.wav",
+            "hit_ideal.wav",
+            "hit_kind.wav",
+            "hit_umm.wav",
+        };
+
+        private IAudioManager _audio;
+        private readonly int[] _hitSoundSlots = new int[HitSoundFiles.Length];
+
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
         private readonly Dictionary<int, bool> _nextGroupDirBuffer = new Dictionary<int, bool>(); // 그룹별 진행 방향(isLTR)
@@ -132,6 +148,14 @@ namespace SCOdyssey.Game
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
             {
                 _judgmentOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
+            }
+
+            // 타격음 슬롯 확보. RegisterOneShot은 파일명 기준 멱등이라 리트라이로 다시 불려도 재로드가 없다.
+            // GameManager.StartGame()이 globalStartTime을 잡기 전에 Init()이 끝나므로 이 로드 비용은 게임 시계에 영향이 없다.
+            if (ServiceLocator.TryGet<IAudioManager>(out _audio))
+            {
+                for (int i = 0; i < HitSoundFiles.Length; i++)
+                    _hitSoundSlots[i] = _audio.RegisterOneShot(HitSoundFiles[i]);
             }
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
@@ -650,8 +674,21 @@ namespace SCOdyssey.Game
         /// 노트가 아직 없으면 선입력으로 버퍼링. Normal/HoldStart만 눌러서 판정(홀드 본체/릴리즈는 별도 경로).
         /// </summary>
         public void TryJudgeInput(int laneIndex, double inputGameTime)
+            => TryJudgeInput(laneIndex, inputGameTime, emitHitSound: true);
+
+        /// <summary>
+        /// emitHitSound: 타격음을 낼지 여부. FlushBufferedInput에서 재진입할 때는 false —
+        /// 선입력이 버퍼링되는 순간 PlayInputSound가 ghostNotes로 예측 판정해 이미 소리를 냈으므로,
+        /// 여기서 또 내면 한 번의 입력에 소리가 두 번 난다.
+        /// </summary>
+        private void TryJudgeInput(int laneIndex, double inputGameTime, bool emitHitSound)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
+
+            // 타격음을 가장 먼저 재생한다. 판정·이펙트·캐릭터 애니메이션보다 앞에 둬서 지연을 최소화
+            // (ApplyJudgment는 이펙트 풀이 비면 Instantiate까지 하므로 그 뒤에 내면 스파이크만큼 밀린다)
+            if (emitHitSound) PlayInputSound(listIndex, inputGameTime);
+
             _lanes[listIndex].isHolding = true;
 
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
@@ -682,6 +719,41 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
+        /// 이번 입력이 어떤 판정이 될지 예측해 타격음을 고른다. 판정 실패(헛침)는 Umm으로 낸다.
+        /// activeNotes가 비어 있으면 ghostNotes 맨 앞을 본다 — ActivateGhostNotes가 첫 노트를
+        /// activeNotes로 옮긴 직후 FlushBufferedInput을 부르므로 그게 곧 실제 판정 대상이다.
+        /// 덕분에 마디 전환 선입력에서도 소리가 다음 마디까지 밀리지 않는다.
+        /// 판정·점수는 전혀 건드리지 않는다.
+        /// </summary>
+        private void PlayInputSound(int listIndex, double inputGameTime)
+        {
+            var lane = _lanes[listIndex];
+            NoteController target = lane.activeNotes.Count > 0 ? lane.activeNotes.Peek()
+                                  : lane.ghostNotes.Count  > 0 ? lane.ghostNotes.Peek()
+                                  : null;
+
+            // 누르는 판정 대상이 아니면(홀드 본체/릴리즈) 칠 노트가 없는데 누른 것 = 헛침
+            if (target == null ||
+                (target.noteData.noteType != NoteType.Normal && target.noteData.noteType != NoteType.HoldStart))
+            {
+                PlayHitSound(JudgeType.Umm);
+                return;
+            }
+
+            double timeDiff = Math.Abs(inputGameTime - target.noteData.time - _judgmentOffsetSec);
+            PlayHitSound(timeDiff > JUDGE_UMM ? JudgeType.Umm : GetJudgeType(timeDiff));
+        }
+
+        /// <summary>
+        /// 판정 등급에 해당하는 타격음을 재생한다. 오디오 매니저가 없으면 조용히 무시한다.
+        /// </summary>
+        private void PlayHitSound(JudgeType type)
+        {
+            if (_audio == null) return;
+            _audio.PlayOneShot(_hitSoundSlots[(int)type]);
+        }
+
+        /// <summary>
         /// 선입력 버퍼를 소비하여 TryJudgeInput을 재호출.
         /// press → release → barStart 케이스: isLaneHolding이 false이면 버퍼 폐기 (phantom 홀딩 방지).
         /// </summary>
@@ -694,7 +766,8 @@ namespace SCOdyssey.Game
 
             if (!_lanes[listIndex].isHolding) return; // 이미 손을 뗀 경우 폐기
 
-            TryJudgeInput(listIndex + 1, inputTime);
+            // 선입력이 버퍼링되던 시점에 예측 판정으로 이미 타격음을 냈으므로 여기선 억제 (한 입력 = 한 소리)
+            TryJudgeInput(listIndex + 1, inputTime, emitHitSound: false);
         }
 
         /// <summary>
@@ -746,11 +819,17 @@ namespace SCOdyssey.Game
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
-                Debug.Log("판정 범위 밖 입력");
+                //Debug.Log("판정 범위 밖 입력");
                 return;
             }
 
-            ApplyJudgment(targetNote, listIndex, GetJudgeType(timeDiff));
+            JudgeType judge = GetJudgeType(timeDiff);
+
+            // 떼는 판정도 플레이어 입력이므로 타격음을 낸다. 단 실패했을 때는 내지 않는다 —
+            // 이 함수는 모든 키 릴리즈마다 불리므로, 일반 노트를 칠 때마다 소리가 두 번 나게 된다.
+            PlayHitSound(judge);
+
+            ApplyJudgment(targetNote, listIndex, judge);
         }
 
         // 타이밍 오차(절댓값, 초)를 판정 등급으로 매핑. 윈도우 상수는 Constants.cs
