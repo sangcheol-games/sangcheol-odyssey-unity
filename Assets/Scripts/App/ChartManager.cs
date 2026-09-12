@@ -39,8 +39,6 @@ namespace SCOdyssey.Game
 
         private double currentTime;
 
-        private bool m_showPerfect;
-
 
         [Header("노트 풀링")]
         public GameObject notePrefab;
@@ -133,7 +131,6 @@ namespace SCOdyssey.Game
 
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
             {
-                m_showPerfect = settingsManager.Current.showPerfect;
                 _judgmentOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
             }
 
@@ -799,10 +796,7 @@ namespace SCOdyssey.Game
             else if (nt == NoteType.HoldRelease)
                 gameManager.OnHoldRelease(pos, groupID);
 
-            if (!m_showPerfect && type == JudgeType.Perfect)
-                EffectJudgement(JudgeType.Master, targetNote);
-            else
-                EffectJudgement(type, targetNote);
+            EffectJudgement(type, targetNote);
         }
         
         /// <summary>

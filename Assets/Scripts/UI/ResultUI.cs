@@ -91,7 +91,7 @@ namespace SCOdyssey.UI
             // 판정 통계 표시
             GetText((int)Texts.TotalNotesText).text = totalNotes.ToString();
 
-            // Perfect는 ShowPerfect 설정 / ClearType과 무관하게 항상 표시
+            // Perfect는 ClearType과 무관하게 항상 표시
             GetText((int)Texts.PerfectCountText).text = judgeCounts[JudgeType.Perfect].ToString();
             GetText((int)Texts.MasterCountText).text = judgeCounts[JudgeType.Master].ToString();
             GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();
