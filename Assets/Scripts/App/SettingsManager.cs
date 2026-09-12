@@ -40,6 +40,12 @@ namespace SCOdyssey.App
         public void Apply()
         {
             // Graphic
+            // vSync가 켜져 있으면 targetFrameRate가 통째로 무시되고 모니터 주사율에 고정된다.
+            // 입력 이벤트는 프레임당 한 번 flush되므로 프레임 간격이 곧 타격음 지연의 지터 폭이 된다.
+            // 리듬게임 기본값대로 vSync를 끄고 targetFrameRate가 실제로 동작하게 한다.
+            // TODO: vSync를 끄면 화면 티어링이 생길 수 있다. 감수할지는 유저가 고를 문제이므로
+            //       SettingsData에 vSync 항목을 추가하고 그래픽 설정 UI에 토글로 노출할 것 (기본값 off).
+            QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = _current.targetFrameRate;
 
             var mode = (_current.displayMode >= 0 && _current.displayMode < DisplayModes.Length)
