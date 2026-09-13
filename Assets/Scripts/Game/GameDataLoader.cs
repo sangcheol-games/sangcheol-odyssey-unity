@@ -42,6 +42,9 @@ namespace SCOdyssey.Game
                 yield break;
             }
 
+            // BGA Prepare와 오디오 로딩을 병렬 시작 (Prepare가 오래 걸리는 영상도 충분한 시간 확보)
+            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
+
             if (!string.IsNullOrEmpty(music.audioFilePath))
             {
                 audioManager.LoadAudio(music.audioFilePath);
@@ -52,9 +55,6 @@ namespace SCOdyssey.Game
             {
                 Debug.LogWarning("[GameDataLoader] audioFilePath is empty!");
             }
-
-            // BGA 및 배경아트 로딩
-            gameManager.SetBGAData(music.videoFileName, music.backgroundArt);
 
             yield return LoadChart(music);
 
