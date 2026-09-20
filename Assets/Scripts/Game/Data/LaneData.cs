@@ -17,6 +17,10 @@ namespace SCOdyssey.Game
 
         public Queue<NoteData> Notes;   // 이 레인의 노트들(판정 순서대로). 각 NoteData.time은 아래에서 선계산
 
+        // 종료 문자(4/5) 없이 마디 끝까지 이어지는 홀드가 있다.
+        // 시퀀스는 0/beat ~ (beat-1)/beat 만 가리킬 수 있어 마디 끝을 표현할 수 없기 때문.
+        public bool holdRunsToBarEnd;
+
         public LaneData(int bar, double time, int beat, bool isLTR, int line)
         {
             this.bar = bar;
@@ -62,6 +66,7 @@ namespace SCOdyssey.Game
                     }
                     // 없으면 마디 끝까지 (endpoint까지)
                     noteData.holdBarBeats = holdEnd ?? (beat - i);
+                    if (!holdEnd.HasValue) holdRunsToBarEnd = true;
                 }
 
                 Notes.Enqueue(noteData);

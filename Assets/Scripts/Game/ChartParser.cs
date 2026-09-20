@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -76,8 +77,56 @@ namespace SCOdyssey.Game
                 }
             }
 
-            Debug.Log($"Chart Parsed Successfully. Total Lanes: {chartData.GetFullChartList().Count}, Total Notes: {chartData.totalNotes}");
+            int synthesized = AppendBarEndHoldEnds(chartData, duration);
+            chartData.totalNotes += synthesized;   // 판정 대상이 늘었으므로 노트당 배점 기준도 같이 옮긴다
+
+            Debug.Log($"Chart Parsed Successfully. Total Lanes: {chartData.GetFullChartList().Count}, Total Notes: {chartData.totalNotes} (마디 끝 홀드 종료 {synthesized}개 합성)");
             return chartData;
+        }
+
+        /// <summary>
+        /// 마디 끝에서 끝나는 홀드에 판정용 종료 노트를 붙인다.
+        ///
+        /// 시퀀스 한 칸은 마디를 beat등분한 시작점(0/beat ~ (beat-1)/beat)만 가리킬 수 있어
+        /// 마디 끝(beat/beat)을 표현할 수 없다. 그래서 채보는 "마디 끝까지 홀드"를 종료 문자의
+        /// 생략으로 표현해 왔는데, 그러면 holdBarBeats로 홀드바 길이만 늘어나고 판정 대상은 하나도 안 남는다.
+        ///
+        /// 다음 마디가 같은 레인을 Holding으로 이어받으면 홀드가 진짜로 계속되는 것이므로 건너뛴다.
+        /// </summary>
+        private static int AppendBarEndHoldEnds(ChartData chartData, double duration)
+        {
+            List<LaneData> lanes = chartData.GetFullChartList();
+
+            var byBarLine = new Dictionary<(int bar, int line), LaneData>();
+            foreach (LaneData lane in lanes)
+                byBarLine[(lane.bar, lane.line)] = lane;
+
+            int added = 0;
+
+            foreach (LaneData lane in lanes)
+            {
+                if (!lane.holdRunsToBarEnd) continue;
+                if (ContinuesInNextBar(byBarLine, lane)) continue;
+
+                // index = beat → 배치 X좌표가 정확히 레인 끝(endpoint)이 된다
+                lane.Notes.Enqueue(new NoteData(lane.beat, lane.time + duration, NoteType.HoldEnd, lane.line));
+                added++;
+            }
+
+            return added;
+        }
+
+        private static bool ContinuesInNextBar(Dictionary<(int bar, int line), LaneData> byBarLine, LaneData lane)
+        {
+            if (!byBarLine.TryGetValue((lane.bar + 1, lane.line), out LaneData next)) return false;
+            if (next.Notes.Count == 0) return false;
+
+            NoteData first = next.Notes.Peek();
+            if (first.index != 0) return false;   // 마디 첫 칸이 아니면 이어받는 게 아니다
+
+            return first.noteType == NoteType.Holding
+                || first.noteType == NoteType.HoldEnd
+                || first.noteType == NoteType.HoldRelease;
         }
 
         private static void ParseHeaderField(string line, ChartData chartData)
