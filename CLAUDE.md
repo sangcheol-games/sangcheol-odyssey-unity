@@ -71,12 +71,12 @@ Charts live in `Assets/Charts/` as text files. Format (see `ChartParser.cs`):
 
 Judge windows (seconds) are in `Assets/Scripts/Domain/Service/Constants.cs`: `Perfect=0.021 / Master=0.042 / Ideal=0.084 / Kind=0.105 / Umm=0.126`.
 
-**Lane numbering is 1-based at the edges, 0-based internally.** Both the Input System (`InputManager` hardcodes `1`–`4`) and the chart file (`#001:`**`02`**`:...`) use lanes 1–4, but the `Lane` enum is 0-based (`TopUpper=0, TopLower=1, BottomUpper=2, BottomLower=3`) — call sites convert with `- 1`. Two *different* mappings derive from a lane; do not conflate them:
+**Lane numbering is 1-based at the edges, 0-based internally.** Both the Input System (`InputManager` hardcodes `1`–`4`) and the chart file (`#001:`**`02`**`:...`) use lanes 1–4, but the `Lane` enum is 0-based (`L1=0 … L4=3`, in the `SCOdyssey.Rhythm` assembly) — call sites convert with `- 1`. Two *different* mappings derive from a lane; do not conflate them:
 
-- **`LaneGroup`** — which judgement line / character the lane belongs to. Lanes 1–2 = `Top`, lanes 3–4 = `Bottom` (`LaneExtensions.GetGroup`, 0-based `(int)lane < 2`). Passed around as a raw `int groupID` in most signatures.
-- **`NotePosition`** — position *within* the group; drives character Y. Alternates: lanes 1,3 = `Top`, lanes 2,4 = `Bottom` (`GetNotePosition`, `listIndex % 2 == 0`).
+- **`LaneGroup`** — which judgement line / character the lane belongs to. Lanes 1–2 = `Top`, lanes 3–4 = `Bottom` (`LaneLayout.GroupOf`, 0-based `(int)lane < 2`). Passed around as a raw `int groupID` in most signatures.
+- **`NotePosition`** — position *within* the group; drives character Y. Alternates: lanes 1,3 = `Top`, lanes 2,4 = `Bottom` (`LaneLayout.PositionOf`, `(int)lane % 2 == 0`).
 
-So `Lane.TopLower` = group `Top`, position `Bottom`. `NotePosition.Middle` is never parsed from a chart — `CharacterAnimator` derives it at runtime two ways: both holds active simultaneously (`UpdateHoldState`), or opposite-position inputs within the same frame (`OnLaneInputEvent`).
+So `Lane.L2` = group `Top`, position `Bottom`. `LaneLayout` (`Assets/Scripts/Game/View/`) is the only place that derives group / position / countdown slot from a `Lane`. `NotePosition.Middle` is never parsed from a chart — `CharacterAnimator` derives it at runtime two ways: both holds active simultaneously (`UpdateHoldState`), or opposite-position inputs within the same frame (`OnLaneInputEvent`).
 
 Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudgedEvent / OnHoldStartEvent / OnHoldEndEvent` and drives a 14-state machine (Idle, Hit0-3, Top/Middle/Bottom, Fall, *Hold, *HitWhile*Hold). It sets `_targetY` and lerps the root in `Update()` — animation clips provide only relative motion. See `Assets/Scripts/Game/Animation_mechanic.md` for the full state machine spec, AnimatorController setup, and CharacterSO authoring checklist — read it before touching animation code or creating character assets.
 
@@ -88,7 +88,8 @@ Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudged
 
 ## Conventions
 
-- **Namespaces mirror folders**: `SCOdyssey.Boot`, `SCOdyssey.Core`, `SCOdyssey.App`, `SCOdyssey.App.Interfaces`, `SCOdyssey.Game`, `SCOdyssey.Domain.Dto`, `SCOdyssey.Domain.Service`, `SCOdyssey.Net`, `SCOdyssey.UI`, `SCOdyssey.Testing.*`.
+- **Namespaces mirror folders**: `SCOdyssey.Boot`, `SCOdyssey.Core`, `SCOdyssey.App`, `SCOdyssey.App.Interfaces`, `SCOdyssey.Game`, `SCOdyssey.Rhythm`, `SCOdyssey.Domain.Dto`, `SCOdyssey.Domain.Service`, `SCOdyssey.Net`, `SCOdyssey.UI`, `SCOdyssey.Testing.*`.
+- **Assemblies**: `SCOdyssey.Domain.Service` (`Constants.cs`) and `SCOdyssey.Rhythm` (`Assets/Scripts/Rhythm/`: judge track, chart parser, judgement bus) are `noEngineReferences` asmdefs — no `UnityEngine` may be used there (`Debug.Log` goes through `ChartParseReport` to the caller). Everything else is Assembly-CSharp, which references both.
 - **Interfaces for managers live separately** in `Assets/Scripts/App/Interfaces/` — consumers always depend on `I*Manager`, not the concrete class, so the API/mock can be swapped via `TestingConfig.useMockApi`.
 - **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `FMODAudioManager.cs`).
 - **Logging**: call `CoreLogger` from `ServiceLocator` (tag strings like `"boot"`, `"unity"`). `LoggerDriver` forwards `Application.logMessageReceivedThreaded` to `CoreLogger` so Debug.Log reaches the file/ring/console sinks, but has a reentrancy guard — don't call Debug.Log while draining.

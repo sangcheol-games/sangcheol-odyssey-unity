@@ -2,6 +2,7 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using SCOdyssey.Rhythm;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.ChartEditor.UI

@@ -1,6 +1,7 @@
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 
 public class GameSceneTester : MonoBehaviour
@@ -29,8 +30,11 @@ public class GameSceneTester : MonoBehaviour
 
         if (testChartFile != null)
         {
-            ChartData data = ChartParser.Parse(testChartFile.text, testBpm);
-            
+            var report = new ChartParseReport();
+            ChartData data = ChartParser.Parse(testChartFile.text, testBpm, report);
+            foreach (string error in report.Errors) Debug.LogError(error);
+            Debug.Log(report.Summary(data));
+
             gameManager.SetChartData(data);
             
         }

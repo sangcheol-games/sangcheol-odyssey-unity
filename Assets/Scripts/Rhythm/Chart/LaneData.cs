@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     // 한 마디 × 한 레인의 채보 데이터. ChartManager는 이 단위로 remainingChart→nextBarLanes 파이프라인을 돌린다.
     // 채보파일 한 줄(#bar:채널레인:시퀀스;)이 LaneData 하나에 대응한다.

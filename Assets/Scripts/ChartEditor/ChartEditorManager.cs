@@ -3,6 +3,7 @@ using SCOdyssey.ChartEditor.Analysis;
 using SCOdyssey.ChartEditor.Data;
 using SCOdyssey.ChartEditor.IO;
 using SCOdyssey.ChartEditor.Preview;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;

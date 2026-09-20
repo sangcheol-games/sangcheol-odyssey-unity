@@ -26,11 +26,11 @@ MonoBehaviour:
     - Name: level
       Entry: 7
       Data: 0|System.Collections.Generic.Dictionary`2[[SCOdyssey.Domain.Service.Constants+Difficulty,
-        Assembly-CSharp],[System.Int32, mscorlib]], mscorlib
+        SCOdyssey.Domain.Service],[System.Int32, mscorlib]], mscorlib
     - Name: comparer
       Entry: 7
       Data: 1|System.Collections.Generic.EnumEqualityComparer`1[[SCOdyssey.Domain.Service.Constants+Difficulty,
-        Assembly-CSharp]], mscorlib
+        SCOdyssey.Domain.Service]], mscorlib
     - Name: 
       Entry: 12
       Data: 0
@@ -100,11 +100,12 @@ MonoBehaviour:
     - Name: chartFile
       Entry: 7
       Data: 2|System.Collections.Generic.Dictionary`2[[SCOdyssey.Domain.Service.Constants+Difficulty,
-        Assembly-CSharp],[UnityEngine.TextAsset, UnityEngine.CoreModule]], mscorlib
+        SCOdyssey.Domain.Service],[UnityEngine.TextAsset, UnityEngine.CoreModule]],
+        mscorlib
     - Name: comparer
       Entry: 7
       Data: 3|System.Collections.Generic.EnumEqualityComparer`1[[SCOdyssey.Domain.Service.Constants+Difficulty,
-        Assembly-CSharp]], mscorlib
+        SCOdyssey.Domain.Service]], mscorlib
     - Name: 
       Entry: 12
       Data: 0

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SCOdyssey.ChartEditor.Data;
 using SCOdyssey.Game;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -222,7 +223,7 @@ namespace SCOdyssey.ChartEditor.Preview
 
             foreach (var lane in barLanes)
             {
-                LaneGroup group = LaneMap.FromChartLine(lane.line).GetGroup();
+                LaneGroup group = LaneLayout.GroupOf(LaneMap.FromChartLine(lane.line));
 
                 // 타임라인 (그룹당 1개)
                 if (!spawnedGroups.Contains(group))

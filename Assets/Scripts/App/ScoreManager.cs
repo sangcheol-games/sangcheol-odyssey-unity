@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.Game;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 

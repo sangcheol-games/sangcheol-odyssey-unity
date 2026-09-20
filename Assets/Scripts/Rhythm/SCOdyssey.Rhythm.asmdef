@@ -1,0 +1,16 @@
+{
+    "name": "SCOdyssey.Rhythm",
+    "rootNamespace": "SCOdyssey.Rhythm",
+    "references": [
+        "SCOdyssey.Domain.Service"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

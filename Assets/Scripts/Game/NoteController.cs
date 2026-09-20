@@ -1,6 +1,7 @@
 using System;
-using SCOdyssey.Core;
 using SCOdyssey.App;
+using SCOdyssey.Core;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;

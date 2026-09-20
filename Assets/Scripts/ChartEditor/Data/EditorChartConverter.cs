@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using SCOdyssey.Game;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 

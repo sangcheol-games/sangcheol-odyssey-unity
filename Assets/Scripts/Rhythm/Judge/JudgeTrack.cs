@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     // 판정의 단일 권한. 시간 오름차순 배열 + 상태 배열 + 커서만으로 판정한다. Unity 참조 없음.
     //

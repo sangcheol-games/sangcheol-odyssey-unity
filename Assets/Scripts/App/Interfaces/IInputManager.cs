@@ -1,5 +1,6 @@
 using System;
 using SCOdyssey.Game;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 
 namespace SCOdyssey.App

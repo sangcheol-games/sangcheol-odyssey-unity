@@ -1,6 +1,7 @@
 using System.Collections;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
+using SCOdyssey.Rhythm;
 using SCOdyssey.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -232,9 +233,9 @@ namespace SCOdyssey.App
         {
             if (!IsGameRunning) return;
 
-            var group = lane.GetGroup();
+            var group = LaneLayout.GroupOf(lane);
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            _judgementBus.PublishLaneInput(GetNotePosition((int)lane), group);
+            _judgementBus.PublishLaneInput(LaneLayout.PositionOf(lane), group);
 
             chartManager.TryJudgeInput(lane, inputDspTime - globalStartTime);
         }
@@ -244,17 +245,11 @@ namespace SCOdyssey.App
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {lane} Released");
 
-            var group = lane.GetGroup();
+            var group = LaneLayout.GroupOf(lane);
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            _judgementBus.PublishHoldReleased(GetNotePosition((int)lane), group);
+            _judgementBus.PublishHoldReleased(LaneLayout.PositionOf(lane), group);
 
             chartManager.TryJudgeRelease(lane, inputDspTime - globalStartTime);
-        }
-
-        private static NotePosition GetNotePosition(int listIndex)
-        {
-            // 각 그룹 내 첫 번째 레인(짝수 인덱스) = Top, 두 번째(홀수) = Bottom
-            return listIndex % 2 == 0 ? NotePosition.Top : NotePosition.Bottom;
         }
 
         private void HandleRestart()

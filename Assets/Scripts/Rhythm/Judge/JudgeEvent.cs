@@ -1,6 +1,6 @@
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     // 판정 1건의 결과. NoteId로 뷰(NoteController)를 되찾는다.
     public readonly struct JudgeEvent

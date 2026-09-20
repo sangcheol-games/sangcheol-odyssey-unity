@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using SCOdyssey.App;
 using SCOdyssey.Core;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 
 namespace SCOdyssey.Game

@@ -3,6 +3,7 @@ using SCOdyssey.App;
 using SCOdyssey.App.Interfaces;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
+using SCOdyssey.Rhythm;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game

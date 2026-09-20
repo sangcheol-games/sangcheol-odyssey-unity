@@ -1,7 +1,7 @@
 using System;
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     // 판정/입력 결과의 구독 창구. ServiceLocator에 등록된다.
     public interface IJudgementBus

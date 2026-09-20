@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using SCOdyssey.Rhythm;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
@@ -64,7 +65,7 @@ namespace SCOdyssey.Game
         ){
             for(int i = 0; i < ghostNotes.Length; i++)
             {
-                var group = ((Lane)i).GetGroup();
+                var group = LaneLayout.GroupOf((Lane)i);
                 activeTimelines.TryGetValue(group, out var timeline);
 
                 var queue = ghostNotes[i];

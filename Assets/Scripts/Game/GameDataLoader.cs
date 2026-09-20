@@ -2,6 +2,7 @@ using System.Collections;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
+using SCOdyssey.Rhythm;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
@@ -90,13 +91,16 @@ namespace SCOdyssey.Game
             Debug.Log("Parsing Chart Data...");
 
             // TODO: 비동기처리 사용 여부 결정 (현재 동기)
-            ChartData parsedData = ChartParser.Parse(chartText, bpm);
+            var report = new ChartParseReport();
+            ChartData parsedData = ChartParser.Parse(chartText, bpm, report);
+            foreach (string error in report.Errors) Debug.LogError(error);
 
             if (parsedData == null)
             {
                 Debug.LogError("[GameDataLoader] 파싱 실패!");
                 yield break;
             }
+            Debug.Log(report.Summary(parsedData));
 
             gameManager.SetChartData(parsedData);
 

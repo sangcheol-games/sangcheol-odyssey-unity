@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     // 채보 텍스트 → ChartData 변환기. 여기서 마디/노트의 모든 시간을 미리 계산해 넣는다.
     // (런타임에는 시간을 다시 계산하지 않고 이 값을 그대로 판정에 쓴다.)
@@ -14,8 +13,9 @@ namespace SCOdyssey.Game
         /// 채보 텍스트를 파싱해 ChartData를 만든다(GameDataLoader가 호출).
         /// 헤더(#KEY value)와 데이터(#마디:채널레인:시퀀스;)를 구분해 처리하고,
         /// 마디 시작 시각·노트 판정 시각을 모두 계산해 채운다.
+        /// 오류와 합성 개수는 report에 담기고, 로그 출력은 호출자가 한다.
         /// </summary>
-        public static ChartData Parse(string chartText, int bpm)
+        public static ChartData Parse(string chartText, int bpm, ChartParseReport report = null)
         {
             ChartData chartData = new ChartData();
             chartData.bpm = bpm;
@@ -73,14 +73,20 @@ namespace SCOdyssey.Game
                 }
                 catch (System.Exception e)
                 {
-                    Debug.LogError($"Chart Parsing Error at line: {line}\n{e.Message}");
+                    report?.Errors.Add($"Chart Parsing Error at line: {line}\n{e.Message}");
                 }
             }
 
+            int headerNotes = chartData.totalNotes;
             int synthesized = AppendBarEndHoldEnds(chartData, duration);
             chartData.totalNotes += synthesized;   // 판정 대상이 늘었으므로 노트당 배점 기준도 같이 옮긴다
 
-            Debug.Log($"Chart Parsed Successfully. Total Lanes: {chartData.GetFullChartList().Count}, Total Notes: {chartData.totalNotes} (마디 끝 홀드 종료 {synthesized}개 합성)");
+            if (report != null)
+            {
+                report.HeaderNotes = headerNotes;
+                report.Synthesized = synthesized;
+            }
+
             return chartData;
         }
 

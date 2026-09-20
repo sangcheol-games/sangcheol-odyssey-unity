@@ -1,6 +1,6 @@
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     /// 판정 전용 노트. 파싱 시점에 값이 확정.
     public readonly struct JudgeNote

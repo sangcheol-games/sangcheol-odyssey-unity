@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
 using SCOdyssey.Core;
+using SCOdyssey.Rhythm;
 using TMPro;
 using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
@@ -127,7 +128,9 @@ namespace SCOdyssey.Game
                 judgementOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
             }
 
-            JudgeNote[] judgeNotes = chartData.BuildJudgeTrack();
+            var trackReport = new ChartParseReport();
+            JudgeNote[] judgeNotes = chartData.BuildJudgeTrack(trackReport);
+            foreach (string error in trackReport.Errors) Debug.LogError(error);
             _judgeTrack.Init(judgeNotes, judgementOffsetSec);
             _noteViews = new NoteController[judgeNotes.Length];
             LogJudgeTrackSummary(chartData, judgeNotes);
@@ -303,7 +306,7 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                var group = LaneMap.FromChartLine(lane.line).GetGroup();
+                var group = LaneLayout.GroupOf(LaneMap.FromChartLine(lane.line));
                 _nextGroupDirBuffer[group] = lane.isLTR;
             }
 
@@ -374,7 +377,7 @@ namespace SCOdyssey.Game
 
             foreach (var lane in nextBarLanes)
             {
-                var group = LaneMap.FromChartLine(lane.line).GetGroup();
+                var group = LaneLayout.GroupOf(LaneMap.FromChartLine(lane.line));
                 _nextGroupDirBuffer[group] = lane.isLTR;
             }
 
@@ -411,7 +414,7 @@ namespace SCOdyssey.Game
                 }
 
                 // 카운트다운은 방향에 따라 좌/우 슬롯이 달라짐
-                CountdownSlot slot = group.ToCountdownSlot(isLTR);
+                CountdownSlot slot = LaneLayout.ToCountdownSlot(group, isLTR);
 
                 _chartState.ActivateCountdown(
                     slot: slot,
@@ -461,7 +464,7 @@ namespace SCOdyssey.Game
                 // 노트 배치 시작점 x좌표 위치
                 float laneStartX = lane.isLTR ? leftEndpoint.anchoredPosition.x : rightEndpoint.anchoredPosition.x;
 
-                var group = LaneMap.FromChartLine(lane.line).GetGroup();
+                var group = LaneLayout.GroupOf(LaneMap.FromChartLine(lane.line));
 
                 // 충돌 = 현재 이동 중인 판정선과 같은 그룹을 다음 마디에서도 사용하는 경우(고난이도).
                 // 이때 다음 마디 노트를 그냥 Ghost로 띄우면 현재 판정선과 겹쳐 난잡 → Hidden으로 숨겼다가 판정선이 지난 뒤 Ghost로 전환.
@@ -612,21 +615,14 @@ namespace SCOdyssey.Game
 
 
 
-        private static NotePosition GetNotePosition(int listIndex)
-        {
-            // 각 그룹 내 첫 번째 레인(짝수 인덱스) = Top, 두 번째(홀수) = Bottom
-            return listIndex % 2 == 0 ? NotePosition.Top : NotePosition.Bottom;
-        }
-
         /// <summary>
         /// 판정 확정 공통 처리. 노트를 activeNotes에서 제거하고 OnHit → GameManager로 판정/홀드 콜백 발화 → 이펙트 출력.
         /// GameManager 콜백이 ScoreManager·CharacterAnimator로 전파된다.
         /// </summary>
         private void ApplyJudgement(JudgeEvent judged, NoteController view)
         {
-            var listIndex = (int)judged.Lane;
-            NotePosition pos = GetNotePosition(listIndex);
-            LaneGroup group = judged.Lane.GetGroup();
+            NotePosition pos = LaneLayout.PositionOf(judged.Lane);
+            LaneGroup group = LaneLayout.GroupOf(judged.Lane);
             _judgementBus.PublishNoteJudged(judged.Judge, pos, group);
 
             // 홀드 관련 이벤트 발화

@@ -1,7 +1,6 @@
-using UnityEngine;
 using static SCOdyssey.Domain.Service.Constants;
 
-namespace SCOdyssey.Game
+namespace SCOdyssey.Rhythm
 {
     // 노트 1개의 순수 데이터. ChartManager는 time으로 판정, noteType으로 판정 방식 분기,
     // index로 배치 X좌표 계산, holdBarBeats로 홀드바 길이를 정한다.
