@@ -1020,8 +1020,9 @@ GameObject:
   - component: {fileID: 263511528}
   - component: {fileID: 263511530}
   - component: {fileID: 263511529}
+  - component: {fileID: 263511531}
   m_Layer: 5
-  m_Name: ComboText
+  m_Name: ComboCount
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1146,6 +1147,23 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 263511527}
   m_CullTransparentMesh: 1
+--- !u!114 &263511531
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 263511527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7067245e8908a4a4f94c1dd9cac459a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SCOdyssey.Game.ComboCountAnimator
+  popDuration: 0.1
+  popEase: 9
+  riseOffset: 10
+  startScale: 0.9
+  startAlpha: 0.5
 --- !u!1 &267057289
 GameObject:
   m_ObjectHideFlags: 0
@@ -4882,6 +4900,7 @@ MonoBehaviour:
   comboRoot: {fileID: 673372712}
   comboText: {fileID: 263511529}
   comboIndicator: {fileID: 330688754}
+  comboCountAnimator: {fileID: 263511531}
   gaugeText: {fileID: 1625766189}
   gaugeBar: {fileID: 462455277}
   clearEffectImage: {fileID: 796260943}
