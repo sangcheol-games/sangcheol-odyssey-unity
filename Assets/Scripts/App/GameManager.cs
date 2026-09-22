@@ -66,6 +66,7 @@ namespace SCOdyssey.App
         public TextMeshProUGUI scoreText;
         public GameObject comboRoot;   // Combo 그룹 루트("Combo" 라벨 + 숫자 + 인디케이터). 콤보 0이면 통째로 숨긴다
         public TextMeshProUGUI comboText;
+        public ComboIndicatorAnimator comboIndicator; // Combo 화살표 밀림 연출. 미할당이면 연출만 생략된다
         public TextMeshProUGUI gaugeText;
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
         public Image clearEffectImage; // 클리어 등급 / 재개 카운트다운 연출 이미지
@@ -318,6 +319,11 @@ namespace SCOdyssey.App
             {
                 comboText.gameObject.SetActive(combo > 0);   // comboRoot 미할당 시 기존 동작으로 폴백
             }
+
+            // 인디케이터 밀림 연출. 반드시 SetActive 이후에 호출한다
+            // (SetActive(true)가 OnEnable을 동기 실행해 위상을 리셋하므로, 먼저 부르면 이번 콤보가 지워진다)
+            // OnComboChanged는 판정마다 같은 값·0으로도 재발행되므로 증가 판별은 컴포넌트가 한다
+            comboIndicator?.SetCombo(combo);
         }
 
         public void UpdateGauge(float percentage)
