@@ -218,6 +218,11 @@ namespace SCOdyssey.Game
             _frame = default;
             _lastVariant = -1;
 
+            // Spine 트랙은 비활성 동안 얼어붙어 있다가 재활성 시 그 자리에서 이어 재생된다.
+            // _current를 비우지 않으면 아래 Play(Run)이 루프 가드에 걸려 조기 반환하고,
+            // 이전 판정선이 재생 중이던 원샷의 뒷부분이 새 캐릭터에서 이어 나온다.
+            _current = (CharacterState)(-1);
+
             SnapY(_bottomY);
             Play(CharacterState.Run);
         }
@@ -417,11 +422,16 @@ namespace SCOdyssey.Game
             FrameInput filtered = DropWhiffs(input, holds);
             HoldMask pressed = PressedMask(filtered);
 
+            // 홀드가 걸리지 않은 쪽에서 들어온 진짜 히트.
+            // 홀드 진입 프레스 자신은 그 쪽 비트가 이미 holds에 서 있으므로 여기서 빠진다.
+            // holds가 Both면 항상 None이라, 상하 동시 홀드 진입은 A2로 새지 않는다.
+            HoldMask hitSides = RealHitMask(filtered) & ~holds;
+
             NotePosition pos = ResolvePosition(holds, pressed, prev);
             bool moved = pos != prev;
 
-            ActionKind action = ResolveAction(filtered, holds, moved);
-            Axis axis = ResolveAxis(action, filtered, prev, pos, moved);
+            ActionKind action = ResolveAction(filtered, holds, hitSides, moved);
+            Axis axis = ResolveAxis(action, hitSides, prev, pos, moved);
 
             int variant;
             CharacterState state = ResolveState(action, axis, filtered, holds, lastVariant, out variant);
@@ -471,6 +481,21 @@ namespace SCOdyssey.Game
             return mask;
         }
 
+        /// 헛침을 걷어낸 뒤 남은 "진짜 히트"의 비트마스크.
+        private static HoldMask RealHitMask(FrameInput input)
+        {
+            HoldMask mask = HoldMask.None;
+            if (input.Top.Pressed && !input.Top.Whiff)
+            {
+                mask |= HoldMask.Top;
+            }
+            if (input.Bottom.Pressed && !input.Bottom.Whiff)
+            {
+                mask |= HoldMask.Bottom;
+            }
+            return mask;
+        }
+
         /// <summary>
         /// 표 A. 홀드가 입력보다 항상 우선이다 — 그래서 홀드 중 반대편 입력은 Y를 흔들지 않는다.
         /// 헛침은 이 표에 등장하지 않으므로 "헛침도 Y는 이동" 규칙이 특수 분기 없이 성립한다.
@@ -492,8 +517,9 @@ namespace SCOdyssey.Game
 
         /// <summary>
         /// 표 B. 위에서부터 첫 일치. 우선순위가 있는 조건이라 표로 접지 않는다.
+        /// hitSides는 "홀드가 걸리지 않은 쪽에서 들어온 진짜 히트"다.
         /// </summary>
-        private static ActionKind ResolveAction(FrameInput input, HoldMask holds, bool moved)
+        private static ActionKind ResolveAction(FrameInput input, HoldMask holds, HoldMask hitSides, bool moved)
         {
             bool topHit = input.Top.Pressed && !input.Top.Whiff;
             bool bottomHit = input.Bottom.Pressed && !input.Bottom.Whiff;
@@ -501,12 +527,20 @@ namespace SCOdyssey.Game
             // A1 — 둘 다 진짜 히트여야 한다. 한쪽이 헛침이면 F2가 이미 걷어냈다.
             if (topHit && bottomHit && holds == HoldMask.None) return ActionKind.DoubleHit;
 
-            // A2 — 홀드에 새로 들어갔거나, 남은 홀드 쪽으로 자리를 옮겼다
-            if (holds != HoldMask.None && (input.HoldBegan != HoldMask.None || moved)) return ActionKind.HoldEnter;
+            // A2 — 한쪽을 잡은 채 비어 있는 쪽을 쳤다.
+            //      홀드 진입 프레스와 반대편 일반 노트가 같은 주기에 겹쳐도 여기서 잡힌다.
+            //      예전에는 아래 A3이 먼저 걸려 그 경우 반대편 타격이 통째로 사라졌다.
+            //      이동 중이어도 히트가 우선이다 — 이동은 트윈이 표현하고 클립은 타격을 표현한다.
+            //
+            //      "반대편"을 따로 검사하지 않는 이유: hitSides가 이미 holds를 빼고 남은 것이라
+            //      잡고 있는 쪽의 히트는 들어올 수 없다. holds가 Both면 항상 비어 발화하지 않는데,
+            //      그 조합에서 진짜 히트가 가능하려면 이번 주기에 시작한 홀드여야 하고
+            //      그러면 HoldBegan이 서서 아래 A3이 잡는다.
+            //      (홀드 본체를 다시 잡는 입력은 PressResult.HoldBody로 분류되어 버퍼에 아예 안 들어온다)
+            if (holds != HoldMask.None && hitSides != HoldMask.None) return ActionKind.HitWhileHold;
 
-            // A3 — 한쪽을 잡은 채 반대편을 쳤다. Y는 홀드가 잡고 있어 움직이지 않는다.
-            if (topHit && (holds & HoldMask.Bottom) != 0) return ActionKind.HitWhileHold;
-            if (bottomHit && (holds & HoldMask.Top) != 0) return ActionKind.HitWhileHold;
+            // A3 — 홀드에 새로 들어갔거나, 남은 홀드 쪽으로 자리를 옮겼다
+            if (holds != HoldMask.None && (input.HoldBegan != HoldMask.None || moved)) return ActionKind.HoldEnter;
 
             // A4 — 필터를 통과해 남은 헛침이면 홀드도 없고 진짜 히트도 없다는 뜻이다
             bool whiffRemains = (input.Top.Pressed && input.Top.Whiff)
@@ -524,18 +558,23 @@ namespace SCOdyssey.Game
         /// 이동이 동반되면 방향 애니메이션이 등급보다 우선한다는 규칙이 오직 여기에만 있다.
         /// 축이 None이 아닌 순간 등급 애니메이션은 표에서 도달 불가능해진다.
         /// </summary>
-        private static Axis ResolveAxis(ActionKind action, FrameInput input, NotePosition prev, NotePosition pos, bool moved)
+        private static Axis ResolveAxis(ActionKind action, HoldMask hitSides, NotePosition prev, NotePosition pos, bool moved)
         {
-            if (moved)
+            // 홀드 중 비어 있는 쪽을 쳤다. 여기서 축은 "친 레인"을 가리켜 클립 이름 접두사를 고를 뿐이고
+            // 이동이 아니다. 홀드 진입과 겹쳐 Y가 움직이는 중에도 히트가 우선이라 이 분기가 위에 있다.
+            // 그 경우 접두사가 이동 방향과 반대가 되는데, 이동은 트윈(0.12초)이 이미 표현하고 있다.
+            //
+            // ★ 누른 쪽(Pressed)을 보면 안 된다. 홀드 진입과 겹치면 홀드 쪽도 Pressed라 접두사가 뒤집힌다.
+            //   hitSides는 holds를 뺀 것이라 이 분기에서는 항상 한쪽 비트만 서 있다.
+            if (action == ActionKind.HitWhileHold)
             {
-                if (HeightOf(pos) > HeightOf(prev)) return Axis.Up;
+                if ((hitSides & HoldMask.Top) != 0) return Axis.Up;
                 return Axis.Down;
             }
 
-            // 이동이 아니다. 여기서 축은 "누른 쪽"을 가리켜 클립 이름 접두사를 고를 뿐이다.
-            if (action == ActionKind.HitWhileHold)
+            if (moved)
             {
-                if (input.Top.Pressed) return Axis.Up;
+                if (HeightOf(pos) > HeightOf(prev)) return Axis.Up;
                 return Axis.Down;
             }
 
