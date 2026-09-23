@@ -77,18 +77,8 @@ namespace SCOdyssey.Domain.Service
             Bottom
         }
 
-        public enum CharacterState
-        {
-            Idle,
-            Hit0, Hit1, Hit2, Hit3,
-            Top, Middle, Bottom,
-            TopHold, MiddleHold, BottomHold,
-            TopHitWhileBottomHold,              // 아래 홀드 중 위 히트 (bottomY 유지)
-            BottomHitWhileTopHold,              // 위 홀드 중 아래 히트 (topY 유지)
-            Attack,                             // 같은 레인 재입력 (Y 유지)
-            Hit_Kind,                           // Kind 판정 히트
-            Hit_Umm                             // Umm 판정 히트
-        }
+        // CharacterState는 연출 전용 개념이라 Assets/Scripts/Game/CharacterState.cs로 옮겼다.
+        // 참조자가 전부 SCOdyssey.Game이고, Spine 애니메이션 이름과 1:1로 묶이는 값이다.
 
     }
 }

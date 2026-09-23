@@ -674,25 +674,39 @@ namespace SCOdyssey.Game
         /// 노트가 아직 없으면 선입력으로 버퍼링. Normal/HoldStart만 눌러서 판정(홀드 본체/릴리즈는 별도 경로).
         /// </summary>
         public void TryJudgeInput(int laneIndex, double inputGameTime)
-            => TryJudgeInput(laneIndex, inputGameTime, emitHitSound: true);
+            => TryJudgeInput(laneIndex, inputGameTime, isFreshPress: true);
 
         /// <summary>
-        /// emitHitSound: 타격음을 낼지 여부. FlushBufferedInput에서 재진입할 때는 false —
-        /// 선입력이 버퍼링되는 순간 PlayInputSound가 ghostNotes로 예측 판정해 이미 소리를 냈으므로,
-        /// 여기서 또 내면 한 번의 입력에 소리가 두 번 난다.
+        /// isFreshPress: 플레이어가 실제로 키를 누른 순간인지 여부. FlushBufferedInput에서 재진입할 때는 false.
+        /// 선입력이 버퍼링되는 순간 PredictInput이 ghostNotes로 예측 판정을 끝내고 타격음과 입력 이벤트를
+        /// 이미 내보냈으므로, flush에서 또 내면 한 번의 입력에 소리와 캐릭터 연출이 두 번 나간다.
+        ///
+        /// ★ 이 플래그가 "OnLaneInput은 물리적 키 입력당 정확히 1회"라는 불변식을 지킨다.
+        ///   CharacterAnimator의 입력 버퍼 해석이 이 불변식 위에 서 있으므로 깨뜨리면 안 된다.
         /// </summary>
-        private void TryJudgeInput(int laneIndex, double inputGameTime, bool emitHitSound)
+        private void TryJudgeInput(int laneIndex, double inputGameTime, bool isFreshPress)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
 
-            // 타격음을 가장 먼저 재생한다. 판정·이펙트·캐릭터 애니메이션보다 앞에 둬서 지연을 최소화
-            // (ApplyJudgment는 이펙트 풀이 비면 Instantiate까지 하므로 그 뒤에 내면 스파이크만큼 밀린다)
-            if (emitHitSound) PlayInputSound(listIndex, inputGameTime);
+            if (isFreshPress)
+            {
+                // 판정 예측을 한 번만 하고 타격음과 캐릭터 연출이 같은 값을 쓰게 한다.
+                // 타격음을 가장 먼저 재생한다. 판정·이펙트보다 앞에 둬서 지연을 최소화
+                // (ApplyJudgment는 이펙트 풀이 비면 Instantiate까지 하므로 그 뒤에 내면 스파이크만큼 밀린다)
+                (JudgeType sound, PressResult result) prediction = PredictInput(listIndex, inputGameTime);
+                PlayHitSound(prediction.sound);
 
+                LaneInputResult inputResult = new LaneInputResult(
+                    GetNotePosition(listIndex),
+                    GetTrackGroupID(listIndex),
+                    prediction.sound,
+                    prediction.result,
+                    inputGameTime);
+                gameManager.OnLaneInput(inputResult);
+            }
+
+            // flush 경로에서도 실행되어야 한다. 홀드 본체 판정(CheckHoldingBody)이 이 플래그를 본다.
             _lanes[listIndex].isHolding = true;
-
-            // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            gameManager.OnLaneInput(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
 
             var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0)
@@ -719,29 +733,54 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 이번 입력이 어떤 판정이 될지 예측해 타격음을 고른다. 판정 실패(헛침)는 Umm으로 낸다.
+        /// 이번 입력이 어떤 판정이 될지 예측한다. 타격음과 캐릭터 연출의 단일 진실 공급원.
         /// activeNotes가 비어 있으면 ghostNotes 맨 앞을 본다 — ActivateGhostNotes가 첫 노트를
         /// activeNotes로 옮긴 직후 FlushBufferedInput을 부르므로 그게 곧 실제 판정 대상이다.
         /// 덕분에 마디 전환 선입력에서도 소리가 다음 마디까지 밀리지 않는다.
         /// 판정·점수는 전혀 건드리지 않는다.
+        ///
+        /// 반환값이 둘로 나뉘는 이유:
+        ///  - sound는 낼 타격음 등급이다. 헛침이든 홀드 본체든 전부 Umm이라 기존 동작과 같다.
+        ///  - result는 캐릭터가 무엇을 연출할지 정하는 분류다. 셋을 구분해야 한다.
+        ///    NoTarget  = 칠 노트가 없음 → Miss
+        ///    HoldBody  = 큐 맨 앞이 홀드 본체(홀드 재그립) → 아무 연출도 하지 않음
+        ///    HitTarget = 판정이 생김. 오차가 Kind~Umm 사이면 sound가 Umm이지만 이건 "진짜 Umm 히트"다
+        ///  sound == Umm 하나로 헛침을 판별하면 마지막 경우와 구분되지 않아 Hit_umm 대신 Miss가 나간다.
         /// </summary>
-        private void PlayInputSound(int listIndex, double inputGameTime)
+        private (JudgeType sound, PressResult result) PredictInput(int listIndex, double inputGameTime)
         {
             var lane = _lanes[listIndex];
-            NoteController target = lane.activeNotes.Count > 0 ? lane.activeNotes.Peek()
-                                  : lane.ghostNotes.Count  > 0 ? lane.ghostNotes.Peek()
-                                  : null;
 
-            // 누르는 판정 대상이 아니면(홀드 본체/릴리즈) 칠 노트가 없는데 누른 것 = 헛침
-            if (target == null ||
-                (target.noteData.noteType != NoteType.Normal && target.noteData.noteType != NoteType.HoldStart))
+            NoteController target = null;
+            if (lane.activeNotes.Count > 0)
             {
-                PlayHitSound(JudgeType.Umm);
-                return;
+                target = lane.activeNotes.Peek();
+            }
+            else if (lane.ghostNotes.Count > 0)
+            {
+                target = lane.ghostNotes.Peek();
+            }
+
+            // 칠 노트가 아예 없다 = 허공에 친 것
+            if (target == null)
+            {
+                return (JudgeType.Umm, PressResult.NoTarget);
+            }
+
+            // 누르는 판정 대상이 아님(홀드 본체/릴리즈). 홀드를 놓쳤다 다시 잡는 정상 플레이에서 나온다.
+            NoteType targetType = target.noteData.noteType;
+            if (targetType != NoteType.Normal && targetType != NoteType.HoldStart)
+            {
+                return (JudgeType.Umm, PressResult.HoldBody);
             }
 
             double timeDiff = Math.Abs(inputGameTime - target.noteData.time - _judgmentOffsetSec);
-            PlayHitSound(timeDiff > JUDGE_UMM ? JudgeType.Umm : GetJudgeType(timeDiff));
+            if (timeDiff > JUDGE_UMM)   // 판정 범위 밖 = 헛침
+            {
+                return (JudgeType.Umm, PressResult.NoTarget);
+            }
+
+            return (GetJudgeType(timeDiff), PressResult.HitTarget);
         }
 
         /// <summary>
@@ -766,8 +805,9 @@ namespace SCOdyssey.Game
 
             if (!_lanes[listIndex].isHolding) return; // 이미 손을 뗀 경우 폐기
 
-            // 선입력이 버퍼링되던 시점에 예측 판정으로 이미 타격음을 냈으므로 여기선 억제 (한 입력 = 한 소리)
-            TryJudgeInput(listIndex + 1, inputTime, emitHitSound: false);
+            // 선입력이 버퍼링되던 시점에 예측 판정으로 이미 타격음과 캐릭터 연출을 냈으므로 여기선 억제
+            // (한 입력 = 한 소리 = 한 연출)
+            TryJudgeInput(listIndex + 1, inputTime, isFreshPress: false);
         }
 
         /// <summary>
@@ -865,13 +905,12 @@ namespace SCOdyssey.Game
 
             // 홀드 관련 이벤트 발화
             // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
-            // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
             // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
+            // HoldEnd(4)는 완주 피드백용이었으나 대응하는 캐릭터 연출이 없어 콜백을 없앴다.
+            // 홀드 완주에 연출을 붙이려면 그때 다시 만든다.
             var nt = targetNote.noteData.noteType;
             if (nt == NoteType.HoldStart || nt == NoteType.Holding)
                 gameManager.OnHoldStart(pos, groupID);
-            else if (nt == NoteType.HoldEnd)
-                gameManager.OnHoldEnd(pos, groupID);
             else if (nt == NoteType.HoldRelease)
                 gameManager.OnHoldRelease(pos, groupID);
 
