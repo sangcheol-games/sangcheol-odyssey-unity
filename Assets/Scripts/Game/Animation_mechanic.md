@@ -1,336 +1,464 @@
-# CharacterAnimator 메커니즘 정리
+# 캐릭터 애니메이션 메커니즘
 
-## 관련 파일
+`CharacterAnimator`가 무엇을 근거로 어떤 애니메이션을 재생하는지에 대한 정본 문서다.
+코드를 고칠 때 이 문서도 같이 고친다.
 
-| 파일 | 역할 |
+관련 파일
+- [CharacterAnimator.cs](CharacterAnimator.cs) — 구독, 입력 버퍼, 전이 규칙, 적용
+- [CharacterState.cs](CharacterState.cs) — 상태 목록과 루프 판별
+- [ICharacterAnimationHandler.cs](ICharacterAnimationHandler.cs) / [SpineAnimationHandler.cs](SpineAnimationHandler.cs) / [SpriteSheetAnimationHandler.cs](SpriteSheetAnimationHandler.cs) — 재생 백엔드
+- [LaneInputResult.cs](Data/LaneInputResult.cs) — 판정 계층이 넘겨주는 입력 페이로드
+
+---
+
+## 1. 왜 이런 구조인가
+
+판정 계층은 한 번의 키 입력에 대해 여러 이벤트를 **한 프레임 안에 줄줄이** 발화한다.
+입력 이벤트가 먼저 오고, 판정이 성립하면 홀드 시작이 뒤따르는 식이다.
+
+받는 족족 애니메이션을 바꾸면 나중에 온 이벤트가 앞선 것을 덮어쓴다.
+예전 구현은 이걸 막으려고 "이동 애니메이션은 히트가 덮지 않는다", "홀드 중에는 입력을 무시한다" 같은
+예외를 핸들러마다 흩뿌렸고, 그 예외들이 서로 간섭해 다시 버그를 만들었다.
+
+**그래서 핸들러는 기록만 하고, 해석은 한 곳에서 한 번만 한다.**
+
+```
+이벤트 3종 ──▶ _frame 버퍼에 적재 ──▶ (시간창 대기) ──▶ Resolve ──▶ TweenY + Play
+             (판단 없음)                                (규칙 전부)   (부수효과 전부)
+```
+
+`Resolve`는 `static`이다. 인스턴스 필드에 손댈 수 없으므로 "전이 규칙이 전부 저 안에 있다"가
+주석이 아니라 컴파일러가 강제하는 사실이 된다.
+
+캐릭터는 판정선(`TimelineController`)의 자식이라 X축 이동은 부모를 따라 자동으로 되고,
+이 컴포넌트는 `_spriteRoot`의 Y만 제어한다.
+
+---
+
+## 2. 상태 목록 (17종)
+
+이름은 **Spine 스켈레톤의 애니메이션 이름과 대소문자·언더스코어까지 정확히** 일치해야 한다.
+기동 시 `SpineAnimationHandler`가 전부 조회해 캐시하고, 없는 이름은 `LogError`로 한 줄에 모아 알린다.
+
+| 상태 | 언제 | 루프 |
+|---|---|---|
+| `Run` | 아무 입력이 없는 기본 상태 | O |
+| `Hold` | 홀드 유지 중 | O |
+| `Hit_master_1~3` | Perfect 또는 Master 제자리 히트 (3종 랜덤) | |
+| `Hit_1~3` | Ideal 또는 Kind 제자리 히트 (3종 랜덤) | |
+| `Hit_umm` | Umm 제자리 히트 | |
+| `Miss` | 판정 윈도우에 칠 노트가 없는데 누름 | |
+| `Double_hit` | 상하 동시 입력이고 **둘 다** 히트 | |
+| `Up_hit` / `Down_hit` | 이동하며 일반 노트 히트 | |
+| `Up_hold` / `Down_hold` | 이동하며 홀드 진입 | |
+| `Up_hit_while_hold` / `Down_hit_while_hold` | 홀드 유지 중 반대편 일반 노트 히트 | |
+
+### 위치는 클립 이름에 들어가지 않는다
+
+`Hold` 하나가 위 홀드(Y=120), 아래 홀드(Y=-120), 상하 동시 홀드(Y=0)를 전부 담당한다.
+`Run`도 캐릭터가 어느 높이에 있든 재생된다.
+**두 루프 클립은 세 높이 모두에서 자연스러워야 한다.**
+
+`Double_hit`은 항상 Middle에서만 재생되므로 그 높이를 전제로 작화해도 된다.
+다만 원샷이 끝나면 `Run`으로 돌아가고 자동 복귀가 없으므로,
+캐릭터는 다음 입력이 올 때까지 두 레인 사이에 머문 채 `Run`을 재생한다.
+
+### 인덱스 제약
+
+`Hit_master_1~3`과 `Hit_1~3`은 각각 **연속 배치**여야 한다.
+랜덤 변형 선택이 `(int)Hit_master_1 + pick` 형태의 인덱스 덧셈을 쓴다.
+
+---
+
+## 3. 판정 계층에 요구하는 입력 계약
+
+애니메이터가 바깥에 요구하는 것은 이 셋뿐이다.
+`GameManager`나 `ChartManager`의 내부 구조가 바뀌어도 이 계약만 다시 연결하면 된다.
+
+### 3-1. 입력 이벤트 — `OnLaneInputEvent(LaneInputResult)`
+
+| 필드 | 뜻 |
 |---|---|
-| `CharacterAnimator.cs` | 상태 머신 + Root Y 제어 + 이벤트 구독 |
-| `ICharacterAnimationHandler.cs` | 애니메이션 방식 추상화 인터페이스 |
-| `SpriteSheetAnimationHandler.cs` | Unity Animator 구현체 |
-| `SpineAnimationHandler.cs` | Spine 구현체 (stub) |
-| `Constants.cs` | `CharacterState`, `NotePosition`, `AnimationType` enum |
+| `Pos` | 그룹 내 위치. Top 또는 Bottom (Middle은 파생값이라 발행되지 않는다) |
+| `GroupID` | 판정선 그룹. 캐릭터는 자기 그룹 것만 처리한다 |
+| `Judge` | 예측 판정 등급 |
+| `Result` | `HitTarget` / `NoTarget` / `HoldBody` |
+| `Time` | 입력 시각(게임 상대시간). 상하 동시 입력을 짝지을 때 쓴다 |
 
----
+**★ 불변식: 물리적 키 입력당 정확히 한 번 발행된다.**
+선입력이 버퍼링됐다가 나중에 재판정되는 경로에서는 발행하지 않는다.
+이 불변식이 깨지면 한 번의 타격에 연출이 두 번 나가고, 버퍼 해석의 전제가 무너진다.
 
-## 전체 데이터 흐름
+**`Result`가 셋으로 나뉘는 이유.** 판정이 성립하지 않는 경우가 세 가지인데 캐릭터 반응이 서로 다르다.
 
-```
-유저 입력
-  └─ ChartManager.ApplyJudgment()
-       ├─ gameManager.OnNoteJudged(type, pos)    ← NotePosition 포함
-       ├─ gameManager.OnHoldStart(pos)           ← HoldStart 노트 판정 시
-       └─ gameManager.OnHoldEnd(pos)             ← HoldRelease 노트 판정 시
-
-GameManager
-  └─ 이벤트 발화 (OnNoteJudgedEvent / OnHoldStartEvent / OnHoldEndEvent)
-
-CharacterAnimator (구독)
-  ├─ OnNoteJudgedHandler → OnNoteHit(pos)
-  ├─ OnHoldStart(pos)    → UpdateHoldState()
-  └─ OnHoldEnd(pos)      → UpdateHoldState()
-```
-
----
-
-## NotePosition 매핑 (ChartManager)
-
-```
-listIndex 0, 1  →  NotePosition.Bottom  (그룹 0, 아래 판정선)
-listIndex 2, 3  →  NotePosition.Top     (그룹 1, 위 판정선)
-```
-
-`Middle`은 채보 이벤트로 직접 오지 않음.
-`_isTopHolding && _isBottomHolding` 조건에서 `UpdateHoldState()` 내부가 결정.
-
----
-
-## CharacterState 전체 목록 (14개)
-
-| 상태 | 위치(Y) | Animator | 용도 |
+| 상황 | 타격음 | `Result` | 캐릭터 |
 |---|---|---|---|
-| `Idle` | bottomY | 루프 | 기본 달리기 |
-| `Hit0` ~ `Hit3` | 변경 없음 | 원샷 → Idle | 현재 레인 제자리 타격 (랜덤 4종) |
-| `Top` | topY | 원샷 → Fall | 위 이동 타격 |
-| `Middle` | centerY | 원샷 → Fall | 위아래 동시 타격 |
-| `Bottom` | bottomY | 원샷 → Idle | 아래 이동 타격 |
-| `Fall` | topY→bottomY lerp | 원샷 → Idle | 낙하 전환 (레인 없음) |
-| `TopHold` | topY | 루프 | 위 롱노트 홀드 중 |
-| `MiddleHold` | centerY | 루프 | 위아래 동시 홀드 중 |
-| `BottomHold` | bottomY | 루프 | 아래 롱노트 홀드 중 |
-| `TopHitWhileBottomHold` | bottomY 유지 | 원샷 → BottomHold | 아래 홀드 중 위 타격 |
-| `BottomHitWhileTopHold` | topY 유지 | 원샷 → TopHold | 위 홀드 중 아래 타격 |
+| 칠 노트가 아예 없음 | Umm | `NoTarget` | `Miss` |
+| 오차가 Umm 윈도우를 넘음 | Umm | `NoTarget` | `Miss` |
+| 큐 맨 앞이 홀드 본체 (홀드 재그립) | Umm | `HoldBody` | **아무 연출도 안 함** |
+| 오차가 Kind~Umm 사이 | Umm | `HitTarget` | `Hit_umm` |
 
----
+넷째 줄 때문에 **"타격음이 Umm이다"로 헛침을 판별하면 안 된다.**
+그 구간은 판정이 정상적으로 성립하는 진짜 Umm 히트다.
 
-## Root Y 제어 방식
+셋째 줄은 홀드를 잠깐 놓쳤다 다시 잡는 정상적인 플레이다.
+헛침으로 묶으면 `Miss`가, 히트로 묶으면 `Hit_umm`이 번쩍인다. 둘 다 틀렸다.
+아무것도 하지 않으면 다음 홀드 본체 판정에서 `Hold`가 자연히 복귀한다.
 
-```
-CharacterRoot  (CharacterAnimator — Y 위치: 코드 lerp 제어)
-└── CharacterSprite (Animator: Root 기준 상대 모션만 담당)
-```
+### 3-2. 홀드 시작 — `OnHoldStartEvent(NotePosition, int groupID)`
 
-- `_targetY` 값만 변경하면 `Update()`의 `Mathf.MoveTowards`가 매 프레임 lerp 처리
-- 애니메이션 클립은 Root 기준 상대 모션 → 출발 위치와 무관하게 동일 클립 재사용 가능
-- `Hit` 상태는 `_targetY` 변경 없음 (현재 위치에서 재생)
+홀드 본체의 노트마다 **반복 발화된다.** 비트 0→1 전이일 때만 기록해 무시한다.
 
----
+### 3-3. 홀드 종료 — `OnHoldStopEvent(NotePosition, int groupID)`
 
-## GetLaneFromState() — 레인 추론
+**홀드가 끝나는 원인은 셋이고, 애니메이터는 구분하지 않는다.** 하는 일은 비트를 내리는 것뿐이다.
 
-현재 상태에서 캐릭터가 어느 레인에 있는지 추론. 별도 변수 없이 `_currentState`로 판단.
-
-```
-Top 레인    : Top, TopHold, BottomHitWhileTopHold
-Middle 레인 : Middle, MiddleHold
-Bottom 레인 : Idle, Bottom, BottomHold, Hit0~3, TopHitWhileBottomHold
-null        : Fall  ← 어느 레인도 아님, 항상 이동 타격
-```
-
----
-
-## 상태 전이 규칙 (OnNoteHit)
-
-```
-pos == Top && _isBottomHolding  →  TopHitWhileBottomHold  (bottomY 유지)
-pos == Bottom && _isTopHolding  →  BottomHitWhileTopHold  (topY 유지)
-pos == Middle                   →  Middle, centerY, StartFallTimer()
-
-pos == Top:
-  GetLaneFromState == Top   →  Hit(랜덤), Y 유지, StartFallTimer() 리셋
-  그 외 (Bottom/Middle/Fall) →  Top, topY, StartFallTimer()
-
-pos == Bottom:
-  GetLaneFromState == Bottom →  Hit(랜덤), Y 유지
-  그 외 (Top/Middle/Fall)    →  Bottom, bottomY
-```
-
----
-
-## FallTimer 메커니즘 (topY 체공 → 중력 복귀)
-
-**목적**: `Top`/`Middle`은 단발 타격이라 "언제 내려오는지" 외부 신호가 없음.
-FallTimer가 그 종료 신호 역할.
-
-```
-Top/Middle 히트
-  └─ StartFallTimer()
-       └─ [_topFloatDuration 대기]
-            └─ FallAfterDelay()
-                 ├─ SetState(Fall)
-                 ├─ _currentState = Fall
-                 └─ _targetY = bottomY
-                      └─ Update() lerp → Animator Fall 원샷 → Idle
-```
-
-**타이머 시작/취소 규칙:**
-
-| 전이 | 타이머 동작 |
+| 원인 | 발화 지점 |
 |---|---|
-| → Top, Hit(topY에서), Middle | `StartFallTimer()` (리셋 포함) |
-| → TopHold, BottomHold, MiddleHold | `ResetFallTimer()` 취소 |
-| → TopHitWhileBottomHold, BottomHitWhileTopHold | `ResetFallTimer()` 취소 |
-| → Bottom, Bottom 이동 타격 | `ResetFallTimer()` 취소 |
+| 플레이어가 키를 뗌 | `TryJudgeRelease` 진입부 |
+| 홀드 본체를 완주함 (`HoldEnd` 판정) | `ApplyJudgment` |
+| 홀드 본체를 놓침 (`HoldEnd`/`HoldRelease` miss) | `CheckMissedNotes` |
 
-**Hold와 FallTimer의 차이:**
+이름이 `Release`가 아니라 `Stop`인 이유가 이것이다. 키를 뗀 건 셋 중 하나일 뿐이다.
+`HoldEnd`라는 이름도 쓰지 않는다. `NoteType.HoldEnd`와 헷갈리는데 그것도 셋 중 하나다.
 
-| | Top/Middle (단타) | Hold 상태 |
-|---|---|---|
-| 종료 신호 | 없음 → FallTimer가 대신 | `OnHoldEnd` 이벤트 (명시적) |
-| bottomY 복귀 방법 | FallTimer → Fall → bottomY | `UpdateHoldState` → Fall → bottomY |
+**홀드와 무관하게 모든 키 뗌마다도 발화된다.** 일반 노트를 톡 치고 손을 떼도 온다.
+그래서 비트 1→0 전이일 때만 기록한다. 이 가드가 없으면 모든 탭 직후 `Run`이 히트 원샷을 잘라먹는다.
+같은 홀드에 여러 원인이 겹쳐 와도 두 번째부터는 이 가드에 걸린다.
 
----
+`Holding`(타입 3) 노트를 놓친 경우에는 발화하지 않는다. 본체는 계속되고 끝점이 나중에 오기 때문이다.
+빽빽한 본체가 프레임 누락으로 미스되는 건 흔한데, 거기서 끊으면 홀드가 수시로 깨진다.
 
-## Hold 종료 복귀 흐름 (UpdateHoldState)
+### 3-4. 구독하지 않는 것
 
-홀드가 모두 끝났을 때 직접 Idle로 가지 않고 **Fall을 경유**:
+판정 이벤트는 구독하지 않는다. 홀드 본체 판정과 릴리즈 판정이 계속 발화되는데 캐릭터에는 잡음이다.
+히트 등급은 입력 이벤트가 예측값으로 싣고 오므로 타격음과 그림이 구조적으로 어긋날 수 없다.
 
-```
-OnHoldEnd → UpdateHoldState
-  _isTopHolding == false && _isBottomHolding == false
-    └─ _targetY = bottomY
-       SetState(Fall)         ← topY/centerY에서 달리기 하강 방지
-       _currentState = Fall
-         └─ Animator Fall 원샷 종료 → Idle 자동 전이
-```
+지나쳐서 놓친 **일반 노트**에는 반응하지 않는다. 그 경로에는 위치도 그룹도 없기 때문이다.
+`Miss` 상태는 오직 헛침 입력에서만 나온다. 놓친 노트 중 홀드의 끝점만 예외적으로 위 종료 신호를 쏜다.
 
-단일 홀드 종료 (반대쪽 홀드 유지 중):
-```
-Top 홀드 종료, Bottom 홀드 유지 →  BottomHold, bottomY
-Bottom 홀드 종료, Top 홀드 유지 →  TopHold, topY
-```
+### 3-5. 판정 계층에 가한 변경 — 리팩터링 후 다시 적용할 것
 
----
+> **이 절은 `GameManager`와 `ChartManager` 리팩터링이 끝난 뒤 다시 읽어야 한다.**
+> 아래 변경은 그 두 파일에 직접 가한 것이라 리팩터링에 덮여 사라질 수 있다.
+> 라인 번호가 아니라 "무엇을 왜"로 적었으므로 구조가 바뀌어도 같은 변경을 다시 찾아 적용할 수 있다.
 
-## Hit 랜덤 선택
+원래대로면 판정 계층 수정은 `develop`에서 별도 브랜치를 따 먼저 머지하는 것이 맞지만,
+어차피 두 파일이 통째로 바뀔 예정이라 연출 작업과 함께 처리하고 이 메모를 남긴다.
 
-```
-PickHitVariant():
-  [0, 1, 2, 3] 중 _lastHitVariant 제외 → Random.Range → _lastHitVariant 갱신
-  → CharacterState.Hit0 + pick 반환
-```
+**1. 홀드가 끝나는 지점 세 곳에서 종료 신호를 쏘고 `isHolding`을 내린다.**
+`ChartManager.StopHold(listIndex)` 한 메서드로 묶여 있다. 호출 지점은 이렇다.
 
-직전과 동일한 Hit 애니메이션 연속 재생 방지.
-
----
-
-## 캐릭터 교체 흐름
-
-```
-CharacterAnimator.LoadCharacter(CharacterSO so)
-  ├─ animationType == SpriteSheet
-  │     → SpriteSheetAnimationHandler
-  │          → _animator.runtimeAnimatorController = so.animatorController
-  └─ animationType == Spine
-        → SpineAnimationHandler (stub)
-
-SpriteSheetAnimationHandler.SetState(state)
-  → Animator.SetTrigger(state.ToString())
-```
-
----
-
-## AnimatorController 구성 가이드
-
-| 상태 그룹 | 상태 목록 | 전이 규칙 |
-|---|---|---|
-| 루프 | Idle, TopHold, MiddleHold, BottomHold | Has Exit Time = false, 외부 Trigger로만 전이 |
-| 원샷 → Idle | Hit0~3, Bottom, Fall | Has Exit Time = true, 종료 후 Idle로 자동 전이 |
-| 원샷 → Fall | Top, Middle | Has Exit Time = true, 종료 후 Fall로 자동 전이 |
-| 원샷 → Hold | TopHitWhileBottomHold → BottomHold | Has Exit Time = true |
-| 원샷 → Hold | BottomHitWhileTopHold → TopHold | Has Exit Time = true |
-
-> **주의**: `Top`/`Middle` → `Fall` 자동 전이는 Animator의 Has Exit Time 전이.
-> 코드 쪽 `_currentState = Fall` / `_targetY = bottomY` 는 FallTimer coroutine이 담당.
-> 두 타이밍이 맞아야 하므로 `_topFloatDuration` ≈ Top/Middle 클립 재생 시간으로 설정.
-
----
-
-## Unity 에디터 작업 목록
-
-### 1. Timeline.prefab 수정
-
-기존 `characterImage` GameObject를 캐릭터 루트로 전환.
-
-**계층 구조:**
-```
-Timeline (TimelineController)
-└── CharacterRoot          ← CharacterAnimator 컴포넌트 부착
-    └── CharacterSprite    ← Animator 컴포넌트 부착 (SpriteRenderer 포함)
-```
-
-**작업 순서:**
-1. Timeline.prefab 열기
-2. 기존 `characterImage` 오브젝트를 `CharacterRoot`로 이름 변경
-3. `CharacterRoot`에 `CharacterAnimator` 컴포넌트 추가
-4. `CharacterRoot` 하위에 `CharacterSprite` 자식 오브젝트 생성
-5. `CharacterSprite`에 `Animator` + `SpriteRenderer` 컴포넌트 추가
-6. `CharacterAnimator` Inspector 연결:
-   - `_spriteRoot` → `CharacterSprite`
-   - `_topY` / `_bottomY` / `_centerY` 값 설정 (기본: 60 / -60 / 0)
-   - `_topFloatDuration` → Top/Middle 클립 재생 시간과 동일하게 설정
-   - `_fallSpeed` → 300 (기본값)
-7. `TimelineController` Inspector 연결:
-   - `_characterAnimator` → `CharacterRoot`
-
----
-
-### 2. CharacterSO 에셋 생성
-
-1. `Assets/Resources/Characters/` 폴더 생성
-2. Project 창 우클릭 → Create → Skins → CharacterSO
-3. 파일명: `CharacterSO_0001`
-4. Inspector 설정:
-
-| 필드 | 값 |
+| 지점 | 조건 |
 |---|---|
-| `id` | `1` (고유 정수, PlayerPrefs 저장 키) |
-| `skinName` | 캐릭터 이름 |
-| `thumbnailSprite` | 선택 UI용 썸네일 스프라이트 |
-| `animationType` | `SpriteSheet` |
-| `animatorController` | 아래 3번에서 생성할 AnimatorController 할당 |
+| `TryJudgeRelease` 진입부 | 무조건 (키를 뗌) |
+| `ApplyJudgment` | 판정된 노트가 `HoldEnd` |
+| `CheckMissedNotes` | 놓친 노트가 `HoldEnd` 또는 `HoldRelease` |
 
-> **주의**: `id`는 반드시 고유해야 함. 중복 시 PlayerPrefs 저장 충돌 발생.
+**2. `Holding` 노트를 놓친 경우는 제외한다.** 본체는 계속되고 끝점이 나중에 오기 때문이다.
+빽빽한 본체가 프레임 누락으로 미스되는 건 흔한데, 거기서 끊으면 홀드가 수시로 깨진다.
+
+**3. `ApplyJudgment`에서 `HoldRelease` 분기는 두지 않는다.**
+그 타입이 `ApplyJudgment`에 도달하는 경로는 `TryJudgeRelease` 하나뿐이고,
+그 진입부가 큐를 보기 전에 이미 `StopHold`를 부르므로 중복이다.
+
+**4. `isHolding`을 내리는 것은 점수에 영향을 준다.** 이게 이 절에서 가장 중요하다.
+이걸 빼먹으면 `CheckHoldingBody`가 계속 돌아, 손을 떼지 않은 플레이어에게
+**다음 홀드의 본체가 키 입력 없이 공짜로 판정된다.** 같은 레인에서 홀드가 끝난 뒤
+다시 시작되는 패턴은 채보마다 18~51쌍씩 있어 자주 발생한다.
+연출 쪽 증상은 캐릭터가 `Run`으로 갔다가 **입력도 없이** `Hold`로 되돌아오는 깜빡임이다.
+
+**5. 애니메이터가 요구하는 것은 신호 하나뿐이다.** 홀드가 끝났다는 사실만 알면 되고
+이유는 구분하지 않는다. 판정 계층이 종료 경로를 어떻게 재구성하든,
+세 원인 전부에서 이 신호가 나가고 `isHolding`이 함께 내려가면 된다.
 
 ---
 
-### 3. AnimatorController 생성
+## 4. 해석 시점 — 시간창
 
-1. Project 창 우클릭 → Create → Animator Controller
-2. 파일명: `CharacterName_AnimatorController`
-3. Animator 창에서 아래 상태 구성:
+프레임 단위로 즉시 해석하면 `Double_hit`이 거의 나오지 않는다.
+판정창은 위아래로 126ms인데 프레임은 60fps에서 16.7ms다.
+사람이 두 키를 20ms 차이로 눌러도 둘 다 완벽한 히트인데 프레임이 갈린다.
+불발했을 때의 그림이 더 나쁘다. 위로 트윈을 시작했다가 다음 프레임에 아래로 다시 걸어 캐릭터가 튄다.
 
-**파라미터 (Trigger × 11):**
+**첫 입력이 들어오면 `_pairWindow`(기본 20ms)만큼 반대편을 기다린다.**
+
+| 상황 | 해석 시점 |
+|---|---|
+| 홀드 변화만 있음 | 즉시 (짝지을 상대가 없다) |
+| 양쪽이 다 왔음 | 즉시 (더 기다릴 이유가 없다) |
+| 한쪽만 왔음 | 창 만료까지 대기 |
+
+**창을 여는 조건은 "버퍼가 비었을 때"가 아니라 "직전에 press가 없었을 때"다.**
+홀드 해제가 먼저 기록되면 버퍼는 비어있지 않으므로, 전자로 하면 창이 열리지 않는다.
+
+**대기 중 새 입력이 기존 것과 독립된 타격이면 먼저 비운다.** 두 경우다.
+- 같은 레인이 또 눌렸다 — 버퍼가 레인당 한 칸이라 그냥 두면 앞 타격이 덮여 사라진다
+- 반대편인데 입력 시각이 창보다 멀다 — 같은 프레임에 들어왔을 뿐 동시 입력이 아니다
+
+이때만 입력 핸들러가 예외적으로 즉시 해석한다. "핸들러는 기록만 한다"의 유일한 예외이며,
+그 순간에 비우지 않으면 정보가 없어지기 때문이다.
+
+**늦어지는 건 캐릭터 연출뿐이다.** 판정은 입력 시점의 DSP 타임스탬프로 계산되므로 영향이 없고,
+타격음과 판정 이펙트도 즉시 나간다. 창을 0으로 두면 프레임 단위 즉시 해석으로 돌아간다.
+
+---
+
+## 5. 전이 규칙
+
+### 5-0. 전처리 — 무시할 헛침 걷어내기
+
+표를 보기 전에 실행한다.
+
+| # | 조건 | 처리 |
+|---|---|---|
+| F1 | 홀드가 활성이다 | 헛침 입력을 버린다 |
+| F2 | 이번 주기에 진짜 히트가 하나라도 있다 | 헛침 입력을 버린다 |
+
+F1은 "홀드 중 반대편 헛침은 아무 일도 없다"를 구현한다.
+F2는 "한쪽만 히트하고 다른 쪽이 헛침이면 헛침을 무시한다"를 구현한다.
+위에만 노트가 있는데 상하를 동시에 눌렀다면 아래 입력은 없었던 것이 되므로,
+Y는 Middle이 아니라 Top으로 가고 애니메이션도 `Double_hit`이 아니다.
+
+헛침만 있고 진짜 히트가 없으면 아무것도 버리지 않는다. 그 경우는 `Miss`로 정상 처리된다.
+
+### 5-1. 표 A — Y 위치 (위에서부터 첫 일치)
+
+| # | 조건 | 결과 |
+|---|---|---|
+| Y1 | 상하 모두 홀드 중 | Middle (0) |
+| Y2 | 위만 홀드 중 | Top (120) |
+| Y3 | 아래만 홀드 중 | Bottom (-120) |
+| Y4 | 이번 주기에 상하 모두 입력 | Middle (0) |
+| Y5 | 위만 입력 | Top (120) |
+| Y6 | 아래만 입력 | Bottom (-120) |
+| Y7 | 그 외 | 직전 위치 유지 |
+
+홀드가 입력보다 항상 우선이다. 그래서 홀드 중 반대편 입력은 Y를 흔들지 않는다.
+헛침은 이 표에 등장하지 않으므로 "헛침도 Y는 누른 레인으로 이동"이 특수 분기 없이 성립한다.
+이 표는 멱등이라 이벤트 도착 순서와 무관하다.
+
+코드에서는 홀드와 입력이 같은 매핑을 공유하므로 세 분기로 접힌다.
+
+### 5-2. 표 B — 행동 (위에서부터 첫 일치)
+
+| # | 조건 | 행동 |
+|---|---|---|
+| A1 | 상하 동시 입력 + **둘 다** 진짜 히트 + 홀드 없음 | `DoubleHit` |
+| A2 | 홀드 있음 + (이번 주기에 홀드 시작 또는 Y 변함) | `HoldEnter` |
+| A3 | 진짜 히트 입력 + 반대편 홀드 중 | `HitWhileHold` |
+| A4 | 필터를 통과해 남은 헛침이 있음 | `Whiff` |
+| A5 | 진짜 히트 입력 | `Hit` |
+| A6 | 그 외 | `Idle` |
+
+A1이 "둘 다"를 요구하므로, 상하를 동시에 눌렀는데 둘 다 헛침이면 A4로 내려가 `Miss`가 된다.
+이때는 F2가 아무것도 버리지 않으므로 Y4가 걸려 Middle이 된다.
+
+우선순위가 있는 조건이라 표로 접지 않고 `if` 체인으로 둔다.
+표로 접으면 "내 상황이 어느 행이냐"를 찾는 코드가 규칙보다 길어진다.
+
+### 5-3. 축
+
 ```
-Idle, Hit0, Hit1, Hit2, Hit3,
-Top, Middle, Bottom, Fall,
-TopHold, MiddleHold, BottomHold,
-TopHitWhileBottomHold, BottomHitWhileTopHold
+Y가 변했으면        → 이동 방향 (Up / Down)
+아니고 HitWhileHold → 눌린 쪽 (위면 Up, 아래면 Down)   ※ 이동 아님
+그 외               → None
 ```
-> `SetTrigger(state.ToString())` 방식이므로 파라미터명 = CharacterState enum명과 정확히 일치해야 함.
 
-**상태 및 전이 설정:**
+"이동이 동반되면 방향 애니메이션이 등급보다 우선한다"는 규칙이 **오직 이 한 줄에만** 있다.
+축이 None이 아닌 순간 등급 애니메이션은 표에서 도달 불가능해진다.
 
-| 상태 | AnimationClip | Has Exit Time | 전이 대상 |
+**축 값은 두 가지 의미로 쓰인다.** 이동이 있으면 진행 방향이고,
+`HitWhileHold`에서는 눌린 쪽을 가리켜 클립 이름 접두사를 고를 뿐이다.
+아래 홀드 중 위 노트를 치면 Y는 Y3에 걸려 Bottom에 고정되고, 캐릭터는 그 자리에서 위를 향해 친다.
+트윈은 시작되지 않는다.
+
+**실제로 도달 가능한 조합**
+
+| 상태 | 전이 |
+|---|---|
+| `Up_hold` | Bottom→Middle, Middle→Top, Bottom→Top |
+| `Down_hold` | Top→Middle, Middle→Bottom, Top→Bottom |
+| `Up_hit` | Bottom→Top, Middle→Top (**2가지뿐**) |
+| `Down_hit` | Top→Bottom, Middle→Bottom (**2가지뿐**) |
+
+홀드 진입은 Y가 홀드 조합에서 오므로 Middle이 목적지가 될 수 있다.
+반면 **일반 히트는 Middle에 착지할 수 없다.** 입력으로 Middle에 가는 유일한 경로가 Y4인데,
+둘 다 히트면 A1이 `Double_hit`을, 한쪽이 헛침이면 F2가 걸러내고, 둘 다 헛침이면 A4가 `Miss`를 집는다.
+`Up_hit`이 Middle에서 **출발**하는 경우는 `Double_hit` 직후 거기 머물러 있을 때 생긴다.
+
+### 5-4. 표 C — 최종 상태
+
+| 행동 ＼ 축 | Up | Down | None |
 |---|---|---|---|
-| `Idle` | Idle 클립 | false (루프) | — |
-| `Hit0` ~ `Hit3` | Hit0~3 클립 | true | → Idle |
-| `Top` | Top 클립 | true | → Fall |
-| `Middle` | Middle 클립 | true | → Fall |
-| `Bottom` | Bottom 클립 | true | → Idle |
-| `Fall` | Fall 클립 | true | → Idle |
-| `TopHold` | TopHold 클립 | false (루프) | — |
-| `MiddleHold` | MiddleHold 클립 | false (루프) | — |
-| `BottomHold` | BottomHold 클립 | false (루프) | — |
-| `TopHitWhileBottomHold` | TopHitWhileBottomHold 클립 | true | → BottomHold |
-| `BottomHitWhileTopHold` | BottomHitWhileTopHold 클립 | true | → TopHold |
+| `Idle` | 홀드 있으면 `Hold`, 없으면 `Run` | 〃 | 〃 |
+| `Hit` | `Up_hit` | `Down_hit` | 표 D로 |
+| `HitWhileHold` | `Up_hit_while_hold` | `Down_hit_while_hold` | 도달 불가 |
+| `HoldEnter` | `Up_hold` | `Down_hold` | `Hold` |
+| `Whiff` | `Miss` | `Miss` | `Miss` |
+| `DoubleHit` | `Double_hit` | `Double_hit` | `Double_hit` |
 
-**Any State 전이 설정:**
-- Any State → 각 상태로 Trigger 기반 전이
-- `Can Transition To Self` = false (동일 상태 재진입 방지)
-- `Has Exit Time` = false (즉시 전이)
+17개 상태가 전부 한 번씩 등장한다. 중복과 누락을 눈으로 검증할 수 있다.
+
+코드에서는 2차원 배열로 두고, 표에 담을 수 없는 두 칸(`Idle` 행과 `Hit`+`None`)만
+조회 전에 가드로 걸러낸다. **배열의 행/열 순서가 enum 순서와 어긋나면 조용히 틀린다.**
+
+### 5-5. 표 D — 등급 (제자리 히트에서만 도달)
+
+| 판정 | 상태 |
+|---|---|
+| Perfect, Master | `Hit_master_1~3` 중 랜덤, 직전과 동일 금지 |
+| Ideal, Kind | `Hit_1~3` 중 랜덤, 직전과 동일 금지 |
+| Umm | `Hit_umm` |
 
 ---
 
-### 4. AnimationClip 생성
+## 6. 재생 계약
 
-1. 스프라이트 시트를 `Assets/Sprites/Characters/` 에 임포트
-   - Texture Type: Sprite (2D and UI)
-   - Sprite Mode: Multiple → Sprite Editor에서 슬라이싱
-2. Animation 창(Ctrl+6)에서 각 상태별 클립 생성
-3. **_topFloatDuration 맞추기**: Top / Middle 클립 재생 시간을 확인한 뒤
-   `CharacterAnimator`의 `_topFloatDuration` Inspector 값을 동일하게 설정
+```csharp
+void Play(CharacterState state, CharacterState follow);
+```
 
-**권장 클립 구성 예시:**
+`follow`는 **state 재생이 끝난 시점에 재생되고 있어야 할 상태**다. 구현체가 지켜야 할 사후조건이다.
+호출부가 홀드 마스크를 보고 정한다. 홀드가 없으면 `Run`, 있으면 `Hold`다.
 
-| 클립 | Loop Time | 참고 |
+원샷이 끝나면 돌아갈 곳이 그 순간의 실제 홀드 상태에서 계산되므로 구조적으로 틀릴 수 없다.
+`Up_hold`가 `Hold`로 이어지고 `Up_hit`이 `Run`으로 이어지는 차이도 별도 규칙이 아니라 여기서 나온다.
+
+| 재생 상태 | 종류 | 이어서 |
 |---|---|---|
-| Idle | ✅ | 달리기 루프 |
-| Hit0 ~ Hit3 | ❌ | 타격 리액션 4종 |
-| Top | ❌ | 점프 상승 모션 |
-| Middle | ❌ | 동시 타격 모션 |
-| Bottom | ❌ | 착지 모션 |
-| Fall | ❌ | 낙하 모션 |
-| TopHold | ✅ | 공중 유지 루프 |
-| MiddleHold | ✅ | 중간 유지 루프 |
-| BottomHold | ✅ | 지상 홀드 루프 |
-| TopHitWhileBottomHold | ❌ | 아래 홀드 중 위 타격 |
-| BottomHitWhileTopHold | ❌ | 위 홀드 중 아래 타격 |
+| `Up_hold` / `Down_hold` | 원샷 | `Hold` |
+| `Up_hit_while_hold` / `Down_hit_while_hold` | 원샷 | `Hold` |
+| 나머지 원샷 11종 | 원샷 | `Run` |
+| `Hold` / `Run` | 루프 | — |
+
+### `_current`에는 "요청한 상태"가 아니라 "화면에 남을 상태"를 기록한다
+
+루프 재시작 방지 가드가 이 값을 본다. 원샷은 핸들러가 뒤에 `follow`를 이어붙이므로
+재생이 끝나면 화면에 남는 건 `follow`다.
+
+요청값을 그대로 기록하면 가드가 동작하지 않는다.
+홀드 진입은 `Down_hold`를 요청하지만 실제로 남는 건 `Hold`인데, `_current`가 `Down_hold`인 채로
+다음에 `Play(Hold)`가 오면 값이 달라 가드를 통과하고 `Hold` 루프가 처음부터 다시 시작한다.
+홀드 중 반대편을 헛치는 시나리오가 정확히 이 경로다.
+
+### 백엔드
+
+- **Spine** — 실사용 경로. 이름 조회는 기동 시 한 번만 하고 `Spine.Animation` 객체를 배열에 캐시한다.
+  캐시가 null인 상태는 조용히 건너뛴다. null을 넘기면 Spine이 예외를 던져 LateUpdate가 통째로 멈춘다.
+- **스프라이트시트** — 해당 에셋이 하나도 없어 실행 경로가 없다. `follow`를 표현할 방법이 없어 무시한다.
+  나중에 2D 스프라이트 캐릭터를 추가하면, 원샷에서 `Run`/`Hold`로 돌아오는 전이를
+  AnimatorController에 직접 만들어 사후조건을 지켜야 한다.
 
 ---
 
-### 5. CharacterSO에 AnimatorController 할당
+## 7. 알아둘 동작
 
-생성한 AnimatorController를 `CharacterSO_0001`의 `animatorController` 필드에 드래그 연결.
+버그로 오해하지 않도록 적어둔다.
+
+**입력이 멈춰도 아래로 내려오지 않는다.** 상태 목록에 하강 모션이 없다.
+위에서 친 뒤 입력이 없으면 그 높이에 머문 채 `Run`을 재생한다.
+
+**홀드가 끝나면 키를 안 떼도 `Run`으로 돌아간다.** Y는 그 자리에 머문다.
+완주 자체에 전용 연출은 없다. 붙이고 싶어지면 상태를 하나 추가해야 한다.
+
+**릴리즈 판정 등급은 캐릭터에 표현되지 않는다.** 소리와 판정 이펙트로만 나간다.
+뗀 자리에 머문 채 `Run`으로 돌아간다.
+
+**짧은 홀드는 진입 원샷이 잘린다.** `HoldStart` 판정 직후 `Down_hold`(0.533초 클립)가 재생 중인데
+몇 프레임 뒤 끝점이 오면 `Run`이 끊고 들어온다. 2비트짜리 홀드는 154ms 남짓이라 눈에 띌 수 있다.
+홀드가 실제로 그만큼 짧으므로 동작 자체는 맞다. 거슬리면 진입 클립을 짧게 만드는 쪽이 옳다.
+
+**상하 동시 홀드 중 한쪽만 놓으면 `Up_hold`/`Down_hold`가 나간다.**
+플레이어는 진입한 게 아니라 하나를 놓은 것이지만, 남은 홀드 쪽으로 Y가 이동하므로 A2가 걸린다.
+"홀드 위치 변경" 상태가 없어 진입 모션으로 근사한다.
+
+**긴 홀드가 두 마디 이상 이어지면 마스크가 잠시 빌 수 있다.**
+판정선은 한 마디 앞서 생성되므로, 홀드가 시작된 뒤에 만들어진 캐릭터는 그 시작 신호를 못 본다.
+다음 홀드 본체 노트가 판정될 때 복구된다.
+**채보 본체를 `Holding`(타입 3)으로 채워두면 노트 한 칸 안에 회복된다.**
+
+**일시정지를 특별 취급하지 않는다.** `Time.timeScale`을 건드리지 않는 프로젝트라
+일시정지 중에도 Spine은 계속 재생된다. Y만 멈추면 오히려 일관성이 깨진다.
+그리고 키를 누른 채 일시정지하면 입력 맵이 꺼지면서 취소성 릴리즈가 도착하는데,
+이때 버퍼를 비우면 마스크는 내려갔는데 해석이 안 되어 `Hold` 포즈에 얼어붙는다.
+평소대로 해석해 `Run`으로 보내는 게 맞다. 플레이어가 손을 뗀 것도 사실이다.
+
+**일시정지 후 재개하면 누르고 있던 홀드가 끊긴다.** 입력 액션이 재개 시 눌린 키의 press를
+재발화하지 않기 때문이다. 판정 로직 쪽 문제이고 애니메이션과는 무관하다.
+
+**곡이 끝나면 홀드 포즈가 남는다.** 게임이 멈추면 판정선이 회수되지 않고 릴리즈도 차단된다.
+클리어 연출 뒤 캔버스가 꺼지며 정리된다.
+
+**같은 그룹의 캐릭터가 최대 한 마디 동안 둘 공존한다.** 판정선이 한 마디 앞서 활성화되기 때문이다.
+문제가 아니라 필요한 성질이다. 새 캐릭터가 미리 생겨 같은 이벤트를 따라가므로
+화면에 등장할 때 이미 이전 판정선과 같은 상태가 되어 있다.
 
 ---
 
-### 작업 완료 체크리스트
+## 8. 인스펙터 필드
 
-- [ ] Timeline.prefab: CharacterRoot/CharacterSprite 계층 구성
-- [ ] Timeline.prefab: CharacterAnimator 컴포넌트 추가 및 Inspector 연결
-- [ ] Timeline.prefab: TimelineController._characterAnimator 연결
-- [ ] CharacterSO_0001.asset 생성 (Resources/Characters/)
-- [ ] AnimatorController 생성 및 11개 상태 + Trigger 파라미터 구성
-- [ ] AnimationClip 11개 생성 및 Loop 설정
-- [ ] _topFloatDuration 값을 Top/Middle 클립 길이와 동기화
-- [ ] CharacterSO에 AnimatorController 할당
+`Timeline.prefab` > `CharacterRoot` > `CharacterAnimator`
+
+| 필드 | 기본값 | 설명 |
+|---|---|---|
+| `_spriteRoot` | CharacterSprite | Spine 컴포넌트가 붙고 Y가 움직이는 대상 |
+| `_topY` / `_centerY` / `_bottomY` | 120 / 0 / -120 | 세 위치의 Y 좌표 |
+| `_moveDuration` | 0.12 | Y 이동 보간 시간 |
+| `_moveEase` | OutQuad | Y 이동 이징 |
+| `_animMixDuration` | 0.05 | 상태 전환 블렌딩. 길면 타격감이 뭉개진다 |
+| `_pairWindow` | 0.02 | 반대편을 기다리는 시간. 키우면 동시 인식이 관대해지고 반응이 늦어진다 |
+| `_verboseLog` | off | 해석 주기마다 한 줄 로그. 에디터에서만 동작한다 |
+
+앞 네 필드는 이름을 바꾸면 프리팹에 직렬화된 값과 참조가 끊긴다.
+
+---
+
+## 9. Spine 자산 체크리스트
+
+1. 애니메이션 17개를 2절의 이름과 **정확히** 일치시킨다.
+2. `Run`과 `Hold`만 이음매 없는 루프로, 나머지 15개는 원샷으로 만든다.
+3. `Run`과 `Hold`는 Top/Middle/Bottom 세 높이 모두에서 자연스러워야 한다.
+4. 재출력한 `.json` / `.atlas.txt` / `.png`를 `Assets/Characters/`에 덮어쓴다.
+5. `Sangcheol_SkeletonData.asset` 인스펙터에서 애니메이션 목록 17개를 육안 확인한다.
+6. 같은 인스펙터의 Default Mix를 0.05 이하로 내린다.
+   코드가 `_animMixDuration`으로 덮어쓰지만 에디터 프리뷰와 값이 갈리면 혼란스럽다.
+7. 플레이 모드 진입 시 콘솔에 누락 `LogError`가 없는지 확인한다.
+
+---
+
+## 10. 수동 검증 체크리스트
+
+커맨드라인 테스트가 없으므로 플레이 모드에서 손으로 확인한다.
+
+| 조작 | 기대 |
+|---|---|
+| 무입력 | `Run` 루프, Y = -120 |
+| 아래에서 아래 노트 Perfect | `Hit_master_*`, Y 변화 없음 |
+| 아래에서 위 노트 타격 | `Up_hit`, Y가 -120→120 트윈. 등급 애니메이션이 아님 |
+| 위에서 위 노트 타격 | 등급 애니메이션, Y 유지 |
+| 같은 레인 연타 | 변형 3종이 섞이고 직전과 같은 클립이 연속되지 않음 |
+| 16분 연타 (BPM 195) | 타격 수만큼 반응. 두 개가 하나로 합쳐지지 않을 것 |
+| 노트 없는 곳에서 위 입력 | `Miss` + Y는 120으로 이동 |
+| 상하 동시, 둘 다 노트 있음 | `Double_hit` 1회, Y = 0 |
+| 상하를 아주 살짝 어긋나게 | 창 안이면 `Double_hit` 1회. 위아래로 튀지 않을 것 |
+| 상하 동시, 위에만 노트 | `Double_hit`이 아니라 `Up_hit`(제자리면 등급). Y는 120 |
+| 아래 롱노트 홀드 | `Down_hold` 후 `Hold` 루프. 매 프레임 재시작하지 않을 것 |
+| 홀드 유지 5초 | `Hold` 루프가 끊기지 않음 |
+| 아래 홀드 중 위 노트 타격 | `Up_hit_while_hold` → `Hold` 복귀, Y는 -120 유지 |
+| 아래 홀드 중 위쪽 헛침 | 아무 변화 없음. `Hold`가 재시작하지 않을 것 |
+| 홀드 중 잠깐 놓았다 다시 잡기 | `Miss`도 `Hit_umm`도 뜨지 않을 것 |
+| **홀드를 끝까지 유지하고 키를 계속 누르고 있기** | 끝점을 지나는 시점에 `Run`으로 복귀. Y는 그 자리 유지 |
+| **그 상태에서 반대쪽 노트 타격** | 축이 정상 이동 |
+| **한쪽 홀드 종료와 동시에 반대쪽 홀드 시작, 키는 안 뗌** | Middle을 거치지 않고 반대쪽으로. `Up_hold`/`Down_hold` |
+| **릴리즈 타이밍을 놓치고 키를 계속 누르고 있기** | 노트가 미스 처리되는 시점에 `Run`으로 복귀 |
+| **연속 홀드에서 손을 계속 누르고 있기** | 입력 없이 `Hold`로 되돌아오는 깜빡임이 없을 것. 두 번째 홀드는 미스 |
+| 연속 홀드에서 키를 떼고 다시 누르기 | 두 번째 홀드가 정상 판정되고 `Hold`로 진입 |
+| 홀드 놓기 | `Run`, Y 유지 |
+| 상하 동시 홀드 | `Hold`, Y = 0. 한쪽만 놓으면 남은 쪽으로 이동 |
+| 일반 노트 탭 후 손 뗌 | 히트 원샷이 끝까지 재생됨 |
+| 마디 전환 직전 선입력 | 이동과 애니메이션이 1회만. `Miss`가 뜨지 않음 |
+| 홀드 중 판정선이 화면 밖으로 → 재등장 | 새 판정선이 `Run`, Y = -120 |
+| 홀드 중 일시정지 | `Run`으로 전이. `Hold`에 얼어붙지 않을 것 |
+| 헛침 타격음 | 헛침 시 Umm 타격음이 그대로 날 것 |
+| R키 재시작 | 콘솔에 MissingReference 0건 |
