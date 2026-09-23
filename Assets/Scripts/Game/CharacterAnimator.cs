@@ -99,7 +99,7 @@ namespace SCOdyssey.Game
             public SidePress Top;
             public SidePress Bottom;
             public HoldMask HoldBegan;
-            public HoldMask HoldReleased;
+            public HoldMask HoldStopped;
 
             public bool AnyPress
             {
@@ -112,7 +112,7 @@ namespace SCOdyssey.Game
                 {
                     return !AnyPress
                         && HoldBegan == HoldMask.None
-                        && HoldReleased == HoldMask.None;
+                        && HoldStopped == HoldMask.None;
                 }
             }
         }
@@ -190,7 +190,7 @@ namespace SCOdyssey.Game
             {
                 _gameManager.OnLaneInputEvent += OnLaneInputEvent;
                 _gameManager.OnHoldStartEvent += OnHoldStartEvent;
-                _gameManager.OnHoldReleaseEvent += OnHoldReleaseEvent;
+                _gameManager.OnHoldStopEvent += OnHoldStopEvent;
             }
             else
             {
@@ -204,7 +204,7 @@ namespace SCOdyssey.Game
             {
                 _gameManager.OnLaneInputEvent -= OnLaneInputEvent;
                 _gameManager.OnHoldStartEvent -= OnHoldStartEvent;
-                _gameManager.OnHoldReleaseEvent -= OnHoldReleaseEvent;
+                _gameManager.OnHoldStopEvent -= OnHoldStopEvent;
             }
         }
 
@@ -346,7 +346,11 @@ namespace SCOdyssey.Game
             _frame.HoldBegan |= bit;
         }
 
-        private void OnHoldReleaseEvent(NotePosition pos, int groupID)
+        /// <summary>
+        /// 홀드가 끝났다. 원인은 셋(키 뗌 / 본체 완주 / 본체 놓침)인데 여기서는 구분하지 않는다.
+        /// 어느 쪽이든 하는 일은 비트를 내리는 것뿐이다.
+        /// </summary>
+        private void OnHoldStopEvent(NotePosition pos, int groupID)
         {
             if (groupID != _groupID) return;
 
@@ -355,10 +359,11 @@ namespace SCOdyssey.Game
 
             // 일반 노트를 톡 치고 손을 떼도 이 이벤트가 온다. 잡고 있지 않았으면 아무 일도 없어야 한다.
             // 이 가드가 없으면 모든 탭 직후 Run이 히트 원샷을 잘라먹는다.
+            // 같은 홀드에 대해 여러 원인이 겹쳐 와도 두 번째부터는 여기서 걸린다.
             if ((_holds & bit) == 0) return;
 
             _holds &= ~bit;
-            _frame.HoldReleased |= bit;
+            _frame.HoldStopped |= bit;
         }
 
         // ─────────────────────────────────────────────
@@ -691,7 +696,7 @@ namespace SCOdyssey.Game
 
             Debug.Log($"[CA g{_groupID}] press(T={input.Top.Pressed}/whiff={input.Top.Whiff}, " +
                       $"B={input.Bottom.Pressed}/whiff={input.Bottom.Whiff}) " +
-                      $"holds={_holds} began={input.HoldBegan} released={input.HoldReleased} " +
+                      $"holds={_holds} began={input.HoldBegan} stopped={input.HoldStopped} " +
                       $"pos={_pos} state={resolution.State}");
         }
     }

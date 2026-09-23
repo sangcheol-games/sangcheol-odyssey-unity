@@ -52,7 +52,7 @@ namespace SCOdyssey.App
         // TryJudgeRelease가 릴리즈 판정마다 OnNoteJudged를 쏘는데 둘 다 캐릭터에는 잡음이다.
         // 히트 등급은 OnLaneInputEvent가 예측값으로 싣고 오므로 타격음과 그림이 어긋날 수 없다.
         public event Action<NotePosition, int> OnHoldStartEvent;
-        public event Action<NotePosition, int> OnHoldReleaseEvent;
+        public event Action<NotePosition, int> OnHoldStopEvent;
         public event Action<LaneInputResult> OnLaneInputEvent;
 
 
@@ -280,9 +280,10 @@ namespace SCOdyssey.App
             OnHoldStartEvent?.Invoke(pos, groupID);
         }
 
-        public void OnHoldRelease(NotePosition pos, int groupID)
+        // 홀드가 끝났다. 키를 뗐거나, 본체를 완주했거나, 본체를 놓쳤거나 — 구독자는 구분하지 않는다.
+        public void OnHoldStop(NotePosition pos, int groupID)
         {
-            OnHoldReleaseEvent?.Invoke(pos, groupID);
+            OnHoldStopEvent?.Invoke(pos, groupID);
         }
 
         public void OnLaneInput(LaneInputResult result)

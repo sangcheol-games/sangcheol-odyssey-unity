@@ -844,10 +844,9 @@ namespace SCOdyssey.Game
         public void TryJudgeRelease(int laneIndex, double inputGameTime)
         {
             int listIndex = laneIndex - 1;
-            _lanes[listIndex].isHolding = false;
 
-            // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            gameManager.OnHoldRelease(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
+            // 키를 뗀 것은 홀드가 끝나는 세 원인 중 하나다. 판정 성공 여부와 무관하게 상태를 해제한다.
+            StopHold(listIndex);
 
             var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0) return;
@@ -905,16 +904,29 @@ namespace SCOdyssey.Game
 
             // 홀드 관련 이벤트 발화
             // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
-            // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
-            // HoldEnd(4)는 완주 피드백용이었으나 대응하는 캐릭터 연출이 없어 콜백을 없앴다.
-            // 홀드 완주에 연출을 붙이려면 그때 다시 만든다.
+            // - HoldEnd(4): 홀드 본체 완주 → 홀드 종료
+            // HoldRelease(5)는 여기서 다루지 않는다. 이 타입이 ApplyJudgment에 도달하는 경로는
+            // TryJudgeRelease 하나뿐이고, 그 진입부가 큐를 보기 전에 이미 StopHold를 불렀다.
             var nt = targetNote.noteData.noteType;
             if (nt == NoteType.HoldStart || nt == NoteType.Holding)
                 gameManager.OnHoldStart(pos, groupID);
-            else if (nt == NoteType.HoldRelease)
-                gameManager.OnHoldRelease(pos, groupID);
+            else if (nt == NoteType.HoldEnd)
+                StopHold(listIndex);
 
             EffectJudgement(type, targetNote);
+        }
+
+        /// <summary>
+        /// 이 레인의 홀드를 끝낸다. 키를 뗐거나, 본체를 완주했거나, 본체를 놓쳤을 때 호출한다.
+        ///
+        /// isHolding을 함께 내리는 것이 중요하다. 이게 남아 있으면 CheckHoldingBody가 계속 돌아
+        /// 손을 떼지 않은 플레이어에게 다음 홀드의 본체가 키 입력 없이 공짜로 판정된다.
+        /// 같은 레인에서 홀드가 끝난 뒤 다시 시작되는 패턴은 채보마다 수십 쌍씩 있다.
+        /// </summary>
+        private void StopHold(int listIndex)
+        {
+            _lanes[listIndex].isHolding = false;
+            gameManager.OnHoldStop(GetNotePosition(listIndex), GetTrackGroupID(listIndex));
         }
         
         /// <summary>
@@ -933,6 +945,15 @@ namespace SCOdyssey.Game
                 targetNote.OnMiss();
 
                 gameManager.OnNoteMissed();
+
+                // 홀드의 끝점을 놓쳤으면 그 홀드는 여기서 끝난 것이다.
+                // 특히 HoldRelease를 놓치는 건(제때 못 뗌) 플레이 중 흔한 실패인데,
+                // 이 처리가 없으면 캐릭터가 키를 뗄 때까지 Hold 포즈에 갇힌다.
+                // Holding(3)은 제외한다. 본체는 계속되고 끝점이 나중에 오기 때문이다.
+                // 빽빽한 본체가 프레임 누락으로 미스되는 건 흔한데 거기서 끊으면 홀드가 수시로 깨진다.
+                var nt = targetNote.noteData.noteType;
+                if (nt == NoteType.HoldEnd || nt == NoteType.HoldRelease)
+                    StopHold(listIndex);
 
                 EffectJudgement(JudgeType.Umm, targetNote);
             }
