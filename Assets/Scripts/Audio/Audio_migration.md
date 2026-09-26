@@ -11,6 +11,13 @@
 
 **새 Claude 세션에 줄 첫 요청 예시**: "`Assets/Scripts/Audio/Audio_migration.md`의 0장(인수인계)을 읽고 S-0.5를 이어서 진행해."
 
+**근거 자료**: `Docs/audio-redesign/`
+- `01` 기존 FMOD 사용 현황과 이슈
+- `02` 결정 브리프: 검증된 FMOD·Unity 사실과 출처
+- `03` 설계 원본(개정 2)
+- `04` 승인된 계획
+- 구현 기준은 이 문서와 `Audio_architecture.md`가 우선한다.
+
 **현재 단계**
 - S-1(설계 문서 이관): 완료
 - S-0.5(버리는 최소 스파이크): 진행 중
