@@ -60,8 +60,10 @@ namespace SCOdyssey.Game.Timing.Tests
             }
         }
 
+        public readonly List<PauseReason> PauseCalls = new List<PauseReason>();
+
         public void Start(double leadInSeconds, int audioOffsetMs) { }
-        public void Pause(PauseReason reason) { }
+        public void Pause(PauseReason reason) { PauseCalls.Add(reason); }
         public void Resume() { }
         public void Stop() { }
     }

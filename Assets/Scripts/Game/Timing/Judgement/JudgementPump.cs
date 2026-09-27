@@ -33,7 +33,21 @@ namespace SCOdyssey.Game.Timing.Judgement
             get { return _client != null; }
         }
 
+        public IJudgementClient Client
+        {
+            get { return _client; }
+        }
+
+        public ISongSession Session
+        {
+            get { return _session; }
+        }
+
+        // 진단용 누계(타이밍 오버레이, 하네스).
         public int RejectedInputs { get; private set; }
+        public int ClampedInputs { get; private set; }      // 입력 시각이 프레임 시각보다 늦어 잘라 낸 수(시각 변환 오차 신호)
+        public int DeliveredInputs { get; private set; }
+        public int LastBatchCount { get; private set; }
 
         public void Attach(IJudgementClient client, ISongSession session, long attachQpc)
         {
@@ -62,6 +76,7 @@ namespace SCOdyssey.Game.Timing.Judgement
         {
             _batch.Clear();
             if (source != null) source.Drain(_batch);
+            LastBatchCount = _batch.Count;
 
             if (_client == null) return;
             ISongSession session = _session;
@@ -101,7 +116,11 @@ namespace SCOdyssey.Game.Timing.Judgement
             if (e.QpcTicks < _attachQpc) return;
 
             long qpc = e.QpcTicks;
-            if (qpc > frame.QpcTicks) qpc = frame.QpcTicks;
+            if (qpc > frame.QpcTicks)
+            {
+                qpc = frame.QpcTicks;
+                ClampedInputs++;
+            }
 
             SongTimePoint point;
             if (!clock.TrySongTimeAt(qpc, out point) || double.IsNaN(point.SongTime))
@@ -115,6 +134,7 @@ namespace SCOdyssey.Game.Timing.Judgement
 
             bool judgeable = point.IsRunning && !e.IsSynthetic;
             var input = new JudgedInput(e.Lane, e.IsDown, qpc, point.SongTime, _timeline.ToJudgeTime(point.SongTime), judgeable, point.Epoch);
+            DeliveredInputs++;
             try
             {
                 _client.OnLaneInput(in input);

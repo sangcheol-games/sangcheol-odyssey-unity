@@ -58,6 +58,7 @@ namespace SCOdyssey.Game.Timing.Tests
 
             Assert.AreEqual(5000, _client.Inputs[0].QpcTicks);
             Assert.AreEqual(5.0, _client.Inputs[0].SongTime, 1e-12);
+            Assert.AreEqual(1, _pump.ClampedInputs);
         }
 
         [Test]

@@ -377,7 +377,8 @@ setDelay(S), setPaused(false)
 - InputManager가 레인 콜백에서 `UnityInputSystemTimestampSource.Push(lane, isDown, ctx.time)`를 호출한다(`IsInputActive`일 때만).
 - Synthetic 표시: `SwitchToUI()`와 `Disable()` 안의 입력 맵 비활성화 구간, 그리고 `!Application.isFocused`일 때 들어온 이벤트
 - `ctx.time` → QPC 변환: 프레임마다 (QPC 앞, `InputState.currentTime`, QPC 뒤)를 읽어 오프셋을 구하고, 최근 32개의 중앙값을 쓴다.
-- 1단계 버퍼는 256칸을 미리 할당한 리스트다. 넘치면 오래된 것부터 버리고 개수를 센다. 생산자와 소비자가 모두 메인 스레드라 동시성 자료구조는 쓰지 않는다.
+- 1단계 버퍼는 256칸을 미리 할당한 링이다. 넘치면 오래된 것부터 버리고 개수를 센다. 생산자와 소비자가 모두 메인 스레드라 동시성 자료구조는 쓰지 않는다.
+- 매퍼 표본은 JudgementDriver가 매 프레임 `Drain`을 부를 때 하나씩 넣는다. 첫 Push 때 표본이 없으면 그 자리에서 하나 읽는다. Synthetic 구간은 `BeginSynthetic/EndSynthetic`(중첩 가능)이다.
 
 **JudgementDriver 프레임 처리**(Update -900, AudioEngineRunner 다음)
 1. 입력 버퍼를 비워 복사본에 담는다(Pump 도중 Push가 와도 안전).
@@ -391,12 +392,15 @@ setDelay(S), setPaused(false)
 **판정 싱크 래치**: JudgementTimeline이 App이 넘긴 `Func<int>`를 한 번만 읽는다. 시점은 세션 Started 이벤트이고, 놓쳤으면 첫 진행 프레임, Started 뒤에 Attach했으면 Attach 즉시다. 판정 창과 등급 규칙은 게임플레이(ChartManager)가 가진다.
 
 **게임플레이 쪽 연결**(`GameplayTimingBinding`)
-- GameManager가 `Attach(session, isRunning)`로 붙이고, 끝나면 Dispose한다.
-- `OnFrame`에서 매 프레임 세션 상태를 확인한다. `Paused/Recovering`이고 사용자 일시정지가 아니면 GameManager에 일시정지를 알린다.
-- 곡 시작과 재개 커밋 때도 포커스를 확인한다. AudioEngineRunner의 `OnApplicationFocus(false)`는 게임 세션을 직접 일시정지한다.
+- GameManager가 `GameplayTimingBinding.Attach(driver, session, onAdvance(songTime, judgeTime), onLaneInput(in JudgedInput), isRunning, onExternalPause(PauseReason))`로 붙이고, 끝나면 Dispose한다(멱등).
+- 판정할 수 없는 입력은 release만 넘긴다(눌림 상태 해제용). 판정할 수 있는 입력과 Advance는 `isRunning`일 때만 넘긴다. `isRunning`에는 일시정지 여부를 넣지 않는다(일시정지가 곡 시계를 멈추므로).
+- `OnFrame`에서 매 프레임 세션 상태를 확인한다. `Paused/Recovering`이고 사용자 일시정지가 아니면 GameManager에 일시정지를 알린다(일시정지 한 번에 한 번).
+- 곡 시작(Started)과 재개(Resumed) 때도 포커스를 확인해, 없으면 포커스 사유로 일시정지한다. AudioEngineRunner의 `OnApplicationFocus(false)`는 게임 세션을 직접 일시정지한다.
 - CharacterAnimator의 "같은 프레임 = 동시 입력" 전제는 유지된다. 한 프레임의 입력이 한 번의 처리 안에서 전달되기 때문이다.
 
-**판정 기록**: `TimingSample`에 종류(Press, HoldBody, Release, Miss), 등급(int), 부호 있는 오차 ms, 래치한 판정 싱크 단계, Epoch를 남긴다. 후속 캘리브레이션과 개발 오버레이가 쓴다.
+**판정 기록**: `TimingSample`에 종류(Press, HoldBody, Release, Miss), 등급(int), 부호 있는 오차 ms, 래치한 판정 싱크 단계, Epoch를 남긴다. `TimingLog`(JudgementDriver 소유)가 최근 4096건을 링에 보관하고, 종류별 최근 N건 평균·표준편차(`Summarize`)를 할당 없이 낸다. 후속 캘리브레이션과 개발 오버레이가 쓴다.
+
+**타이밍 오버레이**(에디터·개발 빌드, `JudgementDriver.OverlayVisible`): 클라이언트 연결, 판정 싱크 래치 값, 이번 배치·전달·거부·프레임 시각으로 자른 입력 수, 소스의 Push·Synthetic·버림 수와 매퍼 오프셋, Press·Release 오차 분포. 오디오 오버레이 아래에 그린다.
 
 ## 9. 설정
 

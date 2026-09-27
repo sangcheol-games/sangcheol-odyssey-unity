@@ -13,8 +13,8 @@ namespace SCOdyssey.Testing.AudioHarness
 {
     // 오디오 모듈 하네스. AudioSpikeScene의 빈 GameObject에 붙여 쓴다(S-0.5 하네스의 파일 GUID를 이어받아 씬은 그대로다).
     // 새 오디오 모듈을 게임 없이 단독으로 설치해 부팅, 원샷, 볼륨, 포커스 음소거, 수명주기를 시험하고 요약 파일에 남긴다.
-    // 곡 재생·재구성·프리뷰 확인은 HarnessSongChecks(S2a), 출력 적용·장치 사건은 HarnessOutputChecks(S2b).
-    // 탭 테스트(S3) 메뉴는 해당 단계에서 붙인다.
+    // 곡 재생·재구성·프리뷰 확인은 HarnessSongChecks(S2a), 출력 적용·장치 사건은 HarnessOutputChecks(S2b),
+    // 탭 테스트와 Synthetic 확인은 HarnessTimingChecks(S3).
     public sealed class AudioModuleHarness : MonoBehaviour
     {
         private const string ClickFile = "harness_click.wav";
@@ -36,6 +36,7 @@ namespace SCOdyssey.Testing.AudioHarness
         private Vector2 _scroll;
         private HarnessSongChecks _songs;
         private HarnessOutputChecks _outputs;
+        private HarnessTimingChecks _timing;
 
         private static string HitSoundFolder
         {
@@ -76,17 +77,21 @@ namespace SCOdyssey.Testing.AudioHarness
             _songs = new HarnessSongChecks(CurrentModule, SetStatus);
             _outputs = new HarnessOutputChecks(CurrentModule, SetStatus);
             BootCheck();
+            _timing = new HarnessTimingChecks(_songs, SetStatus, gameObject);
         }
 
         private void OnDestroy()
         {
             ShutdownModule();
+            if (_timing != null) _timing.Dispose();
+            _timing = null;
         }
 
         private void Update()
         {
             // 확인 버튼이 도는 동안(SP6의 재구성 100회 등)에는 사건 기록을 멈춘다. 끝난 뒤의 상태를 기준으로 다시 본다.
             if (_outputs != null && IsInstalled) _outputs.Watch(_songs.Session, _busy);
+            if (_timing != null) _timing.Tick();
         }
 
         // SP1: Play(또는 실행 파일 실행)마다 한 줄. 설치한 모듈은 켜 둔 채로 둔다(재컴파일 확인용).
@@ -121,6 +126,7 @@ namespace SCOdyssey.Testing.AudioHarness
 
         private void ShutdownModule()
         {
+            if (_timing != null) _timing.DetachBinding();
             if (_songs != null) _songs.Detach();
             if (_module == null) return;
             _module.Shutdown();
@@ -228,7 +234,7 @@ namespace SCOdyssey.Testing.AudioHarness
             GUILayout.BeginArea(new Rect(10, 10, Screen.width / scale - 460, Screen.height / scale - 20));
             _scroll = GUILayout.BeginScrollView(_scroll);
 
-            GUILayout.Label("<b>오디오 모듈 하네스 (S2b)</b>");
+            GUILayout.Label("<b>오디오 모듈 하네스 (S3)</b>");
             GUILayout.Label("fps: " + HarnessReport.Num(1.0 / Time.smoothDeltaTime, "0") + ", 상태: " + _status);
             GUILayout.Label("결과 폴더: " + HarnessReport.Folder);
             GUILayout.Label("RM(Studio) 초기화: " + RuntimeManagerGuard.IsInitialized);
@@ -243,6 +249,8 @@ namespace SCOdyssey.Testing.AudioHarness
             DrawSong();
             GUILayout.Space(8);
             DrawOutputApply();
+            GUILayout.Space(8);
+            DrawTiming();
             GUILayout.Space(8);
             DrawChecks();
 
@@ -293,8 +301,10 @@ namespace SCOdyssey.Testing.AudioHarness
             GUILayout.BeginHorizontal();
             if (IsInstalled)
             {
+                // 버튼이 같은 OnGUI 안에서 모듈을 끌 수 있으므로 다시 확인한다.
                 if (GUILayout.Button("종료", GUILayout.Width(160))) ShutdownModule();
-                GUILayout.Label(_module.Engine.Status + " / " + Describe());
+                if (IsInstalled) GUILayout.Label(_module.Engine.Status + " / " + Describe());
+                else GUILayout.Label("꺼짐");
             }
             else
             {
@@ -401,6 +411,36 @@ namespace SCOdyssey.Testing.AudioHarness
             GUI.enabled = true;
         }
 
+        private void DrawTiming()
+        {
+            if (!IsInstalled || _timing == null) return;
+            GUI.enabled = !_busy;
+            GUILayout.Label("<b>판정 타이밍</b> (레인 키 Q, A, ', / → 새 입력 소스 → JudgementDriver → GameplayTimingBinding)");
+
+            GUILayout.BeginHorizontal();
+            string target = "무제한";
+            if (Application.targetFrameRate > 0) target = Application.targetFrameRate.ToString();
+            GUILayout.Label("목표 fps: " + target, GUILayout.Width(200));
+            if (GUILayout.Button("60")) Application.targetFrameRate = 60;
+            if (GUILayout.Button("144")) Application.targetFrameRate = 144;
+            if (GUILayout.Button("무제한")) Application.targetFrameRate = -1;
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("판정 싱크 단계(곡 시작 때 래치): " + _timing.JudgmentOffsetSteps, GUILayout.Width(280));
+            if (GUILayout.Button("-1")) _timing.JudgmentOffsetSteps--;
+            if (GUILayout.Button("+1")) _timing.JudgmentOffsetSteps++;
+            if (GUILayout.Button("0")) _timing.JudgmentOffsetSteps = 0;
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            SCOdyssey.Game.Timing.JudgementDriver.OverlayVisible = GUILayout.Toggle(SCOdyssey.Game.Timing.JudgementDriver.OverlayVisible, "타이밍 오버레이", GUILayout.Width(200));
+            Application.runInBackground = GUILayout.Toggle(Application.runInBackground, "runInBackground (SP-IN alt-tab을 ON/OFF 각각)");
+            GUILayout.EndHorizontal();
+            GUILayout.Label(_timing.Describe());
+            GUI.enabled = true;
+        }
+
         private void SelectApplyKind(AudioOutputKind kind)
         {
             _outputs.Kind = kind;
@@ -422,6 +462,13 @@ namespace SCOdyssey.Testing.AudioHarness
                 if (GUILayout.Button("SP6: 로비 BGM 재생 중 설정 적용 50회 + close→init 50회 (현재 출력 적용 설정)")) StartCoroutine(RunBusy(_outputs.RunSp6(_click)));
                 if (GUILayout.Button("SP9: 로비 BGM 재생 중 WASAPI·ASIO 장치 목록 3회")) StartCoroutine(RunBusy(_outputs.RunSp9()));
                 GUILayout.Label("SP10: USB 분리·재연결, 기본 장치·형식 변경 등을 하면 세대·상태가 바뀔 때마다 요약에 한 줄씩 남는다.");
+            }
+            if (IsInstalled && _timing != null)
+            {
+                if (GUILayout.Button("SP11: 탭 테스트 1분 (현재 목표 fps, 클릭에 맞춰 레인 키)")) StartCoroutine(RunBusy(_timing.RunTapTest()));
+                if (GUILayout.Button("SP11: 매퍼 장기 변동 기록 (하네스를 30분 이상 켜 둔 뒤)")) _timing.ReportLongRun();
+                if (GUILayout.Button("SP-IN: 레인을 누른 채 입력 맵 끄기 (3초 뒤 자동)")) StartCoroutine(RunBusy(_timing.RunMapDisable()));
+                if (GUILayout.Button("SP-IN: 레인을 누른 채 alt-tab (30초 안에)")) StartCoroutine(RunBusy(_timing.RunFocusLoss()));
             }
             GUI.enabled = true;
         }

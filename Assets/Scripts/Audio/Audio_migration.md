@@ -34,6 +34,11 @@
 - S1(엔진): **완료**(2026-09-27). SP1 재확인 PASS(7장)
 - S2a(곡 재생): **완료**(2026-09-27). SP4 PASS(녹음 1샘플 이내), 재구성·프리뷰 PASS(7장)
 - S2b(출력 관리): **완료**(2026-09-27). SP6·SP9·SP10 PASS, SP8 부분(ASIO4ALL만)
+- S3(판정 타이밍): **완료**(2026-09-27). SP11(60/144/무제한 + 매퍼 46분)·SP-IN(입력 맵 끄기, alt-tab runInBackground ON/OFF) PASS(7장)
+  - `Game/Timing/LaneInput/{RealtimeQpcMapper, UnityInputSystemTimestampSource}`, `Game/Timing/{JudgementDriver, GameplayTimingBinding}`, `Game/Timing/Judgement/TimingLog`, `Game/Timing/Diagnostics/TimingOverlay`. JudgementPump에 진단 누계(자름, 전달, 배치) 추가
+  - 하네스: `Testing/AudioHarness/HarnessTimingChecks`(게임 입력 맵 Game.Lane1~4 → 새 입력 소스 → JudgementDriver → binding). SP11 탭 테스트, SP11 매퍼 장기 변동, SP-IN 입력 맵 끄기, SP-IN alt-tab
+  - 테스트 81개(매퍼 7, 입력 소스 7, 판정 기록 5, binding 9 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 80개 통과(`LogAssert` 1개는 Test Runner 전용)
+  - 하네스 UI 버그 수정: "종료" 버튼을 누른 같은 OnGUI에서 끝난 모듈을 읽어 NullReferenceException(S1부터 있었음, 동작 영향 없음)
   - `Audio/Output/{DeviceCatalog, AudioOutputService}`, 엔진 재구성 일반화(`AudioEngine.Reinitialize(attempts, reason)`, `BootPlan.BuildApply/BuildRecovery`), 모듈의 장치 사건 처리(DEVICELOST, DEVICEREINITIALIZE, Pinned 1초 디바운스)와 콜백 없는 정지 감지, 포커스 상실 시 게임 곡 일시정지(S2a에서 빠졌던 것), `AudioApplyOutcome.Rejected`
   - 하네스: `Testing/AudioHarness/HarnessOutputChecks`(출력 적용, SP6, SP9, SP10 사건 기록)
   - 테스트 53개(BootPlan 3개 추가). 임시 csproj로 세 조건 컴파일 오류 0, 52개 통과(`LogAssert` 1개는 Test Runner 전용)
@@ -71,8 +76,8 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S3(판정 타이밍)를 진행한다: UnityInputSystemTimestampSource(Push, Synthetic 구간, 256칸 버퍼), RealtimeQpcMapper(ctx.time → QPC, 32개 중앙값), JudgementDriver(-900, 유일한 MonoBehaviour, 판정 싱크 `Func<int>`), GameplayTimingBinding, 판정 로그(TimingLog), 타이밍 오버레이. 하네스에 탭 테스트와 Synthetic 확인 메뉴를 붙인다.
-2. (사용자) S3 확인: SP11(60/144/무제한 fps 탭 테스트 각 1분), SP-IN(레인을 누른 채 입력 맵 끄기·alt-tab).
+1. (Claude) S4a(게임에 설치, GM/CM 편집 없음)를 진행한다: `Managers.InitServices`에 모듈 설치(try/catch, 실패 시 no-op 모듈과 어댑터), `ILegacyTransport`와 `App/LegacyAudioManagerAdapter`, `AudioSettingsMapper` v1(버퍼 인덱스 → 길이, 장치는 Follow-Default), JudgementDriver와 판정 기록 등록, InputManager가 입력 소스를 소유하고 Push·Synthetic 구간, 로비 포커스 음소거. FMODAudioManager는 등록만 끊는다.
+2. (사용자) S4a 확인: 로비 BGM, 프리뷰, 곡 한 판(타격음, 일시정지·재개), 설정에서 장치 선택, 로비 alt-tab 음소거, 재시작 뒤 버퍼 로그가 설정 인덱스와 맞는지.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 
 ---
@@ -488,6 +493,10 @@
 | 2026-09-27 (데스크탑) | SP10 (S2b) | Editor | – | 미실시 | 장치 콜백(DEVICELOST·DEVICELISTCHANGED·DEVICEREINITIALIZE)이 로그에 없음. 하네스 SP10 기록기가 SP6의 재구성까지 기록해 요약이 107줄 늘어난 문제를 고침(확인 버튼 실행 중에는 기록 안 함) |
 
 | 2026-09-27 (데스크탑) | SP10 재확인 (S2b) | Editor | WASAPI BenQ HDMI ↔ S/PDIF | PASS | 처음에는 Follow-Default에서 기본 장치를 바꿔도 소리가 BenQ에 남았다(DEVICEREINITIALIZE 0회). 원인: Follow-Default에서도 setDriver(0)를 직접 불렀다(옛 RuntimeManager는 부르지 않음) → 부르지 않도록 고친 뒤 1) 기본 장치 변경 때마다 DEVICEREINITIALIZE와 자동 전환, 장치 이름 갱신 2) 곡 재생 중 변경 → Paused(DeviceChanged) 3) S/PDIF 고정 적용 뒤 '사용 안 함' → DEVICELISTCHANGED, 1초 디바운스 뒤 기본 장치(BenQ)로 재구성(29.9ms). USB 분리, 절전 복귀, 블루투스, HDMI 해상도 변경은 미실시. 장치 분리 중 FMOD가 같은 경고를 초당 15번 남겨 반복 경고를 묶도록 고침 |
+
+| 2026-09-27 (데스크탑) | SP11 (S3) | Editor | 목표 60 / 144(실제 116) / 무제한(실제 146)fps, WASAPI S/PDIF 256x4 | PASS | 새 경로(입력 소스 → 매퍼 → JudgementDriver → binding). 매퍼 오프셋 변동(p1~p99) 0.000ms. 프레임 시각 - 입력 시각 평균 10.5 / 5.1 / 4.7ms, p95 14.9 / 8.2 / 7.8ms(S-0.5와 같은 경향). 프레임 시각으로 자름 0, 거부 0, 버림 0. 탭 오차(참고)는 표준편차 131~141ms로 균등분포 수준이고 탭 수(129~139)가 클릭 수(120)보다 많아 박자 맞춤 측정으로는 쓰지 않음 |
+| 2026-09-27 (데스크탑) | SP11 매퍼 장기 (S3) | Editor | 무제한 fps | PASS | 46분 동안 매퍼 오프셋(중앙값) 변동 0.020ms |
+| 2026-09-27 (데스크탑) | SP-IN (S3, 하네스) | Editor | – | PASS | 입력 맵 끄기: 누른 레인 1, release 1(Synthetic 구간 안에서 동기로 옴, 판정됨 0). alt-tab: runInBackground ON/OFF 모두 누른 레인 1, 포커스 상실 뒤 release 1(판정됨 0), 세션 Paused(FocusLost), binding 외부 일시정지 알림 FocusLost |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
