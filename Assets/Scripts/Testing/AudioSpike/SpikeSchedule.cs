@@ -43,6 +43,9 @@ namespace SCOdyssey.Testing.AudioSpike
         private bool _segmentSeeked;
         private int _lateClicks;
         private int _pauseCount;
+        private int _seekFailures;
+        private int _notReadyRetries;
+        private double _worstSeekError;
         private StreamWriter _log;
 
         public IEnumerator Run(SpikeFmodSystem system, int pauseCycles, Action<string> progress)
@@ -126,30 +129,60 @@ namespace SCOdyssey.Testing.AudioSpike
         // 곡 채널을 songTime 위치로 준비하고, 준비되면 미래 DSP 시각에 예약해 재생을 시작한다.
         private IEnumerator PrepareAndCommit(double songTime, Action<string> progress)
         {
-            _system.CoreSystem.playSound(_song, _songGroup, true, out _songChannel);
+            var watch = Stopwatch.StartNew();
+            FMOD.RESULT result = _system.CoreSystem.playSound(_song, _songGroup, true, out _songChannel);
+            if (result != FMOD.RESULT.OK)
+            {
+                _seekFailures++;
+                LogEvent("playSound_fail=" + result, songTime, SongGroupClock());
+            }
             _songChannel.setPriority(0);
+
+            // NONBLOCKING 스트림은 playSound 직후 처음으로 되감는 비동기 seek를 한다.
+            // 그동안 setPosition은 ERR_NOTREADY로 거부되므로, 준비된 뒤 seek하고 다시 준비를 기다린다.
+            yield return WaitSongReady(watch, progress);
 
             double audioPosition = songTime - LeadInSeconds;
             if (audioPosition > 0)
             {
-                uint frames = (uint)Math.Round(audioPosition * _songRate);
-                _songChannel.setPosition(frames, FMOD.TIMEUNIT.PCM);
-            }
+                uint target = (uint)Math.Round(audioPosition * _songRate);
+                result = _songChannel.setPosition(target, FMOD.TIMEUNIT.PCM);
+                while (result == FMOD.RESULT.ERR_NOTREADY && watch.Elapsed.TotalSeconds <= SeekTimeoutSeconds)
+                {
+                    _notReadyRetries++;
+                    _system.CoreSystem.update();
+                    yield return null;
+                    result = _songChannel.setPosition(target, FMOD.TIMEUNIT.PCM);
+                }
+                yield return WaitSongReady(watch, progress);
 
-            var watch = Stopwatch.StartNew();
+                // seek가 실제로 반영됐는지 재생 전 채널 위치로 확인한다.
+                _songChannel.getPosition(out uint reported, FMOD.TIMEUNIT.PCM);
+                double seekError = ((double)reported - target) / _songRate;
+                if (result != FMOD.RESULT.OK || Math.Abs(seekError) > _system.BlockSeconds)
+                {
+                    _seekFailures++;
+                }
+                if (Math.Abs(seekError) > _worstSeekError) _worstSeekError = Math.Abs(seekError);
+                LogEvent("seek result=" + result + " target=" + target + " reported=" + reported, songTime, SongGroupClock());
+            }
+            _seekSeconds.Add(watch.Elapsed.TotalSeconds);
+
+            Commit(songTime);
+        }
+
+        private IEnumerator WaitSongReady(Stopwatch watch, Action<string> progress)
+        {
             while (!IsSongReady())
             {
                 if (watch.Elapsed.TotalSeconds > SeekTimeoutSeconds)
                 {
                     progress("SP4 seek 준비 시간 초과");
-                    break;
+                    yield break;
                 }
                 _system.CoreSystem.update();
                 yield return null;
             }
-            _seekSeconds.Add(watch.Elapsed.TotalSeconds);
-
-            Commit(songTime);
         }
 
         private void Commit(double songTime)
@@ -333,11 +366,12 @@ namespace SCOdyssey.Testing.AudioSpike
             // 채널 위치는 믹스 블록 단위로 갱신되므로 2블록 + 1ms까지는 오차로 보지 않는다.
             double tolerance = 2 * _system.BlockSeconds + 0.001;
             bool positionOk = seekedWorst <= tolerance && plainWorst <= tolerance;
-            bool pass = maxSeek < 1.0 && _lateClicks == 0 && positionOk;
-            string measured = string.Format("일시정지 {0}회, 늦은 예약 {1}회, seek 준비 평균 {2} 최대 {3}, 위치 오차(seek 있음) {4}, 위치 오차(seek 없음) {5}, 허용 {6}, 곡 레이트 {7}Hz",
-                _pauseCount, _lateClicks, SpikeReport.Ms(averageSeek), SpikeReport.Ms(maxSeek),
+            bool pass = maxSeek < 1.0 && _lateClicks == 0 && _seekFailures == 0 && positionOk;
+            string measured = string.Format("일시정지 {0}회, 늦은 예약 {1}회, seek 실패 {2}회(NOTREADY 재시도 {3}회, 반영 오차 최대 {4}), seek 준비 평균 {5} 최대 {6}, 위치 오차(seek 있음) {7}, 위치 오차(seek 없음) {8}, 허용 {9}, 곡 레이트 {10}Hz",
+                _pauseCount, _lateClicks, _seekFailures, _notReadyRetries, SpikeReport.Ms(_worstSeekError),
+                SpikeReport.Ms(averageSeek), SpikeReport.Ms(maxSeek),
                 seekedErrors, plainErrors, SpikeReport.Ms(tolerance), _songRate);
-            SpikeReport.Summary("SP4", SpikeReport.PassIf(pass), "seek 준비 < 1초, 늦은 예약 0, 위치 오차 ≤ 2블록+1ms, (루프백) 시작 차 평균 ≤ 1ms", measured, _system.Describe());
+            SpikeReport.Summary("SP4", SpikeReport.PassIf(pass), "seek 준비 < 1초, 늦은 예약 0, seek 실패 0, 위치 오차 ≤ 2블록+1ms, (루프백) 시작 차 평균 ≤ 1ms", measured, _system.Describe());
         }
 
         // seek가 있었던(또는 없었던) 구간의 위치 오차를 "n회 평균 x 최대 y" 형식으로 만든다. worst는 절댓값 최대.

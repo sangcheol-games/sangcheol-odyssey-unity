@@ -38,17 +38,28 @@ namespace SCOdyssey.Testing.AudioSpike
         {
 #if UNITY_EDITOR
             // 플레이 중 재컴파일이 일어나면 도메인이 내려가기 전에 FMOD를 먼저 해제한다.
-            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += ReleaseAll;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
 #endif
         }
 
         private void OnDisable()
         {
 #if UNITY_EDITOR
-            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= ReleaseAll;
+            UnityEditor.AssemblyReloadEvents.beforeAssemblyReload -= OnBeforeAssemblyReload;
 #endif
             ReleaseAll();
         }
+
+#if UNITY_EDITOR
+        // SP1 재컴파일 확인: 리로드 직전에 시스템이 켜져 있었는지 요약에 남긴 뒤 해제한다.
+        private void OnBeforeAssemblyReload()
+        {
+            string context = "시스템 꺼짐";
+            if (_system != null) context = _system.Describe();
+            SpikeReport.Summary("SP1-reload", SpikeReport.Result.Info, "Play 중 리로드 직전 FMOD 해제", "시스템 켜짐: " + (_system != null), context);
+            ReleaseAll();
+        }
+#endif
 
         private void Start()
         {

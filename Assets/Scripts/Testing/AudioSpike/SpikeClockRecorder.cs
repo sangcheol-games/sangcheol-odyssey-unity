@@ -35,6 +35,8 @@ namespace SCOdyssey.Testing.AudioSpike
         private readonly Dictionary<ulong, int> _stepCounts = new Dictionary<ulong, int>();
         private readonly List<double> _edgeQpcSeconds = new List<double>();
         private readonly List<double> _edgeClockSeconds = new List<double>();
+        private readonly List<double> _frameQpcSeconds = new List<double>();
+        private readonly List<ulong> _frameClocks = new List<ulong>();
 
         public bool IsRecording { get; private set; }
 
@@ -57,6 +59,8 @@ namespace SCOdyssey.Testing.AudioSpike
             _stepCounts.Clear();
             _edgeQpcSeconds.Clear();
             _edgeClockSeconds.Clear();
+            _frameQpcSeconds.Clear();
+            _frameClocks.Clear();
             _burstResult = MeasureBurst(2.0);
             _startQpc = Stopwatch.GetTimestamp();
             _csv = SpikeReport.OpenCsv("sp3_clock_" + system.Output + "_" + system.BufferLength + "x" + system.BufferCount, "q0_ticks,q1_ticks,dsp_clock");
@@ -100,6 +104,8 @@ namespace SCOdyssey.Testing.AudioSpike
             double sampleGap = midSeconds - _lastSampleSeconds;
             if (_samples > 1 && sampleGap > _maxSampleGapSeconds) _maxSampleGapSeconds = sampleGap;
             _lastSampleSeconds = midSeconds;
+            _frameQpcSeconds.Add(midSeconds);
+            _frameClocks.Add(clock);
 
             if (!_hasLast)
             {
@@ -160,14 +166,82 @@ namespace SCOdyssey.Testing.AudioSpike
             residuals.Sort();
             double spread = Percentile(residuals, 0.99) - Percentile(residuals, 0.01);
 
-            bool pass = spread <= blockSeconds + 0.001;
+            // 믹서가 OS 주기마다 여러 블록을 몰아 믹스하면 원시 잔차 폭은 1블록을 넘는다.
+            // 판정은 설계의 곡 시계 모델을 적용한 프레임 오차로 한다.
+            string model = SimulateSongClock(out double jitterP99);
+            bool pass = jitterP99 <= 0.001;
             // 클록 변화 간격이 프레임 간격보다 훨씬 길면 믹서가 실제로 멈춘 것이다. 둘을 나란히 보여 준다.
-            string measured = string.Format("{0} | 프레임 기록: 길이 {1}s, 샘플 {2}(버림 {3}), 평균 샘플 간격 {4}, 최대 샘플 간격(메인 스레드 멈춤) {5}, 클록 변화 {6}회, 프레임 사이 계단 {7}, 드리프트 {8}ppm, 잔차 폭(p1~p99) {9}, 블록 {10}, 클록 변화 최대 간격 {11}, GC 부하 {12}",
-                _burstResult, SpikeReport.Num(ElapsedSeconds, "0"), _samples, _rejected,
+            string measured = string.Format("{0} | {1} | 프레임 기록: 길이 {2}s, 샘플 {3}(버림 {4}), 평균 샘플 간격 {5}, 최대 샘플 간격(메인 스레드 멈춤) {6}, 클록 변화 {7}회, 프레임 사이 계단 {8}, 드리프트 {9}ppm, 원시 잔차 폭(p1~p99) {10}, 블록 {11}, 클록 변화 최대 간격 {12}, GC 부하 {13}",
+                _burstResult, model, SpikeReport.Num(ElapsedSeconds, "0"), _samples, _rejected,
                 SpikeReport.Ms(ElapsedSeconds / _samples), SpikeReport.Ms(_maxSampleGapSeconds),
                 _edgeQpcSeconds.Count, steps, SpikeReport.Num(driftPpm, "0.0"), SpikeReport.Ms(spread),
                 SpikeReport.Ms(blockSeconds), SpikeReport.Ms(_maxGapSeconds), _gcStress);
-            SpikeReport.Summary("SP3", SpikeReport.PassIf(pass), "잔차 폭 ≤ 1블록(+1ms 여유)", measured, _system.Describe());
+            SpikeReport.Summary("SP3", SpikeReport.PassIf(pass), "곡 시계 모델 프레임 오차 p99 ≤ 1ms", measured, _system.Describe());
+        }
+
+        // 설계의 곡 시계 모델: 최근 1초의 하한 포락선(c - q·R의 최댓값)으로 연속 DSP를 추정하고
+        // c_read ≤ DspAt ≤ c_read + S_max로 클램프한다. 프레임 사이 곡 시각 증가가 QPC 증가와 얼마나 다른지 잰다.
+        private string SimulateSongClock(out double jitterP99)
+        {
+            const double WindowSeconds = 1.0;
+            double rate = _system.MixerRate;
+            double sMax = _system.BufferLength * (_system.BufferCount + 1.0);
+            int count = _frameQpcSeconds.Count;
+
+            var offsets = new double[count];
+            for (int i = 0; i < count; i++) offsets[i] = _frameClocks[i] - _frameQpcSeconds[i] * rate;
+
+            // 구간 최댓값을 단조 덱으로 구한다.
+            var window = new int[count];
+            int head = 0;
+            int tail = 0;
+            var jitters = new List<double>(count);
+            int clampHigh = 0;
+            int backward = 0;
+            double maxLead = 0;
+            double previous = 0;
+            bool hasPrevious = false;
+
+            for (int i = 0; i < count; i++)
+            {
+                while (tail > head && offsets[window[tail - 1]] <= offsets[i]) tail--;
+                window[tail++] = i;
+                while (_frameQpcSeconds[window[head]] < _frameQpcSeconds[i] - WindowSeconds) head++;
+
+                double raw = _frameClocks[i];
+                double estimate = _frameQpcSeconds[i] * rate + offsets[window[head]];
+                double lead = (estimate - raw) / rate;
+                if (lead > maxLead) maxLead = lead;
+                if (estimate < raw) estimate = raw;
+                if (estimate > raw + sMax)
+                {
+                    estimate = raw + sMax;
+                    clampHigh++;
+                }
+
+                // 포락선이 채워지는 첫 1초는 평가하지 않는다.
+                if (_frameQpcSeconds[i] < WindowSeconds) continue;
+                if (hasPrevious)
+                {
+                    if (estimate < previous) backward++;
+                    double songStep = (estimate - previous) / rate;
+                    double qpcStep = _frameQpcSeconds[i] - _frameQpcSeconds[i - 1];
+                    jitters.Add(Math.Abs(songStep - qpcStep));
+                }
+                previous = estimate;
+                hasPrevious = true;
+            }
+
+            if (jitters.Count < 10)
+            {
+                jitterP99 = double.MaxValue;
+                return "곡 시계 모델: 샘플 부족";
+            }
+            jitters.Sort();
+            jitterP99 = Percentile(jitters, 0.99);
+            return string.Format("곡 시계 모델: 프레임 오차 p99 {0} 최대 {1}, 역행 {2}회, 상한 클램프 {3}회(S_max {4}), 원시 대비 최대 앞섬 {5}",
+                SpikeReport.Ms(jitterP99), SpikeReport.Ms(jitters[jitters.Count - 1]), backward, clampHigh,
+                SpikeReport.Ms(sMax / rate), SpikeReport.Ms(maxLead));
         }
 
         // 메인 스레드에서 seconds초 동안 클록을 쉬지 않고 읽어, fps와 관계없이
