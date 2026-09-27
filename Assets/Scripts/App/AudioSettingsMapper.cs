@@ -14,7 +14,7 @@ namespace SCOdyssey.App
         public const int WasapiBufferCount = 4;
         public const int AsioBufferCount = 2;
 
-        // 저장할 수 있는 버퍼 길이(WASAPI·ASIO 공통, v1 audioBufferIndex 순서와 같다). 480 등 추가 여부는 SP13에서 정한다.
+        // 저장할 수 있는 버퍼 길이(WASAPI·ASIO 공통, v1 audioBufferIndex 순서와 같다). 기본 256.
         // ASIO는 실제 버퍼를 드라이버 제어판 값으로 정하므로 여기 길이는 요청값이다.
         public static readonly int[] BufferPresets = { 64, 128, 256, 512, 1024 };
         private const int DefaultBufferIndex = 2;
