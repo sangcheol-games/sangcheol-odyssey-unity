@@ -27,13 +27,22 @@ namespace SCOdyssey.Audio.Hosting
             RuntimeManagerGuard.Enabled = options.EnforceRuntimeManagerGuard;
             RuntimeManagerGuard.Check("부팅");
 
-            bool safeMode = options.SafeMode || HasSafeModeArgument();
-            module.Boot(safeMode);
-            module.RegisterServices();
+            // 도중에 예외가 나면 만든 것(System, 등록)을 모두 해제하고 다시 던진다.
+            try
+            {
+                bool safeMode = options.SafeMode || HasSafeModeArgument();
+                module.Boot(safeMode);
+                module.RegisterServices();
 
-            AudioEngineRunner runner = host.GetComponent<AudioEngineRunner>();
-            if (runner == null) runner = host.AddComponent<AudioEngineRunner>();
-            runner.Bind(module);
+                AudioEngineRunner runner = host.GetComponent<AudioEngineRunner>();
+                if (runner == null) runner = host.AddComponent<AudioEngineRunner>();
+                runner.Bind(module);
+            }
+            catch
+            {
+                module.Shutdown();
+                throw;
+            }
             return module;
         }
 

@@ -65,7 +65,7 @@ Assembly-CSharp (기존 코드)
 | Playback | OneShotBank, FmodMusicPlayer(+MusicPlayers), SongPlayer, FmodSongSession, StreamLoader | 원샷, 로비·프리뷰 음악, 게임 곡 세션, NONBLOCKING 로드 판정 |
 | Clock | ClockSampler, DspQpcModel, SongTimeline, SongClock, SongAnchor | DSP 원천(SCO.Song 클록 또는 가상 QPC 클록), DSP↔QPC 대응, 세그먼트, 프레임 스냅샷, 앵커 커밋 계산 |
 | Hosting | AudioModuleInstaller, AudioModuleOptions, AudioModule, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle | 설치와 설치 인자, 모듈 한 벌과 종료, 프레임 구동, 포커스 정책, RuntimeManager 가드, 에디터 정리 |
-| Legacy | LegacyTransport(`ILegacyTransport`) | 과도기 어댑터가 쓰는 공개 API. 모든 소비자를 옮긴 뒤 삭제한다. |
+| Legacy | LegacyTransport(`ILegacyTransport`) | 과도기 어댑터가 쓰는 공개 API(단일 음악 슬롯, DSP 초 예약, int 원샷 슬롯, 장치 이름·선택). 모든 소비자를 옮긴 뒤 삭제한다. |
 | Diagnostics | AudioOverlay, SongMetronome | 엔진 상태·세대·출력·버퍼(개발 빌드), 곡 시각 기준 클릭 예약(SP4 루프백 비교, 캘리브레이션 바탕) |
 
 **Game/Timing(`SCOdyssey.Game.Timing`)**
@@ -200,7 +200,8 @@ namespace SCOdyssey.Game.Timing
 2. 메인 스레드와 COM 아파트먼트(STA 여부)를 기록한다.
 3. 부팅 시도를 순서대로 실행한다(아래). 성공하면 믹서, 원샷, 음악 재생기를 만든다.
 4. 계약을 ServiceLocator에 등록한다. JudgementDriver와 판정 로그는 Managers가 같은 GameObject에 붙이고 등록한다.
-5. Install이 예외를 던지면 Managers가 잡는다. 이때는 no-op 모듈(QPC 시계로 진행하는 무음 세션)과 과도기 어댑터를 등록하고 부팅을 계속한다.
+5. Install이 예외를 던지면 Installer가 만든 것을 모두 해제하고 다시 던지고, Managers가 잡는다. 이때는 소리 없는 과도기 어댑터(IsLoaded 즉시 true, GetDSPTime은 QPC)를 등록하고 부팅을 계속한다. 새 계약(ISongPlayer 등)은 등록되지 않는다(게임이 새 계약을 쓰기 시작하는 I1 전에 no-op 모듈로 바꾼다).
+6. 판정 타이밍: Managers가 `JudgementDriver.Install(gameObject, inputManager.LaneTimestampSource, 판정 싱크 Func)`로 붙이고, JudgementDriver와 `IJudgementTimingLog`를 등록한다.
 
 **시도 한 번의 순서**(메인 스레드)
 ```
@@ -370,6 +371,14 @@ setDelay(S), setPaused(false)
 - 채널이 멈췄고 곡 시각이 끝 무렵이면 종료로 처리한다.
 - 채널이 멈췄는데 끝까지 0.5초 넘게 남았으면 스트림 끊김으로 보고 일시정지한다. 같은 위치에서 두 번 끊기면 종료로 처리한다.
 - 곡 시각이 끝보다 0.25초 이상 지나면 채널 상태와 관계없이 종료로 처리한다.
+
+**과도기 경로(S4a~C)**
+- 옛 `IAudioManager` 소비자(MainUI, AdventureUI, GameDataLoader, GameManager, ChartManager, SoundSettingUI)는 App의 `LegacyAudioManagerAdapter`가 `AudioModule.Legacy`(`ILegacyTransport`)와 `IAudioMixer`로 전달한다.
+- 음악 슬롯 하나를 SCO.Music 아래에 둔다. 로드 플래그와 예약 순서는 옛 FMODAudioManager와 같다(`CREATESTREAM | NONBLOCKING`, playSound(paused) → setDelay → setLoopCount → setPriority(0) → unpause). 로드 실패는 옛 코드처럼 IsLoaded가 오지 않는 것으로만 드러난다.
+- `DspSeconds = 기준 초 + (SCO.Music 클록 − 기준 클록) / R`. 재구성 직전에 기준 초를, 직후에 기준 클록을 잡아 세대를 넘어도 단조 증가한다. 엔진을 쓸 수 없으면 QPC로 진행한다.
+- 재구성 때 슬롯 상태(파일, 반복, ms 위치, 일시정지, 아직 시작 전인 예약)를 기억해 다시 열고 이어서 재생한다. ms 단위라 샘플 단위로 맞지는 않는다.
+- 끝난 채널은 `isPlaying`으로 한 번 확인하면 핸들을 버린다(옛 코드는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽어 오류 콜백이 쌓인다).
+- S4b 전에는 옛 FMOD for Unity 경로가 남아 있어 RuntimeManager가 함께 초기화될 수 있다(System 두 개, 가드는 끔).
 
 ## 8. 입력과 판정 타이밍
 

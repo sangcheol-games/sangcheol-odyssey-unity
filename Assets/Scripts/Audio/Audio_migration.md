@@ -35,6 +35,13 @@
 - S2a(곡 재생): **완료**(2026-09-27). SP4 PASS(녹음 1샘플 이내), 재구성·프리뷰 PASS(7장)
 - S2b(출력 관리): **완료**(2026-09-27). SP6·SP9·SP10 PASS, SP8 부분(ASIO4ALL만)
 - S3(판정 타이밍): **완료**(2026-09-27). SP11(60/144/무제한 + 매퍼 46분)·SP-IN(입력 맵 끄기, alt-tab runInBackground ON/OFF) PASS(7장)
+- S4a(게임에 설치): **완료**(2026-09-27). 로비 BGM, 프리뷰, 곡 한 판, 설정에서 장치 선택(S/PDIF ↔ BenQ, 재구성 35~46ms, 같은 장치는 Unchanged), 로비 alt-tab 음소거, 버퍼 설정 변경 뒤 재시작(256x4 → 64x4) 모두 정상. 콘솔 오류 0
+  - 사운드 설정의 장치 목록에는 현재 출력 타입(WASAPI) 장치만 나온다. ASIO 선택은 출력 타입 설정(S5a)과 새 사운드 설정 화면(S5b)에서 붙는다
+  - `Audio/Legacy/{ILegacyTransport, LegacyTransport}`(AudioModule.Legacy, 재구성 참여), `App/{AudioSettingsMapper, LegacyAudioManagerAdapter}`
+  - `Managers.InstallAudio`: 모듈 설치(try/catch, 실패하면 소리 없는 어댑터), 어댑터 등록, JudgementDriver·`IJudgementTimingLog` 등록. FMODAudioManager는 더 붙이지 않는다(파일은 S4b에서 삭제)
+  - `InputManager`: `LaneTimestampSource`를 소유하고 레인 콜백에서 Push, 게임 맵 끄기(SwitchToUI, Disable)를 Synthetic 구간으로 감쌈. 레거시 이벤트는 그대로
+  - Installer가 설치 도중 예외가 나면 모듈을 해제하고 다시 던진다
+  - 임시 csproj로 모듈·하네스 세 조건 컴파일 오류·경고 0, 테스트 80개 통과. Assembly-CSharp는 Unity가 만든 csproj에 새 파일을 더한 임시 래퍼로 컴파일 오류 0
   - `Game/Timing/LaneInput/{RealtimeQpcMapper, UnityInputSystemTimestampSource}`, `Game/Timing/{JudgementDriver, GameplayTimingBinding}`, `Game/Timing/Judgement/TimingLog`, `Game/Timing/Diagnostics/TimingOverlay`. JudgementPump에 진단 누계(자름, 전달, 배치) 추가
   - 하네스: `Testing/AudioHarness/HarnessTimingChecks`(게임 입력 맵 Game.Lane1~4 → 새 입력 소스 → JudgementDriver → binding). SP11 탭 테스트, SP11 매퍼 장기 변동, SP-IN 입력 맵 끄기, SP-IN alt-tab
   - 테스트 81개(매퍼 7, 입력 소스 7, 판정 기록 5, binding 9 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 80개 통과(`LogAssert` 1개는 Test Runner 전용)
@@ -76,8 +83,9 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S4a(게임에 설치, GM/CM 편집 없음)를 진행한다: `Managers.InitServices`에 모듈 설치(try/catch, 실패 시 no-op 모듈과 어댑터), `ILegacyTransport`와 `App/LegacyAudioManagerAdapter`, `AudioSettingsMapper` v1(버퍼 인덱스 → 길이, 장치는 Follow-Default), JudgementDriver와 판정 기록 등록, InputManager가 입력 소스를 소유하고 Push·Synthetic 구간, 로비 포커스 음소거. FMODAudioManager는 등록만 끊는다.
-2. (사용자) S4a 확인: 로비 BGM, 프리뷰, 곡 한 판(타격음, 일시정지·재개), 설정에서 장치 선택, 로비 alt-tab 음소거, 재시작 뒤 버퍼 로그가 설정 인덱스와 맞는지.
+1. (Claude) S4b(옛 경로 제거)를 진행한다: `FMODAudioPreInit.cs`·`FMODAudioManager.cs` 삭제, `Plugins/FMOD/src/Platform.cs` :871-872·:874-878 되돌리기(:873 getter 유지), RuntimeManager 가드 켜기(`EnforceRuntimeManagerGuard = true`).
+2. (사용자) S4b 에디터 작업(같은 커밋): MainScene 카메라의 `StudioListener` 제거, GameScene의 "Audio Source" GameObject와 카메라 `AudioListener` 제거, FMOD Settings → Play In Editor → DSP Buffer Count 4.
+3. (사용자) S4b 확인: 게임 전체 흐름, ChartEditorScene(음원 로드, 재생, 자동 채보), 릴리스 스모크 빌드(5장), 콘솔에 RuntimeManager 초기화 오류 없음.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 
 ---
@@ -497,6 +505,8 @@
 | 2026-09-27 (데스크탑) | SP11 (S3) | Editor | 목표 60 / 144(실제 116) / 무제한(실제 146)fps, WASAPI S/PDIF 256x4 | PASS | 새 경로(입력 소스 → 매퍼 → JudgementDriver → binding). 매퍼 오프셋 변동(p1~p99) 0.000ms. 프레임 시각 - 입력 시각 평균 10.5 / 5.1 / 4.7ms, p95 14.9 / 8.2 / 7.8ms(S-0.5와 같은 경향). 프레임 시각으로 자름 0, 거부 0, 버림 0. 탭 오차(참고)는 표준편차 131~141ms로 균등분포 수준이고 탭 수(129~139)가 클릭 수(120)보다 많아 박자 맞춤 측정으로는 쓰지 않음 |
 | 2026-09-27 (데스크탑) | SP11 매퍼 장기 (S3) | Editor | 무제한 fps | PASS | 46분 동안 매퍼 오프셋(중앙값) 변동 0.020ms |
 | 2026-09-27 (데스크탑) | SP-IN (S3, 하네스) | Editor | – | PASS | 입력 맵 끄기: 누른 레인 1, release 1(Synthetic 구간 안에서 동기로 옴, 판정됨 0). alt-tab: runInBackground ON/OFF 모두 누른 레인 1, 포커스 상실 뒤 release 1(판정됨 0), 세션 Paused(FocusLost), binding 외부 일시정지 알림 FocusLost |
+
+| 2026-09-27 (데스크탑) | S4a 게임 설치 | Editor | WASAPI S/PDIF·BenQ 256x4, 64x4 | PASS | 새 모듈 + 과도기 어댑터로 로비 BGM, 프리뷰, 곡 한 판(타격음, 일시정지·재개, 결과 화면) 정상. 설정 저장으로 장치 변경 Applied(init 34.8~46.3ms), 같은 장치는 Unchanged. 버퍼 인덱스 변경이 다음 부팅에 반영됨(`[Audio] 엔진 부팅 … 버퍼 64x4`). 콘솔 오류 0 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
