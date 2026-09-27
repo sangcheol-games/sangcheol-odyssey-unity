@@ -374,7 +374,7 @@ setDelay(S), setPaused(false)
 - 곡 시각이 끝보다 0.25초 이상 지나면 채널 상태와 관계없이 종료로 처리한다.
 
 **과도기 경로(S4a~C)**
-- 옛 `IAudioManager` 소비자(MainUI, AdventureUI, GameDataLoader, GameManager, ChartManager, SoundSettingUI)는 App의 `LegacyAudioManagerAdapter`가 `AudioModule.Legacy`(`ILegacyTransport`)와 `IAudioMixer`로 전달한다.
+- 옛 `IAudioManager` 소비자(GameDataLoader, GameManager, ChartManager, BGAController, GameSceneTester. 사운드 설정은 S5b, 로비 BGM·프리뷰는 S6에서 새 계약으로 옮겼다)는 App의 `LegacyAudioManagerAdapter`가 `AudioModule.Legacy`(`ILegacyTransport`)와 `IAudioMixer`로 전달한다.
 - 음악 슬롯 하나를 SCO.Music 아래에 둔다. 로드 플래그와 예약 순서는 옛 FMODAudioManager와 같다(`CREATESTREAM | NONBLOCKING`, playSound(paused) → setDelay → setLoopCount → setPriority(0) → unpause). 로드 실패는 옛 코드처럼 IsLoaded가 오지 않는 것으로만 드러난다.
 - `DspSeconds = 기준 초 + (SCO.Music 클록 − 기준 클록) / R`. 재구성 직전에 기준 초를, 직후에 기준 클록을 잡아 세대를 넘어도 단조 증가한다. 엔진을 쓸 수 없으면 QPC로 진행한다.
 - 재구성 때 슬롯 상태(파일, 반복, ms 위치, 일시정지, 아직 시작 전인 예약)를 기억해 다시 열고 이어서 재생한다. ms 단위라 샘플 단위로 맞지는 않는다.

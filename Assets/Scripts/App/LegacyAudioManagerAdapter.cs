@@ -7,7 +7,7 @@ namespace SCOdyssey.App
 {
     // [과도기] 옛 IAudioManager를 새 오디오 모듈 위에서 제공한다(S4a~C). 호출은 ILegacyTransport와 IAudioMixer로 전달만 한다.
     // 모듈 설치에 실패하면 소리 없는 어댑터를 등록한다: IsLoaded는 곧바로 true, GetDSPTime은 QPC로 진행, 나머지는 무시.
-    // 모든 소비자(MainUI, AdventureUI, GameDataLoader, GameManager, ChartManager, SoundSettingUI)를 옮기면 C 단계에서 삭제한다.
+    // 남은 소비자(GameDataLoader, GameManager, ChartManager, BGAController, GameSceneTester)를 I1·I2에서 옮기면 C 단계에서 삭제한다.
     public sealed class LegacyAudioManagerAdapter : IAudioManager
     {
         private static readonly string[] NoDevices = new string[0];

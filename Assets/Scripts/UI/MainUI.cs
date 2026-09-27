@@ -1,4 +1,5 @@
-using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using SCOdyssey.App;
 using SCOdyssey.Audio;
@@ -13,7 +14,7 @@ namespace SCOdyssey
         // StreamingAssets/Music/ 기준 파일명. 로비 BGM 교체 시 프리팹 인스펙터에서 변경.
         [SerializeField] private string bgmFileName = "Lobby BGM.wav";
 
-        private Coroutine bgmRoutine;
+        private CancellationTokenSource _bgmCts;
 
         // 부팅 때 저장한 출력 구성으로 열지 못했으면 로비에 처음 들어올 때 한 번만 알린다.
         private static bool s_audioNoticeShown;
@@ -48,11 +49,11 @@ namespace SCOdyssey
             base.OnEnable();
 
             // MainUI가 표시될 때마다 BGM을 처음부터 재생
-            bgmRoutine = StartCoroutine(PlayBgm());
+            PlayBgm();
             NotifyAudioFallbackOnce();
         }
 
-        // TODO: 공용 알림 UI가 생기면 화면에 띄운다. 지금은 로그로 남기고, 사운드 설정 화면 상태 줄이 계속 보여 준다.
+        // TODO: 공용 알림 UI가 생기면 화면에 띄운다. 지금은 로그로만 남긴다.
         private static void NotifyAudioFallbackOnce()
         {
             if (s_audioNoticeShown) return;
@@ -70,43 +71,46 @@ namespace SCOdyssey
         {
             base.OnDisable();
 
-            // 다른 UI/씬으로 이동하면 BGM 정지 (로딩 중이었다면 대기 코루틴도 취소)
-            if (bgmRoutine != null)
-            {
-                StopCoroutine(bgmRoutine);
-                bgmRoutine = null;
-            }
-
-            if (ServiceLocator.TryGet<IAudioManager>(out var audioManager))
-            {
-                audioManager.Stop();
-            }
+            // 다른 UI/씬으로 이동하면 BGM 정지 (로딩 중이었다면 요청도 취소)
+            CancelBgm();
+            if (ServiceLocator.TryGet<IMusicPlayers>(out var music)) music.Lobby.Stop();
         }
 
-        private IEnumerator PlayBgm()
+        private void PlayBgm()
         {
             if (string.IsNullOrEmpty(bgmFileName))
             {
                 Debug.LogWarning("[MainUI] bgmFileName is empty!");
-                bgmRoutine = null;
-                yield break;
+                return;
             }
 
-            if (!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
+            if (!ServiceLocator.TryGet<IMusicPlayers>(out var music))
             {
-                Debug.LogError("[MainUI] IAudioManager not found in ServiceLocator!");
-                bgmRoutine = null;
-                yield break;
+                Debug.LogWarning("[MainUI] IMusicPlayers를 찾지 못해 로비 BGM을 재생하지 않습니다.");
+                return;
             }
 
-            if (audioManager.IsPlaying) audioManager.Stop();
+            CancelBgm();
+            _bgmCts = new CancellationTokenSource();
+            PlayBgmAsync(music.Lobby, bgmFileName, _bgmCts.Token).Forget();
+        }
 
-            audioManager.LoadAudio(bgmFileName, loopHint: true);
-            // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
-            while (!audioManager.IsLoaded) yield return null;
+        // 로비 재생기는 마지막 요청만 유효하다(앞선 요청은 Superseded로 끝난다).
+        private static async UniTaskVoid PlayBgmAsync(IMusicPlayer lobby, string fileName, CancellationToken ct)
+        {
+            AudioLoadResult result = await lobby.PlayAsync(fileName, true, ct);
+            if (result.Status == AudioLoadStatus.NotFound || result.Status == AudioLoadStatus.DecodeError || result.Status == AudioLoadStatus.Timeout)
+            {
+                Debug.LogWarning("[MainUI] 로비 BGM을 재생하지 못했습니다(" + result.Status + "): " + result.Detail);
+            }
+        }
 
-            audioManager.PlayScheduled(audioManager.GetDSPTime(), loopPlay: true);
-            bgmRoutine = null;
+        private void CancelBgm()
+        {
+            if (_bgmCts == null) return;
+            _bgmCts.Cancel();
+            _bgmCts.Dispose();
+            _bgmCts = null;
         }
 
         private void Init()

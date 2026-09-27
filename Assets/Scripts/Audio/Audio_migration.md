@@ -32,13 +32,41 @@
   - `Assets/Scripts/Editor/Tests/` 폴더는 빈 폴더라 git에 남지 않으므로 첫 App 테스트를 넣는 S5a에서 만든다
   - 곡 시계 창을 1초에서 10초로 바꾸고 하향 계단 규칙을 넣었다(7장 결정 아래 참고)
 - S1(엔진): **완료**(2026-09-27). SP1 재확인 PASS(7장)
+  - `Audio/Engine/{AudioEngine, EngineConfigurator, BootPlan, SystemCallbackHub, FmodDebugBridge, AsioPolicy, AudioThread}`, `Audio/Output/DriverLookup`, `Audio/Mixing/FmodMixer`, `Audio/Playback/OneShotBank`, `Audio/Hosting/{AudioModule, AudioModuleInstaller, AudioModuleOptions, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle}`, `Audio/Diagnostics/AudioOverlay`
+  - 모듈 하네스: `Testing/AudioSpike/`를 `Testing/AudioHarness/`로 옮기고 S-0.5 코드를 지웠다. 하네스 컴포넌트는 `.meta`를 함께 옮겨 GUID를 유지했으므로 씬에서 컴포넌트를 바꿀 필요가 없다. 결과는 `persistentDataPath/audio_harness/audio_harness_summary.txt`
+  - 임시 csproj로 에디터·플레이어·define 없음 세 조건 컴파일(오류·경고 0), 테스트 42개 통과(BootPlan 4개 추가, `LogAssert` 1개는 Test Runner 전용)
 - S2a(곡 재생): **완료**(2026-09-27). SP4 PASS(녹음 1샘플 이내), 재구성·프리뷰 PASS(7장)
+  - `Audio/Clock/ClockSampler`, `Audio/Playback/{StreamLoader, FmodSongSession, SongPlayer, FmodMusicPlayer}`, `Audio/Diagnostics/SongMetronome`, 엔진 재구성(`AudioEngine.Reinitialize`, `AudioModule.Reinitialize`)
+  - 하네스: `Testing/AudioHarness/HarnessSongChecks`(곡 재생, SP4, 상태별 강제 재구성, 프리뷰 대체)
+  - 테스트 50개(세션 상태 머신 7개 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 49개 통과(`LogAssert` 1개는 Test Runner 전용)
 - S2b(출력 관리): **완료**(2026-09-27). SP6·SP9·SP10 PASS, SP8 부분(ASIO4ALL만)
+  - `Audio/Output/{DeviceCatalog, AudioOutputService}`, 엔진 재구성 일반화(`AudioEngine.Reinitialize(attempts, reason)`, `BootPlan.BuildApply/BuildRecovery`), 모듈의 장치 사건 처리(DEVICELOST, DEVICEREINITIALIZE, Pinned 1초 디바운스)와 콜백 없는 정지 감지, 포커스 상실 시 게임 곡 일시정지(S2a에서 빠졌던 것), `AudioApplyOutcome.Rejected`
+  - 하네스: `Testing/AudioHarness/HarnessOutputChecks`(출력 적용, SP6, SP9, SP10 사건 기록)
+  - 테스트 53개(BootPlan 3개 추가). 임시 csproj로 세 조건 컴파일 오류 0, 52개 통과(`LogAssert` 1개는 Test Runner 전용)
 - S3(판정 타이밍): **완료**(2026-09-27). SP11(60/144/무제한 + 매퍼 46분)·SP-IN(입력 맵 끄기, alt-tab runInBackground ON/OFF) PASS(7장)
+  - `Game/Timing/LaneInput/{RealtimeQpcMapper, UnityInputSystemTimestampSource}`, `Game/Timing/{JudgementDriver, GameplayTimingBinding}`, `Game/Timing/Judgement/TimingLog`, `Game/Timing/Diagnostics/TimingOverlay`. JudgementPump에 진단 누계(자름, 전달, 배치) 추가
+  - 하네스: `Testing/AudioHarness/HarnessTimingChecks`(게임 입력 맵 Game.Lane1~4 → 새 입력 소스 → JudgementDriver → binding). SP11 탭 테스트, SP11 매퍼 장기 변동, SP-IN 입력 맵 끄기, SP-IN alt-tab
+  - 테스트 81개(매퍼 7, 입력 소스 7, 판정 기록 5, binding 9 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 80개 통과(`LogAssert` 1개는 Test Runner 전용)
+  - 하네스 UI 버그 수정: "종료" 버튼을 누른 같은 OnGUI에서 끝난 모듈을 읽어 NullReferenceException(S1부터 있었음, 동작 영향 없음)
 - S4a(게임에 설치): **완료**(2026-09-27). 로비 BGM, 프리뷰, 곡 한 판, 설정에서 장치 선택(S/PDIF ↔ BenQ, 재구성 35~46ms, 같은 장치는 Unchanged), 로비 alt-tab 음소거, 버퍼 설정 변경 뒤 재시작(256x4 → 64x4) 모두 정상. 콘솔 오류 0
+  - `Audio/Legacy/{ILegacyTransport, LegacyTransport}`(AudioModule.Legacy, 재구성 참여), `App/{AudioSettingsMapper, LegacyAudioManagerAdapter}`
+  - `Managers.InstallAudio`: 모듈 설치(try/catch, 실패하면 소리 없는 어댑터), 어댑터 등록, JudgementDriver·`IJudgementTimingLog` 등록. FMODAudioManager는 더 붙이지 않는다(파일은 S4b에서 삭제)
+  - `InputManager`: `LaneTimestampSource`를 소유하고 레인 콜백에서 Push, 게임 맵 끄기(SwitchToUI, Disable)를 Synthetic 구간으로 감쌈. 레거시 이벤트는 그대로
+  - Installer가 설치 도중 예외가 나면 모듈을 해제하고 다시 던진다
+  - 임시 csproj로 모듈·하네스 세 조건 컴파일 오류·경고 0, 테스트 80개 통과. Assembly-CSharp는 Unity가 만든 csproj에 새 파일을 더한 임시 래퍼로 컴파일 오류 0
   - 사운드 설정의 장치 목록에는 현재 출력 타입(WASAPI) 장치만 나온다. ASIO 선택은 출력 타입 설정(S5a)과 새 사운드 설정 화면(S5b)에서 붙는다
 - S4b(옛 경로 제거): **완료**(2026-09-27). 게임 전체 흐름·ChartEditorScene·릴리스 스모크 빌드 정상, RuntimeManager 가드 오류 0(7장)
+  - `App/FMODAudioManager.cs`, `App/FMODAudioPreInit.cs` 삭제. `Plugins/FMOD/src/Platform.cs`를 임포트 원본(522d8378)으로 되돌림(버퍼 setter 두 개와 주석 제거)
+  - Managers에서 RuntimeManager 가드를 켬. 주석·CLAUDE.md의 옛 참조 정리
+  - 씬 확인: FMOD Studio 컴포넌트는 MainScene의 StudioListener 하나뿐이고(EventEmitter, BankLoader 등 없음), GameScene에 "Audio Source" GameObject와 AudioListener가 있다
+  - Assembly-CSharp(옛 파일 제외)와 FMODUnity 임시 컴파일 오류 0
+  - 에디터 작업: MainScene `StudioListener` 제거, GameScene "Audio Source"·`AudioListener` 제거, FMOD Settings의 Play In Editor만 256×4(개수 추가). 옛 PreInit이 메모리에서 모든 플랫폼을 덮어써 둔 값(64×4)이 Save Project로 함께 저장됐기 때문에, 파일은 원본에서 Play In Editor 개수만 바꾼 상태로 되돌렸다
+  - 과도기 음악 채널의 끝을 END 콜백으로 알아채게 고침(릴리스 빌드 Player.log에서 곡 종료 뒤 `ERR_INVALID_HANDLE` 1건 → 에디터 재확인 0건)
 - S5a(설정 v2): **완료**(2026-09-27). Test Runner 102개 통과, v1 → v2 마이그레이션 1회(`.v1.bak` 백업), 버퍼·볼륨·노트 싱크·판정 싱크 유지, 버퍼 변경 뒤 재시작 반영, 로비 playInBackground ON/OFF alt-tab 정상(SP14 로비)
+  - `SettingsData` v2 필드와 v1 필드 `[Obsolete]`, `App/SettingsMigration`(v1 판별·이동·검증, `.v1.bak`/`.v1.corrupt.bak`), `AudioSettingsMapper` v2(`ToBootRequest`가 v2 필드를 읽음, 버퍼 프리셋)
+  - `SettingsManager`: Load에서 마이그레이션·백업·저장, Apply에서 볼륨은 `IAudioMixer`, `Application.runInBackground = playInBackground`
+  - 옛 `SoundSettingUI`: 저장 때 `dspBufferLength`도 씀(파일 첫 줄의 CS0618 억제는 S5b에서 지움)
+  - `Assets/Scripts/Editor/Tests/SettingsMigrationTests`(21개, Assembly-CSharp-Editor). Assembly-CSharp와 테스트 임시 컴파일 오류·경고 0(JsonUtility를 써서 Test Runner에서만 실행)
   - 사운드 설정에서 ASIO는 아직 고를 수 없다. v2에 출력 타입 필드만 생겼고, 선택 UI는 S5b
 - S5b(사운드 설정 화면): **완료**(2026-09-27). 통합 장치 목록(WASAPI·ASIO), 장치·버퍼 적용과 저장, 재시작 뒤 복원, Save 두 번, Pinned 장치 분리 정상. Force Single Instance 켬
   - 사용자 요청으로 바꾼 것: 출력 타입 선택을 없애고 장치 목록 하나로 합침(이름만 표시), 상태 줄 없음(적용 결과는 로그), 버퍼 목록에서 480 제거(원래 목록 유지, 장치 타입이 바뀌어도 길이 유지), 버퍼 ms 표시 없음
@@ -47,34 +75,9 @@
   - v1 필드 삭제(마이그레이션은 원문에서 `audioBufferIndex`만 읽음). 버퍼 프리셋은 원래 목록 `64, 128, 256, 512, 1024` 하나(S5a에서 초안대로 넣었던 480은 뺐다. 추가 여부는 SP13). 장치 타입이 바뀌어도 길이는 유지하고 개수만 WASAPI 4·ASIO 2
   - `Editor/AudioBuildValidator`(음원 파일 확인, 없으면 빌드 중단), `Editor/AudioEditorMenu`(에디터에서 ASIO 허용 토글)
   - 임시 컴파일: 모듈·하네스 세 조건, Assembly-CSharp, 에디터 코드 오류 0. 테스트 104개(설정 23개)
-  - `SettingsData` v2 필드와 v1 필드 `[Obsolete]`, `App/SettingsMigration`(v1 판별·이동·검증, `.v1.bak`/`.v1.corrupt.bak`), `AudioSettingsMapper` v2(`ToBootRequest`가 v2 필드를 읽음, 버퍼 프리셋)
-  - `SettingsManager`: Load에서 마이그레이션·백업·저장, Apply에서 볼륨은 `IAudioMixer`, `Application.runInBackground = playInBackground`
-  - 옛 `SoundSettingUI`: 저장 때 `dspBufferLength`도 씀(파일 첫 줄의 CS0618 억제는 S5b에서 지움)
-  - `Assets/Scripts/Editor/Tests/SettingsMigrationTests`(21개, Assembly-CSharp-Editor). Assembly-CSharp와 테스트 임시 컴파일 오류·경고 0(JsonUtility를 써서 Test Runner에서만 실행)
-  - `App/FMODAudioManager.cs`, `App/FMODAudioPreInit.cs` 삭제. `Plugins/FMOD/src/Platform.cs`를 임포트 원본(522d8378)으로 되돌림(버퍼 setter 두 개와 주석 제거)
-  - Managers에서 RuntimeManager 가드를 켬. 주석·CLAUDE.md의 옛 참조 정리
-  - 씬 확인: FMOD Studio 컴포넌트는 MainScene의 StudioListener 하나뿐이고(EventEmitter, BankLoader 등 없음), GameScene에 "Audio Source" GameObject와 AudioListener가 있다
-  - Assembly-CSharp(옛 파일 제외)와 FMODUnity 임시 컴파일 오류 0
-  - 에디터 작업: MainScene `StudioListener` 제거, GameScene "Audio Source"·`AudioListener` 제거, FMOD Settings의 Play In Editor만 256×4(개수 추가). 옛 PreInit이 메모리에서 모든 플랫폼을 덮어써 둔 값(64×4)이 Save Project로 함께 저장됐기 때문에, 파일은 원본에서 Play In Editor 개수만 바꾼 상태로 되돌렸다
-  - 과도기 음악 채널의 끝을 END 콜백으로 알아채게 고침(릴리스 빌드 Player.log에서 곡 종료 뒤 `ERR_INVALID_HANDLE` 1건 → 에디터 재확인 0건)
-  - `Audio/Legacy/{ILegacyTransport, LegacyTransport}`(AudioModule.Legacy, 재구성 참여), `App/{AudioSettingsMapper, LegacyAudioManagerAdapter}`
-  - `Managers.InstallAudio`: 모듈 설치(try/catch, 실패하면 소리 없는 어댑터), 어댑터 등록, JudgementDriver·`IJudgementTimingLog` 등록. FMODAudioManager는 더 붙이지 않는다(파일은 S4b에서 삭제)
-  - `InputManager`: `LaneTimestampSource`를 소유하고 레인 콜백에서 Push, 게임 맵 끄기(SwitchToUI, Disable)를 Synthetic 구간으로 감쌈. 레거시 이벤트는 그대로
-  - Installer가 설치 도중 예외가 나면 모듈을 해제하고 다시 던진다
-  - 임시 csproj로 모듈·하네스 세 조건 컴파일 오류·경고 0, 테스트 80개 통과. Assembly-CSharp는 Unity가 만든 csproj에 새 파일을 더한 임시 래퍼로 컴파일 오류 0
-  - `Game/Timing/LaneInput/{RealtimeQpcMapper, UnityInputSystemTimestampSource}`, `Game/Timing/{JudgementDriver, GameplayTimingBinding}`, `Game/Timing/Judgement/TimingLog`, `Game/Timing/Diagnostics/TimingOverlay`. JudgementPump에 진단 누계(자름, 전달, 배치) 추가
-  - 하네스: `Testing/AudioHarness/HarnessTimingChecks`(게임 입력 맵 Game.Lane1~4 → 새 입력 소스 → JudgementDriver → binding). SP11 탭 테스트, SP11 매퍼 장기 변동, SP-IN 입력 맵 끄기, SP-IN alt-tab
-  - 테스트 81개(매퍼 7, 입력 소스 7, 판정 기록 5, binding 9 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 80개 통과(`LogAssert` 1개는 Test Runner 전용)
-  - 하네스 UI 버그 수정: "종료" 버튼을 누른 같은 OnGUI에서 끝난 모듈을 읽어 NullReferenceException(S1부터 있었음, 동작 영향 없음)
-  - `Audio/Output/{DeviceCatalog, AudioOutputService}`, 엔진 재구성 일반화(`AudioEngine.Reinitialize(attempts, reason)`, `BootPlan.BuildApply/BuildRecovery`), 모듈의 장치 사건 처리(DEVICELOST, DEVICEREINITIALIZE, Pinned 1초 디바운스)와 콜백 없는 정지 감지, 포커스 상실 시 게임 곡 일시정지(S2a에서 빠졌던 것), `AudioApplyOutcome.Rejected`
-  - 하네스: `Testing/AudioHarness/HarnessOutputChecks`(출력 적용, SP6, SP9, SP10 사건 기록)
-  - 테스트 53개(BootPlan 3개 추가). 임시 csproj로 세 조건 컴파일 오류 0, 52개 통과(`LogAssert` 1개는 Test Runner 전용)
-  - `Audio/Clock/ClockSampler`, `Audio/Playback/{StreamLoader, FmodSongSession, SongPlayer, FmodMusicPlayer}`, `Audio/Diagnostics/SongMetronome`, 엔진 재구성(`AudioEngine.Reinitialize`, `AudioModule.Reinitialize`)
-  - 하네스: `Testing/AudioHarness/HarnessSongChecks`(곡 재생, SP4, 상태별 강제 재구성, 프리뷰 대체)
-  - 테스트 50개(세션 상태 머신 7개 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 49개 통과(`LogAssert` 1개는 Test Runner 전용)
-  - `Audio/Engine/{AudioEngine, EngineConfigurator, BootPlan, SystemCallbackHub, FmodDebugBridge, AsioPolicy, AudioThread}`, `Audio/Output/DriverLookup`, `Audio/Mixing/FmodMixer`, `Audio/Playback/OneShotBank`, `Audio/Hosting/{AudioModule, AudioModuleInstaller, AudioModuleOptions, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle}`, `Audio/Diagnostics/AudioOverlay`
-  - 모듈 하네스: `Testing/AudioSpike/`를 `Testing/AudioHarness/`로 옮기고 S-0.5 코드를 지웠다. 하네스 컴포넌트는 `.meta`를 함께 옮겨 GUID를 유지했으므로 씬에서 컴포넌트를 바꿀 필요가 없다. 결과는 `persistentDataPath/audio_harness/audio_harness_summary.txt`
-  - 임시 csproj로 에디터·플레이어·define 없음 세 조건 컴파일(오류·경고 0), 테스트 42개 통과(BootPlan 4개 추가, `LogAssert` 1개는 Test Runner 전용)
+- S6(로비와 곡 선택): **완료**(2026-09-27). 로비 BGM, 빠르게 넘겨도 프리뷰 하나, 로비 ↔ 곡 선택 ↔ 게임 전환, 설정 왕복, 장치 변경 뒤 BGM 복원 정상
+  - MainUI 로비 BGM → `IMusicPlayers.Lobby`, AdventureUI 프리뷰 → `IMusicPlayers.Preview`(마지막 요청만 유효, 150ms 디바운스, 화면을 떠나면 요청 취소·정지). 옛 어댑터를 쓰지 않는다
+  - 음원이 없거나 못 열면 경고 로그(공용 알림 UI가 없어 화면 안내는 후속)
 - 지금까지의 결과는 7장 표에 있다. S-0.5·S0 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
 - S-0.5로 정한 것: B안(Core System 직접 소유) 유지, 메인 스레드에서 ASIO 처리, 곡 시계 모델(드리프트 항·평활 시계 없음, 단조 보장), `S_max = max(L·(N+1), 32ms)`, 게임 곡 스트리밍 유지, WASAPI 버퍼 프리셋 초안(480이 10ms 주기와 맞음). 버퍼 선택지는 S5b에서 사용자 결정으로 `64, 128, 256, 512, 1024`(기본 256)로 확정했다(480 미포함, SP13 측정 생략)
 - 2026-09-27에 고친 하네스 버그와 추가한 측정
@@ -103,10 +106,11 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S6(로비와 곡 선택): MainUI·AdventureUI의 BGM·프리뷰를 `IMusicPlayers`(Lobby, Preview)로 옮긴다.
+1. (Claude) S7(타임라인과 BGA): TimelineController와 BGAController가 곡 시계(`ISongClock.Frame.SongTime`)를 쓰게 한다. 세션이 없으면(I1 전) 레거시 경로를 그대로 쓴다. TimelineController는 `timeProvider`가 null일 때만 늦게 TryGet(ChartEditorScene과 프리팹 공유), BGAController는 OnDestroy에서 구독 해제.
+2. (사용자) S7 확인: 게임 동작이 이전과 같은지(아직 레거시 경로), ChartEditorScene 동등.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 - C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
-- 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고를 화면에 띄운다.
+- 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고와 AdventureUI의 음원 없음 안내를 화면에 띄운다.
 
 ---
 
@@ -534,6 +538,8 @@
 | 2026-09-27 (데스크탑) | S5b 사운드 설정 화면 | Editor | WASAPI BenQ·S/PDIF, ASIO4ALL | PASS(SP13 제외) | 통합 장치 목록(기본 장치 → WASAPI → ASIO)에서 장치·버퍼를 바꿔 Save → 로비 BGM·프리뷰·곡 한 판·타격음 정상, 재시작 뒤 장치·버퍼 복원, Save 빠르게 두 번, 재생 중 Pinned 장치 분리 → 기본 장치 전환 정상. Test Runner 104개 통과 |
 
 | 2026-09-27 | SP13 (S5b) | – | – | 생략(사용자 결정) | 버퍼 선택지 `64, 128, 256, 512, 1024`, 기본 256으로 확정. 480은 넣지 않는다. 64·128도 그대로 둔다. 키 입력 → 타격음 종단 지연과 블루투스 지연은 재지 않았다(노트 싱크 범위 확장 판단 보류). SP13(b)는 I1에서 |
+
+| 2026-09-27 (데스크탑) | S6 로비와 곡 선택 | Editor | WASAPI | PASS | 로비 BGM(`IMusicPlayers.Lobby`), 곡 선택 프리뷰(`IMusicPlayers.Preview`, 빠르게 넘겨도 하나만), 로비 ↔ 곡 선택 ↔ 게임 전환(게임 곡·타격음 정상), 설정 왕복, 사운드 설정 장치 변경 뒤 로비 BGM 복원 정상. 콘솔 오류 0 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
