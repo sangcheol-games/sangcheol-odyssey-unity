@@ -71,8 +71,8 @@ namespace SCOdyssey.App
                 options.HitSoundFolder = Path.Combine(Application.streamingAssetsPath, "HitSound");
                 options.MusicFolder = Path.Combine(Application.streamingAssetsPath, "Music");
                 options.PlayInBackground = () => settings.Current.playInBackground;
-                // 옛 FMOD 경로(FMOD for Unity 자동 초기화, FMODAudioPreInit)가 남아 있는 동안(S4b 전)은 가드 오류를 내지 않는다.
-                options.EnforceRuntimeManagerGuard = false;
+                // 게임 경로에서 FMOD for Unity의 Studio 시스템이 초기화되면 System이 두 개가 되므로 오류로 알린다(ChartEditor는 예외).
+                options.EnforceRuntimeManagerGuard = true;
 
                 AudioModule module = AudioModuleInstaller.Install(gameObject, options);
                 LegacyAudioManagerAdapter.RegisterInto(module);

@@ -38,7 +38,7 @@ Each installer registers services (`CoreLogger`, `GameClock`, `ServerTimeSkew`, 
 
 `Managers` is a `DontDestroyOnLoad` singleton placed in `MainScene` that directly instantiates and registers the gameplay-side managers into the same `ServiceLocator`, in this exact order:
 
-`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → `IAudioManager` (FMOD, attached as component)
+`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → audio module (`AudioModuleInstaller.Install`, registers `IAudioEngine`/`ISongPlayer`/`IAudioMixer`/… plus the transitional `IAudioManager` adapter `LegacyAudioManagerAdapter`) → `JudgementDriver`
 
 Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate`, resolution etc. during their init.
 
@@ -85,7 +85,7 @@ Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudged
 
 - **Namespaces mirror folders**: `SCOdyssey.Boot`, `SCOdyssey.Core`, `SCOdyssey.App`, `SCOdyssey.App.Interfaces`, `SCOdyssey.Game`, `SCOdyssey.Domain.Dto`, `SCOdyssey.Domain.Service`, `SCOdyssey.Net`, `SCOdyssey.UI`, `SCOdyssey.Testing.*`.
 - **Interfaces for managers live separately** in `Assets/Scripts/App/Interfaces/` — consumers always depend on `I*Manager`, not the concrete class, so the API/mock can be swapped via `TestingConfig.useMockApi`.
-- **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `FMODAudioManager.cs`).
+- **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `Assets/Scripts/Audio/`).
 - **Logging**: call `CoreLogger` from `ServiceLocator` (tag strings like `"boot"`, `"unity"`). `LoggerDriver` forwards `Application.logMessageReceivedThreaded` to `CoreLogger` so Debug.Log reaches the file/ring/console sinks, but has a reentrancy guard — don't call Debug.Log while draining.
 - **Comments and identifiers are mixed Korean/English**; match the surrounding file's style when editing rather than translating.
 

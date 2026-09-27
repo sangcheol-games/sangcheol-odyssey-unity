@@ -22,7 +22,7 @@ namespace SCOdyssey.Audio.Hosting
         // 게임 곡이 흐르는 중 포커스를 잃으면 일시정지한다(게임은 항상 켠다. 하네스에서만 끌 수 있다).
         public bool PauseSongOnFocusLoss { get; set; } = true;
 
-        // RuntimeManager가 초기화되어 있으면 오류 로그를 남긴다. 옛 오디오 경로가 남아 있는 동안(S4b 전)은 게임에서 끈다.
+        // 부팅과 씬 로드 때 RuntimeManager가 초기화되어 있으면 오류 로그를 남긴다(게임과 하네스는 켠다).
         public bool EnforceRuntimeManagerGuard { get; set; }
     }
 }

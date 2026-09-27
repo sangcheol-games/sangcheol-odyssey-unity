@@ -240,7 +240,7 @@ Running → (설정 적용·장치 손실) → 재구성 → Running | Degraded
 - 순서: 모듈 CTS 취소 → 콜백 해제(`setCallback(null, 0)`) → 채널·Sound·ChannelGroup 해제 → System release → FMOD Debug 종료(에디터는 FILE 모드로 되돌림, EditorUtils와 같게) → 에디터 이벤트 구독 해제
 - 호출 시점: 플레이 모드 종료, 도메인 리로드 직전, 앱 종료, Runner가 소유자일 때의 OnDestroy
 - 도메인 리로드 뒤 Runner는 자신이 엔진 소유자가 아니면 스스로 비활성화한다.
-- 부팅과 씬 로드 때 RuntimeManager가 초기화되지 않았는지 확인한다. 초기화되어 있으면 오류 로그를 남긴다. 옛 경로가 남아 있는 동안(S4b 전)은 `AudioModuleOptions.EnforceRuntimeManagerGuard`를 꺼 둔다.
+- 부팅과 씬 로드 때 RuntimeManager가 초기화되지 않았는지 확인한다. 초기화되어 있으면 오류 로그를 남긴다(`AudioModuleOptions.EnforceRuntimeManagerGuard`, 게임과 하네스는 켠다). ChartEditorScene은 Managers 없이 따로 열고 RuntimeManager를 쓰므로 가드 대상이 아니다.
 - 모듈 하네스(`Testing/AudioHarness`, `SCO_AUDIO_HARNESS`)는 게임 없이 모듈만 설치해 시험한다.
 
 ## 5. 출력 변경과 장치
@@ -377,8 +377,8 @@ setDelay(S), setPaused(false)
 - 음악 슬롯 하나를 SCO.Music 아래에 둔다. 로드 플래그와 예약 순서는 옛 FMODAudioManager와 같다(`CREATESTREAM | NONBLOCKING`, playSound(paused) → setDelay → setLoopCount → setPriority(0) → unpause). 로드 실패는 옛 코드처럼 IsLoaded가 오지 않는 것으로만 드러난다.
 - `DspSeconds = 기준 초 + (SCO.Music 클록 − 기준 클록) / R`. 재구성 직전에 기준 초를, 직후에 기준 클록을 잡아 세대를 넘어도 단조 증가한다. 엔진을 쓸 수 없으면 QPC로 진행한다.
 - 재구성 때 슬롯 상태(파일, 반복, ms 위치, 일시정지, 아직 시작 전인 예약)를 기억해 다시 열고 이어서 재생한다. ms 단위라 샘플 단위로 맞지는 않는다.
-- 끝난 채널은 `isPlaying`으로 한 번 확인하면 핸들을 버린다(옛 코드는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽어 오류 콜백이 쌓인다).
-- S4b 전에는 옛 FMOD for Unity 경로가 남아 있어 RuntimeManager가 함께 초기화될 수 있다(System 두 개, 가드는 끔).
+- 채널 END 콜백(System.update 안, 메인 스레드)으로 끝을 알아채 핸들을 버린다. 옛 코드는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽는데, 끝난 채널에 `isPlaying`을 부르면 ERR_INVALID_HANDLE 오류 콜백이 난다(S4b 릴리스 빌드에서 곡마다 1건 확인).
+- 옛 FMODAudioManager·FMODAudioPreInit과 FMOD 플러그인 수정(Platform.cs의 버퍼 setter)은 S4b에서 지웠다. 게임 씬에는 FMOD Studio 컴포넌트(StudioListener 등)가 없다.
 
 ## 8. 입력과 판정 타이밍
 

@@ -207,7 +207,7 @@ namespace SCOdyssey
             settings.Current.bgmVolume      = _pending.bgmVolume;
             settings.Current.hitSoundVolume = _pending.hitSoundVolume;
             settings.Current.sfxVolume       = _pending.sfxVolume;
-            // 버퍼 크기는 FMODAudioPreInit에서 다음 시작 시 적용됨 (런타임 변경 불가)
+            // 버퍼 크기는 다음 시작 때 오디오 모듈 부팅(AudioSettingsMapper)에서 적용됨 (런타임 변경은 S5b의 새 설정 화면에서)
             settings.Current.audioBufferIndex = _pending.audioBufferIndex;
             settings.Apply();
             settings.Save();

@@ -26,6 +26,10 @@ namespace SCOdyssey.Audio.Legacy
         private const int MusicPriority = 0;
         private const double RestoreTimeoutSeconds = 3.0;
 
+        // 채널 END 콜백(System.update 안, 메인 스레드)이 끝난 채널 핸들을 남긴다. 델리게이트는 static으로 붙잡아 둔다.
+        private static readonly FMOD.CHANNELCONTROL_CALLBACK s_channelCallback = OnChannelCallback;
+        private static IntPtr s_endedChannel;
+
         private readonly AudioEngine _engine;
         private readonly FmodMixer _mixer;
         private readonly OneShotBank _oneShots;
@@ -316,6 +320,8 @@ namespace SCOdyssey.Audio.Legacy
 
         private void ApplyChannelDefaults()
         {
+            s_endedChannel = IntPtr.Zero;
+            _channel.setCallback(s_channelCallback);
             if (_loop) _channel.setLoopCount(-1);
             else _channel.setLoopCount(0);
             // BGM은 타격음이 몰려도 보이스 스틸링 대상이 되면 안 된다.
@@ -350,11 +356,16 @@ namespace SCOdyssey.Audio.Legacy
             Debug.Log("[Audio] (과도기) 장치 변경 " + previousDevice + " → " + request.DeviceName + ": " + result.Outcome + " " + result.Message);
         }
 
-        // 옛 GameManager·ChartManager는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽는다. 끝난 채널 핸들을 계속 부르면
-        // FMOD가 호출마다 오류 콜백을 내므로, 끝난 것을 한 번 확인하면 핸들을 버린다.
+        // 옛 GameManager·ChartManager는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽는다. 끝난 채널 핸들을 부르면
+        // FMOD가 오류 콜백(ERR_INVALID_HANDLE)을 내므로, END 콜백이 온 채널은 부르지 않고 버린다.
         private bool ChannelAlive()
         {
             if (!_channel.hasHandle()) return false;
+            if (_channel.handle == s_endedChannel)
+            {
+                _channel = default;
+                return false;
+            }
             FMOD.RESULT result = _channel.isPlaying(out bool playing);
             if (result == FMOD.RESULT.OK && playing) return true;
             _channel = default;
@@ -365,6 +376,13 @@ namespace SCOdyssey.Audio.Legacy
         {
             if (ChannelAlive()) _channel.stop();
             _channel = default;
+        }
+
+        [AOT.MonoPInvokeCallback(typeof(FMOD.CHANNELCONTROL_CALLBACK))]
+        private static FMOD.RESULT OnChannelCallback(IntPtr control, FMOD.CHANNELCONTROL_TYPE controlType, FMOD.CHANNELCONTROL_CALLBACK_TYPE callbackType, IntPtr data1, IntPtr data2)
+        {
+            if (callbackType == FMOD.CHANNELCONTROL_CALLBACK_TYPE.END) s_endedChannel = control;
+            return FMOD.RESULT.OK;
         }
 
         private void ReleaseSlot()

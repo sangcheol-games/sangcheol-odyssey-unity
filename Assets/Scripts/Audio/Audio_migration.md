@@ -37,6 +37,13 @@
 - S3(판정 타이밍): **완료**(2026-09-27). SP11(60/144/무제한 + 매퍼 46분)·SP-IN(입력 맵 끄기, alt-tab runInBackground ON/OFF) PASS(7장)
 - S4a(게임에 설치): **완료**(2026-09-27). 로비 BGM, 프리뷰, 곡 한 판, 설정에서 장치 선택(S/PDIF ↔ BenQ, 재구성 35~46ms, 같은 장치는 Unchanged), 로비 alt-tab 음소거, 버퍼 설정 변경 뒤 재시작(256x4 → 64x4) 모두 정상. 콘솔 오류 0
   - 사운드 설정의 장치 목록에는 현재 출력 타입(WASAPI) 장치만 나온다. ASIO 선택은 출력 타입 설정(S5a)과 새 사운드 설정 화면(S5b)에서 붙는다
+- S4b(옛 경로 제거): **완료**(2026-09-27). 게임 전체 흐름·ChartEditorScene·릴리스 스모크 빌드 정상, RuntimeManager 가드 오류 0(7장)
+  - `App/FMODAudioManager.cs`, `App/FMODAudioPreInit.cs` 삭제. `Plugins/FMOD/src/Platform.cs`를 임포트 원본(522d8378)으로 되돌림(버퍼 setter 두 개와 주석 제거)
+  - Managers에서 RuntimeManager 가드를 켬. 주석·CLAUDE.md의 옛 참조 정리
+  - 씬 확인: FMOD Studio 컴포넌트는 MainScene의 StudioListener 하나뿐이고(EventEmitter, BankLoader 등 없음), GameScene에 "Audio Source" GameObject와 AudioListener가 있다
+  - Assembly-CSharp(옛 파일 제외)와 FMODUnity 임시 컴파일 오류 0
+  - 에디터 작업: MainScene `StudioListener` 제거, GameScene "Audio Source"·`AudioListener` 제거, FMOD Settings의 Play In Editor만 256×4(개수 추가). 옛 PreInit이 메모리에서 모든 플랫폼을 덮어써 둔 값(64×4)이 Save Project로 함께 저장됐기 때문에, 파일은 원본에서 Play In Editor 개수만 바꾼 상태로 되돌렸다
+  - 과도기 음악 채널의 끝을 END 콜백으로 알아채게 고침(릴리스 빌드 Player.log에서 곡 종료 뒤 `ERR_INVALID_HANDLE` 1건 → 에디터 재확인 0건)
   - `Audio/Legacy/{ILegacyTransport, LegacyTransport}`(AudioModule.Legacy, 재구성 참여), `App/{AudioSettingsMapper, LegacyAudioManagerAdapter}`
   - `Managers.InstallAudio`: 모듈 설치(try/catch, 실패하면 소리 없는 어댑터), 어댑터 등록, JudgementDriver·`IJudgementTimingLog` 등록. FMODAudioManager는 더 붙이지 않는다(파일은 S4b에서 삭제)
   - `InputManager`: `LaneTimestampSource`를 소유하고 레인 콜백에서 Push, 게임 맵 끄기(SwitchToUI, Disable)를 Synthetic 구간으로 감쌈. 레거시 이벤트는 그대로
@@ -83,10 +90,11 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S4b(옛 경로 제거)를 진행한다: `FMODAudioPreInit.cs`·`FMODAudioManager.cs` 삭제, `Plugins/FMOD/src/Platform.cs` :871-872·:874-878 되돌리기(:873 getter 유지), RuntimeManager 가드 켜기(`EnforceRuntimeManagerGuard = true`).
-2. (사용자) S4b 에디터 작업(같은 커밋): MainScene 카메라의 `StudioListener` 제거, GameScene의 "Audio Source" GameObject와 카메라 `AudioListener` 제거, FMOD Settings → Play In Editor → DSP Buffer Count 4.
-3. (사용자) S4b 확인: 게임 전체 흐름, ChartEditorScene(음원 로드, 재생, 자동 채보), 릴리스 스모크 빌드(5장), 콘솔에 RuntimeManager 초기화 오류 없음.
+1. (사용자) S5a 착수 전에 PlayerPrefs를 백업한다(레지스트리 `HKCU\Software\Unity\UnityEditor\DefaultCompany\sangcheol-odyssey` 내보내기. 플레이어는 `HKCU\Software\DefaultCompany\sangcheol-odyssey`).
+2. (Claude) S5a(설정 v2)를 진행한다: SettingsData v2 필드(`audioOutputType`, `deviceGuid`, `deviceName`, `systemRate`, `dspBufferLength`, `dspBufferCount`, `settingsVersion`), v1 필드 `[Obsolete]`, `App/SettingsMigration`(`.v1.bak`, 손상 값 검증, ResetToDefault), `SettingsManager.Apply`(볼륨은 IAudioMixer, `Application.runInBackground`), v2 값으로 부팅, `Assets/Scripts/Editor/Tests/` 마이그레이션·매퍼 테스트.
+3. (사용자) S5a 확인: 기존 v1 설정으로 부팅해 볼륨·버퍼·노트 싱크·판정 싱크 유지, 로비 playInBackground ON/OFF alt-tab(SP14 로비).
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
+- C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
 
 ---
 
@@ -507,6 +515,8 @@
 | 2026-09-27 (데스크탑) | SP-IN (S3, 하네스) | Editor | – | PASS | 입력 맵 끄기: 누른 레인 1, release 1(Synthetic 구간 안에서 동기로 옴, 판정됨 0). alt-tab: runInBackground ON/OFF 모두 누른 레인 1, 포커스 상실 뒤 release 1(판정됨 0), 세션 Paused(FocusLost), binding 외부 일시정지 알림 FocusLost |
 
 | 2026-09-27 (데스크탑) | S4a 게임 설치 | Editor | WASAPI S/PDIF·BenQ 256x4, 64x4 | PASS | 새 모듈 + 과도기 어댑터로 로비 BGM, 프리뷰, 곡 한 판(타격음, 일시정지·재개, 결과 화면) 정상. 설정 저장으로 장치 변경 Applied(init 34.8~46.3ms), 같은 장치는 Unchanged. 버퍼 인덱스 변경이 다음 부팅에 반영됨(`[Audio] 엔진 부팅 … 버퍼 64x4`). 콘솔 오류 0 |
+
+| 2026-09-27 (데스크탑) | S4b 옛 경로 제거 | Editor / Release 플레이어 | WASAPI BenQ 64x4 | PASS | 게임 전체 흐름, ChartEditorScene(음원 로드·재생·자동 채보) 정상, RuntimeManager 가드 오류 0. 릴리스 스모크: `D:\게임 테스트\test - 복사본`에서 곡 한 판 풀콤보까지 정상, Player.log 예외 0, `fmodstudio.dll`만 포함(`fmodstudioL.dll` 제외), StreamingAssets Music 5·HitSound 5(원본과 같음), Addressables `aa` 포함. 곡 종료 뒤 `ERR_INVALID_HANDLE` 1건(과도기 채널 isPlaying) → END 콜백으로 고친 뒤 에디터에서 0건 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
