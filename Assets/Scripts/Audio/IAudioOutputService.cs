@@ -29,6 +29,7 @@ namespace SCOdyssey.Audio
         AppliedWithFallback,    // 폴백 구성으로 동작 중
         Unchanged,
         Busy,                   // 다른 적용이 진행 중
+        Rejected,               // 지금은 적용할 수 없음(곡 진행 중, 지원하지 않는 출력 타입 등)
         Failed
     }
 

@@ -221,10 +221,10 @@ namespace SCOdyssey.Game.Timing.Tests
         {
             _pump.Attach(_client, _session, 0);
             _session.FakeClock.SetFrame(5000, true);
-            _client.OnInput = input => throw new InvalidOperationException("client failure");
+            _client.OnInput = input => throw new InvalidOperationException("[테스트] 의도한 클라이언트 예외(무시해도 됨)");
             _source.Push(1, true, 4000);
 
-            LogAssert.Expect(LogType.Exception, new Regex("client failure"));
+            LogAssert.Expect(LogType.Exception, new Regex("의도한 클라이언트 예외"));
             _pump.Run(_source);
 
             Assert.AreEqual(new[] { "input", "advance", "frame" }, _client.Calls.ToArray());

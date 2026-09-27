@@ -19,6 +19,9 @@ namespace SCOdyssey.Audio.Hosting
         // 로비에서 포커스를 잃었을 때 계속 재생할지. 포커스가 바뀔 때마다 읽는다. null이면 계속 재생한다.
         public Func<bool> PlayInBackground { get; set; }
 
+        // 게임 곡이 흐르는 중 포커스를 잃으면 일시정지한다(게임은 항상 켠다. 하네스에서만 끌 수 있다).
+        public bool PauseSongOnFocusLoss { get; set; } = true;
+
         // RuntimeManager가 초기화되어 있으면 오류 로그를 남긴다. 옛 오디오 경로가 남아 있는 동안(S4b 전)은 게임에서 끈다.
         public bool EnforceRuntimeManagerGuard { get; set; }
     }

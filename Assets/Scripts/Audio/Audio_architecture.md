@@ -206,7 +206,8 @@ namespace SCOdyssey.Game.Timing
 ```
 System_Create
 1. setOutput(kind)
-2. setDriver(DeviceCatalog.ResolveIndex(guid, name))   // GUID → 이름 → 0(기본 장치)
+2. Pinned: setDriver(ResolveIndex(guid, name))   // GUID → 이름 → 0(기본 장치)
+   Follow-Default: setDriver를 부르지 않는다(부르면 기본 장치 자동 전환이 되지 않았다, SP10). close→init으로 이전 선택이 남아 있을 때만 setDriver(0)
 3. getDriverInfo(…, out systemRate)
    WASAPI: mixerRate = min(systemRate, 48000). 값이 0이면 48000
    ASIO:   mixerRate = systemRate
@@ -244,7 +245,7 @@ Running → (설정 적용·장치 손실) → 재구성 → Running | Degraded
 ## 5. 출력 변경과 장치
 
 **설정 적용(`ApplyAsync`)**: 로비와 설정 화면에서만 쓴다.
-1. 이미 진행 중이면 `Busy`로 거절한다.
+1. 이미 진행 중이면 `Busy`로 거절한다. 곡이 진행 중(세션이 Ready·Stopped·Disposed가 아님)이거나 지원하지 않는 타입이면 `Rejected`다.
 2. `UniTask.Yield` 뒤에 전제를 검사하고 변경을 분류한다. 볼륨만 바뀌었으면 즉시 적용하고 끝낸다.
 3. 재생기와 세션에 "재구성 시작"을 알린다. 각자 되살릴 상태를 기억한다(로비 BGM 파일·루프·재생 여부 등).
 4. close → 재설정 → init(4장 순서). 적용 폴백: 요청 구성 → 직전에 동작하던 구성 → WASAPI 기본 512×4 → NOSOUND
@@ -254,6 +255,7 @@ Running → (설정 적용·장치 손실) → 재구성 → Running | Degraded
 **장치 목록**(DeviceCatalog)
 - 현재 타입은 메인 System으로 열거하고, 다른 타입은 초기화하지 않은 임시 System으로 열거한 뒤 곧바로 release한다. 메인이 ASIO이면 임시 ASIO System을 만들지 않는다(ASIO는 프로세스당 하나).
 - "NoSound Driver"(`Guid.Empty`)는 목록에서 뺀다. 저장과 비교는 GUID로 하고, 이름은 보조 키로 쓴다.
+- `GetDevicesAsync`는 한 프레임 양보한 뒤 메인 스레드에서 동기로 열거한다(FMOD를 메인 스레드에 고정하기 위해서다).
 - 캐시가 비어 있는데 동기 목록이 필요하면(과도기 어댑터) 현재 타입을 곧바로 열거한다.
 
 **콜백 마스크와 처리**(마스크는 항상 명시한다. 기본값 ALL은 FMOD 자동 장치 전환을 꺼 버린다)
@@ -326,7 +328,7 @@ setDelay(S), setPaused(false)
 - 드리프트 항과 평활 렌더 시계는 두지 않는다(SP3). 오프셋을 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.2ms이고, 이 모델만으로 프레임 사이 오차 p99가 1ms 이하였다.
 - 곡 시계는 세션이 커밋·일시정지 때 넣는 세그먼트(멈춤 또는 흐름)를 최근 8개 보관한다. 프레임보다 조금 이른 입력이 이전 세그먼트(예: 일시정지 직전)에 속할 수 있기 때문이다. 모델이 리셋되기 전에 만든 흐르는 세그먼트는 DSP 도메인이 달라 계산하지 않는다. Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다.
 - `Channel.getPosition`은 믹스 블록 단위로만 맞으므로(±2블록) 싱크 판단에 쓰지 않는다.
-- 콜백 없는 정지 감지: Starting이나 Playing 중에 포커스가 있는데 원시 DSP 값이 0.5초 넘게 그대로면, 세션을 Recovering으로 두고 일시정지 경로를 탄다(재초기화는 하지 않음).
+- 콜백 없는 정지 감지: Starting, LeadIn, Playing 중에 포커스가 있는데 원시 DSP 값이 0.5초 넘게 그대로면 장치 사유(`DeviceChanged`)로 일시정지한다(재초기화는 하지 않음). 다시 열 음원이 없으므로 Recovering을 거치지 않고, 클록이 다시 흐르면 사용자가 재개한다.
 
 **일시정지와 재개**
 - 일시정지(Starting, LeadIn, Playing, Resuming에서만, 멱등)

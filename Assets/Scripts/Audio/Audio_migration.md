@@ -33,6 +33,10 @@
   - 곡 시계 창을 1초에서 10초로 바꾸고 하향 계단 규칙을 넣었다(7장 결정 아래 참고)
 - S1(엔진): **완료**(2026-09-27). SP1 재확인 PASS(7장)
 - S2a(곡 재생): **완료**(2026-09-27). SP4 PASS(녹음 1샘플 이내), 재구성·프리뷰 PASS(7장)
+- S2b(출력 관리): **완료**(2026-09-27). SP6·SP9·SP10 PASS, SP8 부분(ASIO4ALL만)
+  - `Audio/Output/{DeviceCatalog, AudioOutputService}`, 엔진 재구성 일반화(`AudioEngine.Reinitialize(attempts, reason)`, `BootPlan.BuildApply/BuildRecovery`), 모듈의 장치 사건 처리(DEVICELOST, DEVICEREINITIALIZE, Pinned 1초 디바운스)와 콜백 없는 정지 감지, 포커스 상실 시 게임 곡 일시정지(S2a에서 빠졌던 것), `AudioApplyOutcome.Rejected`
+  - 하네스: `Testing/AudioHarness/HarnessOutputChecks`(출력 적용, SP6, SP9, SP10 사건 기록)
+  - 테스트 53개(BootPlan 3개 추가). 임시 csproj로 세 조건 컴파일 오류 0, 52개 통과(`LogAssert` 1개는 Test Runner 전용)
   - `Audio/Clock/ClockSampler`, `Audio/Playback/{StreamLoader, FmodSongSession, SongPlayer, FmodMusicPlayer}`, `Audio/Diagnostics/SongMetronome`, 엔진 재구성(`AudioEngine.Reinitialize`, `AudioModule.Reinitialize`)
   - 하네스: `Testing/AudioHarness/HarnessSongChecks`(곡 재생, SP4, 상태별 강제 재구성, 프리뷰 대체)
   - 테스트 50개(세션 상태 머신 7개 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 49개 통과(`LogAssert` 1개는 Test Runner 전용)
@@ -67,8 +71,9 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S2b(출력 관리)를 진행한다: DeviceCatalog(타입별 장치 목록, 임시 System 열거), AudioOutputService.ApplyAsync(close→init, 적용 폴백, 요청 구성 성공 때만 저장 신호), 장치 콜백 처리(Follow-Default, Pinned 1초 디바운스, DEVICELOST), 콜백 없는 정지 감지. 하네스에 출력 전환·버퍼 변경·적용 반복 메뉴를 붙인다.
-2. (사용자) S2b 확인: SP6(재구성 반복), SP8(ASIO 드라이버), SP9(장치 목록), SP10(핫플러그). USB 장치나 두 번째 출력 장치가 필요하다.
+1. (Claude) S3(판정 타이밍)를 진행한다: UnityInputSystemTimestampSource(Push, Synthetic 구간, 256칸 버퍼), RealtimeQpcMapper(ctx.time → QPC, 32개 중앙값), JudgementDriver(-900, 유일한 MonoBehaviour, 판정 싱크 `Func<int>`), GameplayTimingBinding, 판정 로그(TimingLog), 타이밍 오버레이. 하네스에 탭 테스트와 Synthetic 확인 메뉴를 붙인다.
+2. (사용자) S3 확인: SP11(60/144/무제한 fps 탭 테스트 각 1분), SP-IN(레인을 누른 채 입력 맵 끄기·alt-tab).
+- 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 
 ---
 
@@ -476,6 +481,13 @@
 | 2026-09-27 (데스크탑) | 재구성 (S2a) | Editor | 같음 | 부분 | Ready→시작, Playing→장치 일시정지·Recovered·재개, Paused→Recovering·Recovered·재개 모두 OK. "Starting→진행" 실패는 하네스 시나리오 문제(스트림이 열려 있으면 Start가 즉시 커밋해 LeadIn이 되고, 재구성이 흐르는 곡에 걸려 설계대로 장치 일시정지됨). 시나리오를 고쳐 재확인 |
 | 2026-09-27 (데스크탑) | 재구성 재확인 (S2a) | Editor | 같음 | PASS | 시나리오 수정 뒤 Ready→시작, Starting(재구성으로 스트림을 닫은 직후 Start, Starting 중 한 번 더 재구성)→진행, Playing·Paused 복구 모두 OK. 강제 재구성 5회(세대 1→6). 같은 로그에서 진단 메트로놈이 끝난 클릭 채널에 stop을 불러 ERR_CHANNEL_STOLEN·ERR_INVALID_HANDLE 오류 콜백이 일시정지마다 약 5건 났다 → 끝나지 않은 클릭만 멈추도록 고침(S2b 하네스 실행 때 확인) |
 | 2026-09-27 (데스크탑) | 프리뷰 대체 (S2a) | Editor | 같음 | PASS | 한 프레임 5회 요청: Superseded 4, 마지막 Ok·재생 |
+
+| 2026-09-27 (데스크탑) | SP6 (S2b) | Editor | WASAPI BenQ HDMI 48k 256↔512x4 | PASS | 로비 BGM 재생 중 설정 적용 50회(최대 66ms) + 같은 구성 close→init 50회(최대 50ms) 실패 0, 음악 복원 실패 0, 원샷 id 유효 |
+| 2026-09-27 (데스크탑) | SP8 (S2b) | Editor | ASIO4ALL 44.1k 1024x2, WASAPI 고정 장치 | 부분 | ASIO4ALL 적용 2회, WASAPI 고정 장치 256/1024 적용이 모두 Applied(44~105ms). FlexASIO·실제 장비, 블록 불일치, 다른 앱 점유는 미확인 |
+| 2026-09-27 (데스크탑) | SP9 (S2b) | Editor | WASAPI 4개, ASIO 1개 | PASS | WASAPI는 메인 System으로 읽어 0ms, ASIO는 임시 System 40~47ms. 열거 중 BGM 재생 유지. 끊김 녹음은 미실시 |
+| 2026-09-27 (데스크탑) | SP10 (S2b) | Editor | – | 미실시 | 장치 콜백(DEVICELOST·DEVICELISTCHANGED·DEVICEREINITIALIZE)이 로그에 없음. 하네스 SP10 기록기가 SP6의 재구성까지 기록해 요약이 107줄 늘어난 문제를 고침(확인 버튼 실행 중에는 기록 안 함) |
+
+| 2026-09-27 (데스크탑) | SP10 재확인 (S2b) | Editor | WASAPI BenQ HDMI ↔ S/PDIF | PASS | 처음에는 Follow-Default에서 기본 장치를 바꿔도 소리가 BenQ에 남았다(DEVICEREINITIALIZE 0회). 원인: Follow-Default에서도 setDriver(0)를 직접 불렀다(옛 RuntimeManager는 부르지 않음) → 부르지 않도록 고친 뒤 1) 기본 장치 변경 때마다 DEVICEREINITIALIZE와 자동 전환, 장치 이름 갱신 2) 곡 재생 중 변경 → Paused(DeviceChanged) 3) S/PDIF 고정 적용 뒤 '사용 안 함' → DEVICELISTCHANGED, 1초 디바운스 뒤 기본 장치(BenQ)로 재구성(29.9ms). USB 분리, 절전 복귀, 블루투스, HDMI 해상도 변경은 미실시. 장치 분리 중 FMOD가 같은 경고를 초당 15번 남겨 반복 경고를 묶도록 고침 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.

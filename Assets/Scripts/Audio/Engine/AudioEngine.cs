@@ -105,19 +105,29 @@ namespace SCOdyssey.Audio.Engine
             SetStatus(EngineStatus.Failed);
         }
 
-        // 같은 System을 close → init 한다(재구성). 현재 구성 → WASAPI 기본 512×4 → NOSOUND 순서로 시도한다.
+        public BootAttempt CurrentAttempt
+        {
+            get { return _currentAttempt; }
+        }
+
+        // 같은 System을 close → init 한다(재구성). attempts를 순서대로 시도하고, 성공한 시도의 번호를 돌려준다(모두 실패하면 -1).
         // 호출 전에 채널·Sound·ChannelGroup을 모두 해제해야 한다. 성공하면 세대가 오른다.
-        public void Reinitialize()
+        // 엔진이 Failed라 System이 없으면 새로 만든다.
+        public int Reinitialize(IReadOnlyList<BootAttempt> attempts, string reason)
         {
             AudioThread.AssertMain("AudioEngine.Reinitialize");
-            if (!_system.hasHandle()) return;
-
-            var attempts = new List<BootAttempt>(3);
-            attempts.Add(_currentAttempt);
-            List<BootAttempt> fallbacks = BootPlan.Build(default, true, false);
-            for (int i = 0; i < fallbacks.Count; i++)
+            if (_status == EngineStatus.Disposed) return -1;
+            if (!_system.hasHandle())
             {
-                if (!fallbacks[i].SameConfig(_currentAttempt)) attempts.Add(fallbacks[i]);
+                FMOD.RESULT created = FMOD.Factory.System_Create(out _system);
+                if (created != FMOD.RESULT.OK)
+                {
+                    _system = default;
+                    BootSummary = "재구성 실패 | System_Create " + created;
+                    Debug.LogError("[Audio] " + BootSummary);
+                    SetStatus(EngineStatus.Failed);
+                    return -1;
+                }
             }
 
             var failures = new List<string>();
@@ -131,19 +141,38 @@ namespace SCOdyssey.Audio.Engine
                 if (error == null)
                 {
                     InitMilliseconds = watch.Elapsed.TotalMilliseconds;
-                    Adopted(attempts[i], actual, failures, "엔진 재구성");
-                    return;
+                    Adopted(attempts[i], actual, failures, "엔진 재구성(" + reason + ")");
+                    return i;
                 }
                 failures.Add(attempts[i].Label + ": " + error);
             }
 
-            BootSummary = "재구성 실패 | " + string.Join(" | ", failures);
+            InitMilliseconds = watch.Elapsed.TotalMilliseconds;
+            BootSummary = "재구성 실패(" + reason + ") | " + string.Join(" | ", failures);
             Debug.LogError("[Audio] " + BootSummary);
             SystemCallbackHub.Uninstall(_system);
             _system.release();
             _system = default;
             _systemMaster = default;
             SetStatus(EngineStatus.Failed);
+            return -1;
+        }
+
+        internal CallbackSnapshot Callbacks
+        {
+            get { return _callbacks; }
+        }
+
+        // Follow-Default에서 FMOD가 기본 장치를 바꾼 뒤(DEVICEREINITIALIZE) 표시용 장치 이름을 다시 읽는다.
+        // 믹서 레이트는 setSoftwareFormat으로 고정했으므로 바뀌지 않는다.
+        public void RefreshCurrentDevice()
+        {
+            if (!_system.hasHandle() || _currentOutput.Kind == AudioOutputKind.NoSound) return;
+            if (_system.getDriver(out int driver) != FMOD.RESULT.OK) return;
+            AudioDeviceInfo info;
+            if (!Output.DriverLookup.TryRead(_system, driver, out info)) return;
+            AudioOutputInfo o = _currentOutput;
+            _currentOutput = new AudioOutputInfo(o.Kind, o.DeviceId, info.Name, o.SampleRate, o.BufferLength, o.BufferCount);
         }
 
         // 매 프레임 한 번(AudioEngineRunner, -1010). update 안에서 장치 콜백이 오고, 쌓인 오류와 FMOD 경고를 로그로 옮긴다.
@@ -154,6 +183,14 @@ namespace SCOdyssey.Audio.Engine
                 _system.update();
                 SystemCallbackHub.Drain(_callbacks);
                 ReportCallbacks();
+            }
+            else
+            {
+                _callbacks.ErrorCount = 0;
+                _callbacks.DroppedErrors = 0;
+                _callbacks.DeviceLost = false;
+                _callbacks.DeviceListChanged = false;
+                _callbacks.DeviceReinitialized = false;
             }
             FmodDebugBridge.Flush();
         }

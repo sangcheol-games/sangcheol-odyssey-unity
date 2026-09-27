@@ -29,9 +29,24 @@ namespace SCOdyssey.Audio.Engine
                 if (result != FMOD.RESULT.OK) return "getNumDrivers: " + result;
                 if (driverCount <= 0) return "출력 장치 없음";
 
-                driver = DriverLookup.ResolveIndex(system, attempt.DeviceId, attempt.DeviceName);
-                result = system.setDriver(driver);
-                if (result != FMOD.RESULT.OK) return "setDriver: " + result;
+                // Follow-Default에서는 setDriver를 부르지 않는다(옛 경로 RuntimeManager와 같게 둬 FMOD의 기본 장치 자동 전환을 살린다).
+                // 단, 같은 System을 close→init으로 다시 쓰면 이전 선택이 남으므로 0이 아닐 때만 0으로 되돌린다.
+                bool followDefault = attempt.DeviceId == Guid.Empty && string.IsNullOrEmpty(attempt.DeviceName);
+                if (followDefault)
+                {
+                    system.getDriver(out int selected);
+                    if (selected != 0)
+                    {
+                        result = system.setDriver(0);
+                        if (result != FMOD.RESULT.OK) return "setDriver(0): " + result;
+                    }
+                }
+                else
+                {
+                    driver = DriverLookup.ResolveIndex(system, attempt.DeviceId, attempt.DeviceName);
+                    result = system.setDriver(driver);
+                    if (result != FMOD.RESULT.OK) return "setDriver: " + result;
+                }
 
                 result = system.getDriverInfo(driver, out deviceName, 256, out deviceGuid, out systemRate, out _, out _);
                 if (result != FMOD.RESULT.OK) return "getDriverInfo: " + result;

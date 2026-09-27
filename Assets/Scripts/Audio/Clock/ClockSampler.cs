@@ -19,6 +19,8 @@ namespace SCOdyssey.Audio.Clock
         private bool _isVirtual = true;
         private long _virtualOriginQpc;
         private int _blockLength = VirtualBlockLength;
+        private ulong _lastRawDsp;
+        private long _lastRawChangeQpc;
 
         public ClockSampler(AudioEngine engine, FmodMixer mixer)
         {
@@ -46,6 +48,12 @@ namespace SCOdyssey.Audio.Clock
             get { return _isVirtual; }
         }
 
+        // 원시 DSP 값이 마지막으로 바뀐 뒤 흐른 시간(콜백 없는 믹서 정지 감지용).
+        public double SecondsSinceRawChange
+        {
+            get { return Qpc.ToSeconds(Qpc.Now - _lastRawChangeQpc); }
+        }
+
         // 부팅·재구성 뒤 부른다(모델 하드 리셋). 이전 모델로 만든 흐르는 세그먼트는 더 이상 계산되지 않는다.
         public void Reset()
         {
@@ -63,6 +71,8 @@ namespace SCOdyssey.Audio.Clock
                 _virtualOriginQpc = Qpc.Now;
                 _model.Reset(VirtualSampleRate, VirtualBlockLength, VirtualBlockCount);
             }
+            _lastRawDsp = 0;
+            _lastRawChangeQpc = Qpc.Now;
         }
 
         public void Sample()
@@ -71,6 +81,11 @@ namespace SCOdyssey.Audio.Clock
             ulong dsp = ReadDsp();
             long after = Qpc.Now;
             _model.AddSample(before, dsp, after);
+            if (dsp != _lastRawDsp)
+            {
+                _lastRawDsp = dsp;
+                _lastRawChangeQpc = before;
+            }
         }
 
         public ulong ReadDsp()

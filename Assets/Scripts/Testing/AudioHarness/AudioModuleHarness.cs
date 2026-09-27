@@ -13,7 +13,8 @@ namespace SCOdyssey.Testing.AudioHarness
 {
     // 오디오 모듈 하네스. AudioSpikeScene의 빈 GameObject에 붙여 쓴다(S-0.5 하네스의 파일 GUID를 이어받아 씬은 그대로다).
     // 새 오디오 모듈을 게임 없이 단독으로 설치해 부팅, 원샷, 볼륨, 포커스 음소거, 수명주기를 시험하고 요약 파일에 남긴다.
-    // 곡 재생·재구성·프리뷰 확인은 HarnessSongChecks(S2a). 출력 변경(S2b), 탭 테스트(S3) 메뉴는 해당 단계에서 붙인다.
+    // 곡 재생·재구성·프리뷰 확인은 HarnessSongChecks(S2a), 출력 적용·장치 사건은 HarnessOutputChecks(S2b).
+    // 탭 테스트(S3) 메뉴는 해당 단계에서 붙인다.
     public sealed class AudioModuleHarness : MonoBehaviour
     {
         private const string ClickFile = "harness_click.wav";
@@ -26,6 +27,7 @@ namespace SCOdyssey.Testing.AudioHarness
         private int _countIndex = 1;
         private bool _safeMode;
         private bool _playInBackground = true;
+        private bool _pauseSongOnFocusLoss = true;
 
         private AudioModule _module;
         private OneShotId _click;
@@ -33,6 +35,7 @@ namespace SCOdyssey.Testing.AudioHarness
         private bool _busy;
         private Vector2 _scroll;
         private HarnessSongChecks _songs;
+        private HarnessOutputChecks _outputs;
 
         private static string HitSoundFolder
         {
@@ -71,12 +74,19 @@ namespace SCOdyssey.Testing.AudioHarness
             HarnessWav.WriteClick(Path.Combine(HitSoundFolder, ClickFile), 48000);
             HarnessSongChecks.PrepareFiles(MusicFolder);
             _songs = new HarnessSongChecks(CurrentModule, SetStatus);
+            _outputs = new HarnessOutputChecks(CurrentModule, SetStatus);
             BootCheck();
         }
 
         private void OnDestroy()
         {
             ShutdownModule();
+        }
+
+        private void Update()
+        {
+            // 확인 버튼이 도는 동안(SP6의 재구성 100회 등)에는 사건 기록을 멈춘다. 끝난 뒤의 상태를 기준으로 다시 본다.
+            if (_outputs != null && IsInstalled) _outputs.Watch(_songs.Session, _busy);
         }
 
         // SP1: Play(또는 실행 파일 실행)마다 한 줄. 설치한 모듈은 켜 둔 채로 둔다(재컴파일 확인용).
@@ -102,6 +112,7 @@ namespace SCOdyssey.Testing.AudioHarness
             options.HitSoundFolder = HitSoundFolder;
             options.MusicFolder = MusicFolder;
             options.PlayInBackground = ReadPlayInBackground;
+            options.PauseSongOnFocusLoss = _pauseSongOnFocusLoss;
             options.EnforceRuntimeManagerGuard = true;
 
             _module = AudioModuleInstaller.Install(gameObject, options);
@@ -217,7 +228,7 @@ namespace SCOdyssey.Testing.AudioHarness
             GUILayout.BeginArea(new Rect(10, 10, Screen.width / scale - 460, Screen.height / scale - 20));
             _scroll = GUILayout.BeginScrollView(_scroll);
 
-            GUILayout.Label("<b>오디오 모듈 하네스 (S2a)</b>");
+            GUILayout.Label("<b>오디오 모듈 하네스 (S2b)</b>");
             GUILayout.Label("fps: " + HarnessReport.Num(1.0 / Time.smoothDeltaTime, "0") + ", 상태: " + _status);
             GUILayout.Label("결과 폴더: " + HarnessReport.Folder);
             GUILayout.Label("RM(Studio) 초기화: " + RuntimeManagerGuard.IsInitialized);
@@ -230,6 +241,8 @@ namespace SCOdyssey.Testing.AudioHarness
             DrawPlayback();
             GUILayout.Space(8);
             DrawSong();
+            GUILayout.Space(8);
+            DrawOutputApply();
             GUILayout.Space(8);
             DrawChecks();
 
@@ -268,6 +281,8 @@ namespace SCOdyssey.Testing.AudioHarness
 #endif
             GUILayout.Label("ASIO 지원(x64): " + AsioPolicy.IsSupported);
             GUILayout.EndHorizontal();
+            // SP10처럼 Windows 설정을 눌러야 하는 확인에서만 끈다(게임은 항상 켠다).
+            _pauseSongOnFocusLoss = GUILayout.Toggle(_pauseSongOnFocusLoss, "포커스 잃으면 곡 일시정지(SP10 확인 때만 끄고 다시 설치)");
             GUI.enabled = true;
         }
 
@@ -350,6 +365,50 @@ namespace SCOdyssey.Testing.AudioHarness
             GUI.enabled = true;
         }
 
+        private void DrawOutputApply()
+        {
+            if (!IsInstalled || _outputs == null) return;
+            GUI.enabled = !_busy;
+            GUILayout.Label("<b>출력 적용</b> (ApplyAsync: close→init, 폴백 포함)");
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("타입: " + _outputs.Kind, GUILayout.Width(200));
+            if (GUILayout.Button("WASAPI")) SelectApplyKind(AudioOutputKind.Wasapi);
+            if (GUILayout.Button("ASIO")) SelectApplyKind(AudioOutputKind.Asio);
+            GUILayout.Label("지원: " + _module.Output.IsSupported(_outputs.Kind));
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("장치: " + _outputs.DeviceLabel, GUILayout.Width(520));
+            if (GUILayout.Button("◀")) _outputs.ChangeDevice(-1);
+            if (GUILayout.Button("▶")) _outputs.ChangeDevice(1);
+            if (GUILayout.Button("목록 새로고침")) StartCoroutine(RunBusy(_outputs.RefreshDevices()));
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("버퍼: " + _outputs.BufferLength + " x " + _outputs.BufferCount, GUILayout.Width(200));
+            for (int i = 0; i < BufferLengths.Length; i++)
+            {
+                if (GUILayout.Button(BufferLengths[i].ToString())) _outputs.BufferLength = BufferLengths[i];
+            }
+            for (int i = 0; i < BufferCounts.Length; i++)
+            {
+                if (GUILayout.Button("x" + BufferCounts[i])) _outputs.BufferCount = BufferCounts[i];
+            }
+            if (GUILayout.Button("적용", GUILayout.Width(100))) StartCoroutine(RunBusy(_outputs.Apply()));
+            GUILayout.EndHorizontal();
+            GUILayout.Label("마지막 적용: " + _outputs.LastApply);
+            GUI.enabled = true;
+        }
+
+        private void SelectApplyKind(AudioOutputKind kind)
+        {
+            _outputs.Kind = kind;
+            if (kind == AudioOutputKind.Asio) _outputs.BufferCount = 2;
+            else _outputs.BufferCount = 4;
+            StartCoroutine(RunBusy(_outputs.RefreshDevices()));
+        }
+
         private void DrawChecks()
         {
             GUI.enabled = !_busy;
@@ -360,6 +419,9 @@ namespace SCOdyssey.Testing.AudioHarness
                 if (GUILayout.Button("SP4: 곡 일시정지·재개 21회 (루프백 녹음을 먼저 시작하세요, 약 80초)")) StartCoroutine(RunBusy(_songs.RunSp4()));
                 if (GUILayout.Button("재구성: Ready·Starting·Playing·Paused에서 강제 재구성")) StartCoroutine(RunBusy(_songs.RunReconfigure()));
                 if (GUILayout.Button("프리뷰: 한 프레임에 5번 요청")) StartCoroutine(RunBusy(_songs.RunPreviewSupersede()));
+                if (GUILayout.Button("SP6: 로비 BGM 재생 중 설정 적용 50회 + close→init 50회 (현재 출력 적용 설정)")) StartCoroutine(RunBusy(_outputs.RunSp6(_click)));
+                if (GUILayout.Button("SP9: 로비 BGM 재생 중 WASAPI·ASIO 장치 목록 3회")) StartCoroutine(RunBusy(_outputs.RunSp9()));
+                GUILayout.Label("SP10: USB 분리·재연결, 기본 장치·형식 변경 등을 하면 세대·상태가 바뀔 때마다 요약에 한 줄씩 남는다.");
             }
             GUI.enabled = true;
         }
