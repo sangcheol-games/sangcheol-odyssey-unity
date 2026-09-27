@@ -1,3 +1,5 @@
+// 옛 사운드 설정 화면은 v1 필드(audioDeviceIndex, audioBufferIndex)를 그대로 쓴다. S5b에서 새 화면으로 바꿀 때 이 줄을 지운다.
+#pragma warning disable CS0618
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Dto;
@@ -209,6 +211,7 @@ namespace SCOdyssey
             settings.Current.sfxVolume       = _pending.sfxVolume;
             // 버퍼 크기는 다음 시작 때 오디오 모듈 부팅(AudioSettingsMapper)에서 적용됨 (런타임 변경은 S5b의 새 설정 화면에서)
             settings.Current.audioBufferIndex = _pending.audioBufferIndex;
+            settings.Current.dspBufferLength = AudioSettingsMapper.BufferLengthForIndex(_pending.audioBufferIndex);
             settings.Apply();
             settings.Save();
         }

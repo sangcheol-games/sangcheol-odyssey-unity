@@ -38,6 +38,12 @@
 - S4a(게임에 설치): **완료**(2026-09-27). 로비 BGM, 프리뷰, 곡 한 판, 설정에서 장치 선택(S/PDIF ↔ BenQ, 재구성 35~46ms, 같은 장치는 Unchanged), 로비 alt-tab 음소거, 버퍼 설정 변경 뒤 재시작(256x4 → 64x4) 모두 정상. 콘솔 오류 0
   - 사운드 설정의 장치 목록에는 현재 출력 타입(WASAPI) 장치만 나온다. ASIO 선택은 출력 타입 설정(S5a)과 새 사운드 설정 화면(S5b)에서 붙는다
 - S4b(옛 경로 제거): **완료**(2026-09-27). 게임 전체 흐름·ChartEditorScene·릴리스 스모크 빌드 정상, RuntimeManager 가드 오류 0(7장)
+- S5a(설정 v2): **완료**(2026-09-27). Test Runner 102개 통과, v1 → v2 마이그레이션 1회(`.v1.bak` 백업), 버퍼·볼륨·노트 싱크·판정 싱크 유지, 버퍼 변경 뒤 재시작 반영, 로비 playInBackground ON/OFF alt-tab 정상(SP14 로비)
+  - 사운드 설정에서 ASIO는 아직 고를 수 없다. v2에 출력 타입 필드만 생겼고, 선택 UI는 S5b
+  - `SettingsData` v2 필드와 v1 필드 `[Obsolete]`, `App/SettingsMigration`(v1 판별·이동·검증, `.v1.bak`/`.v1.corrupt.bak`), `AudioSettingsMapper` v2(`ToBootRequest`가 v2 필드를 읽음, 버퍼 프리셋)
+  - `SettingsManager`: Load에서 마이그레이션·백업·저장, Apply에서 볼륨은 `IAudioMixer`, `Application.runInBackground = playInBackground`
+  - 옛 `SoundSettingUI`: 저장 때 `dspBufferLength`도 씀(파일 첫 줄의 CS0618 억제는 S5b에서 지움)
+  - `Assets/Scripts/Editor/Tests/SettingsMigrationTests`(21개, Assembly-CSharp-Editor). Assembly-CSharp와 테스트 임시 컴파일 오류·경고 0(JsonUtility를 써서 Test Runner에서만 실행)
   - `App/FMODAudioManager.cs`, `App/FMODAudioPreInit.cs` 삭제. `Plugins/FMOD/src/Platform.cs`를 임포트 원본(522d8378)으로 되돌림(버퍼 setter 두 개와 주석 제거)
   - Managers에서 RuntimeManager 가드를 켬. 주석·CLAUDE.md의 옛 참조 정리
   - 씬 확인: FMOD Studio 컴포넌트는 MainScene의 StudioListener 하나뿐이고(EventEmitter, BankLoader 등 없음), GameScene에 "Audio Source" GameObject와 AudioListener가 있다
@@ -90,9 +96,9 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (사용자) S5a 착수 전에 PlayerPrefs를 백업한다(레지스트리 `HKCU\Software\Unity\UnityEditor\DefaultCompany\sangcheol-odyssey` 내보내기. 플레이어는 `HKCU\Software\DefaultCompany\sangcheol-odyssey`).
-2. (Claude) S5a(설정 v2)를 진행한다: SettingsData v2 필드(`audioOutputType`, `deviceGuid`, `deviceName`, `systemRate`, `dspBufferLength`, `dspBufferCount`, `settingsVersion`), v1 필드 `[Obsolete]`, `App/SettingsMigration`(`.v1.bak`, 손상 값 검증, ResetToDefault), `SettingsManager.Apply`(볼륨은 IAudioMixer, `Application.runInBackground`), v2 값으로 부팅, `Assets/Scripts/Editor/Tests/` 마이그레이션·매퍼 테스트.
-3. (사용자) S5a 확인: 기존 v1 설정으로 부팅해 볼륨·버퍼·노트 싱크·판정 싱크 유지, 로비 playInBackground ON/OFF alt-tab(SP14 로비).
+1. (Claude) S5b(사운드 설정 화면)를 진행한다: SoundSettingUI에 출력 타입 선택(WASAPI/ASIO), GUID 장치 목록(비동기, 검색 중 표시), 타입별 버퍼 프리셋과 ms 표시(ASIO 안내), 실제 적용값 상태 줄, `_applying` 가드, 적용 결과 처리(요청 구성으로 성공했을 때만 v2 저장), v1 필드 삭제, MainUI 부팅 폴백 경고 1회, 빌드 검증기(`Assets/Scripts/Editor/AudioBuildValidator.cs`), 새 문자열은 `App/AudioUiText`.
+2. (사용자) S5b 에디터 작업: SoundSettingUI 프리팹에 `Btn_OutputTypePrev`, `Btn_OutputTypeNext`, `Text_OutputTypeValue`, `Text_AudioStatusValue` 추가(기존 장치 선택 줄과 같은 형태), Player Settings → Resolution and Presentation → Force Single Instance 켜기.
+3. (사용자) S5b 확인: 출력 타입·장치·버퍼를 각각 바꿔 Save → 로비 BGM·프리뷰·곡 한 판·타격음, 재시작 뒤 장치 복원, Save 빠르게 두 번, 재생 중 Pinned 장치 분리, SP13(버퍼 프리셋 확정).
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 - C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
 
@@ -517,6 +523,8 @@
 | 2026-09-27 (데스크탑) | S4a 게임 설치 | Editor | WASAPI S/PDIF·BenQ 256x4, 64x4 | PASS | 새 모듈 + 과도기 어댑터로 로비 BGM, 프리뷰, 곡 한 판(타격음, 일시정지·재개, 결과 화면) 정상. 설정 저장으로 장치 변경 Applied(init 34.8~46.3ms), 같은 장치는 Unchanged. 버퍼 인덱스 변경이 다음 부팅에 반영됨(`[Audio] 엔진 부팅 … 버퍼 64x4`). 콘솔 오류 0 |
 
 | 2026-09-27 (데스크탑) | S4b 옛 경로 제거 | Editor / Release 플레이어 | WASAPI BenQ 64x4 | PASS | 게임 전체 흐름, ChartEditorScene(음원 로드·재생·자동 채보) 정상, RuntimeManager 가드 오류 0. 릴리스 스모크: `D:\게임 테스트\test - 복사본`에서 곡 한 판 풀콤보까지 정상, Player.log 예외 0, `fmodstudio.dll`만 포함(`fmodstudioL.dll` 제외), StreamingAssets Music 5·HitSound 5(원본과 같음), Addressables `aa` 포함. 곡 종료 뒤 `ERR_INVALID_HANDLE` 1건(과도기 채널 isPlaying) → END 콜백으로 고친 뒤 에디터에서 0건 |
+
+| 2026-09-27 (데스크탑) | S5a 설정 v2 · SP14(로비) | Editor | WASAPI BenQ 64x4 | PASS | 기존 v1 설정으로 부팅해 v2로 1회 마이그레이션(`.v1.bak` 백업), 두 번째 Play부터 마이그레이션 없음. 버퍼 64x4·볼륨·노트 싱크·판정 싱크 유지, 버퍼 변경 뒤 재시작 반영. 로비 alt-tab: playInBackground OFF 음소거, ON 계속 재생. Test Runner EditMode 102개 통과 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.

@@ -1,4 +1,5 @@
 using System;
+using SCOdyssey.Audio;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Dto;
 using UnityEngine;
@@ -7,7 +8,8 @@ namespace SCOdyssey.App
 {
     public class SettingsManager : ISettingsManager
     {
-        private const string PREFS_KEY = "SCOdyssey.Settings.v1";
+        // 키는 v1 이름 그대로 쓴다(내용은 v2). 마이그레이션과 백업 규칙은 SettingsMigration.
+        private const string PREFS_KEY = SettingsMigration.PrefsKey;
 
         private SettingsData _current;
 
@@ -19,9 +21,22 @@ namespace SCOdyssey.App
         public void Load()
         {
             var json = PlayerPrefs.GetString(PREFS_KEY, "");
-            _current = string.IsNullOrEmpty(json)
-                ? new SettingsData()
-                : JsonAdapter.FromJson<SettingsData>(json);
+            _current = SettingsMigration.Parse(json, out SettingsLoadOutcome outcome);
+
+            if (outcome == SettingsLoadOutcome.Corrupt)
+            {
+                // 손상된 원문은 남겨 두고 기본값으로 덮어쓴다.
+                PlayerPrefs.SetString(SettingsMigration.CorruptBackupKey, json);
+                Debug.LogWarning("[Settings] 저장된 설정이 손상되어 기본값으로 시작합니다. 원문: " + SettingsMigration.CorruptBackupKey);
+                Save();
+            }
+            else if (outcome == SettingsLoadOutcome.MigratedFromV1)
+            {
+                // v1 원문은 처음 한 번만 백업한다(되돌릴 때 이 값을 원래 키에 넣는다).
+                if (!PlayerPrefs.HasKey(SettingsMigration.V1BackupKey)) PlayerPrefs.SetString(SettingsMigration.V1BackupKey, json);
+                Debug.Log("[Settings] 설정을 v1에서 v2로 옮겼습니다. 원문: " + SettingsMigration.V1BackupKey);
+                Save();
+            }
         }
 
         public void Save()
@@ -68,14 +83,16 @@ namespace SCOdyssey.App
                 Screen.fullScreenMode = mode;
             }
 
-            // Sound
-            if (ServiceLocator.TryGet<IAudioManager>(out var audio))
+            // Sound: 볼륨은 믹서에 바로 넣는다. 출력(타입, 장치, 버퍼)은 여기서 적용하지 않는다(부팅은 Installer, 설정 화면은 ApplyAsync).
+            if (ServiceLocator.TryGet<IAudioMixer>(out var mixer))
             {
-                audio.SetMasterVolume(_current.masterVolume);
-                audio.SetBgmVolume(_current.bgmVolume);
-                audio.SetHitSoundVolume(_current.hitSoundVolume);
-                audio.SetSfxVolume(_current.sfxVolume);
+                mixer.Master.Volume = _current.masterVolume;
+                mixer.Music.Volume = _current.bgmVolume;
+                mixer.HitSound.Volume = _current.hitSoundVolume;
+                mixer.Sfx.Volume = _current.sfxVolume;
             }
+            // 로비 음소거는 오디오 모듈이 포커스가 바뀔 때마다 playInBackground를 읽어 처리한다.
+            Application.runInBackground = _current.playInBackground;
 
             // Input
             UnityEngine.InputSystem.InputSystem.pollingFrequency = _current.inputPollingRateHz;
@@ -83,6 +100,7 @@ namespace SCOdyssey.App
             OnSettingsChanged?.Invoke(_current);
         }
 
+        // 출력 설정도 기본값(WASAPI, 기본 장치, 256x4)으로 돌아가며 다음 부팅부터 적용된다.
         public void ResetToDefault()
         {
             _current = new SettingsData();

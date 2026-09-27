@@ -23,9 +23,21 @@ namespace SCOdyssey.Domain.Dto
         public float bgmVolume = 1f;          // 배경음(음악)
         public float hitSoundVolume = 1f;     // 타격음
         public float sfxVolume = 1f;          // 효과음
+        [Obsolete("v1 필드. 출력 장치는 deviceGuid/deviceName을 쓴다. S5b에서 새 사운드 설정 화면으로 바꾸면 쓰는 곳이 없어진다.")]
         public int audioDeviceIndex = 0;     // FMOD 출력 장치 인덱스
+        [Obsolete("v1 필드. 버퍼는 dspBufferLength를 쓴다. S5b까지 옛 사운드 설정 화면이 표시용으로만 쓴다.")]
         public int audioBufferIndex = 2;      // 0=64 / 1=128 / 2=256 / 3=512 / 4=1024
         public bool playInBackground = false; // true=백그라운드 재생 / false=포커스 잃으면 음소거
+
+        // Sound v2 (출력). 부팅 때 AudioSettingsMapper가 읽고, 설정 화면은 적용이 요청 구성으로 성공했을 때만 저장한다.
+        public const int CurrentVersion = 2;
+        public int settingsVersion = CurrentVersion;
+        public string audioOutputType = "WASAPI";   // "WASAPI" | "ASIO"
+        public string deviceGuid = "";              // 비어 있으면 기본 장치 따라가기
+        public string deviceName = "";              // GUID로 못 찾을 때의 보조 키, 표시용
+        public int systemRate = 0;                  // 마지막으로 확인한 장치 레이트
+        public int dspBufferLength = 256;
+        public int dspBufferCount = 4;              // UI에 노출하지 않음. ASIO는 2
 
         // Input
         public int inputPollingRateHz = 2000;  // 입력 폴링레이트 (Hz): 1000 / 2000 / 4000 / 8000

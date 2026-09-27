@@ -426,12 +426,14 @@ public int    dspBufferCount  = 4;          // UI에 노출하지 않음. ASIO�
 ```
 
 **v1 → v2 마이그레이션**(`App/SettingsMigration`, 키 `SCOdyssey.Settings.v1` 유지)
+- v1 판별: JSON에 `settingsVersion`이 없으면 v1이다(JsonUtility는 없는 필드를 기본값으로 채우므로 필드 값으로는 알 수 없다).
 - 파싱에 실패하면 원문을 `…v1.corrupt.bak`에 남기고 기본값으로 시작한다.
 - v1이면 원문을 `…v1.bak`에 한 번 저장한다.
 - 출력은 WASAPI, 장치는 Follow-Default로 둔다(v1 인덱스는 믿을 수 없음).
 - 버퍼 길이는 `{64, 128, 256, 512, 1024}[audioBufferIndex]`로 구한다. 범위 밖이면 256이다. 64·128을 256으로 올릴지는 SP13 결과로 정한다.
-- 손상된 값을 검증한다: GUID 파싱 실패는 빈 값, 모르는 타입 문자열은 WASAPI, 프리셋에 없는 길이는 가까운 프리셋으로 바꾼다.
-- `ResetToDefault`는 출력 필드를 기본값으로 되돌리고, 다음 부팅부터 적용한다.
+- 손상된 값을 검증한다(매 부팅): GUID 파싱 실패는 빈 값(장치 이름도 비움), 모르는 타입 문자열은 WASAPI, 프리셋(`64, 128, 256, 480, 512, 1024`)에 없는 길이는 가까운 프리셋(같은 거리면 작은 쪽), 개수가 2~8 밖이면 타입 기본값(WASAPI 4, ASIO 2), 볼륨은 0~1로 자른다.
+- v1 필드(`audioDeviceIndex`, `audioBufferIndex`)는 `[Obsolete]`로 남긴다. 옛 사운드 설정 화면(S5b까지)이 쓰므로 `audioBufferIndex`는 검증 때 v2 길이에 맞추고, 그 화면은 저장 때 `dspBufferLength`도 함께 쓴다. 그 화면의 장치 선택(과도기 어댑터)은 v2에 저장하지 않는다(옛 코드처럼 재시작하면 기본 장치).
+- `ResetToDefault`는 새 SettingsData로 바꾸므로 출력 필드도 기본값(WASAPI, 기본 장치, 256×4)이 되고, 다음 부팅부터 적용한다.
 
 **적용과 저장**
 - `SettingsManager.Apply`: 볼륨을 `IAudioMixer`에 넣고, `Application.runInBackground = playInBackground`로 둔다. 출력 설정은 적용하지 않는다(부팅은 Installer, 설정 화면은 ApplyAsync가 맡는다).
