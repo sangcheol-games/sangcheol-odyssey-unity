@@ -70,6 +70,7 @@ namespace SCOdyssey.Audio.Output
                 if (blocked != null) return Result(AudioApplyOutcome.Rejected, blocked);
 
                 BootAttempt requested = BootPlan.FromRequest(request, "요청 구성");
+                _engine.SetRequested(request);
                 bool running = _engine.Status == EngineStatus.Running || _engine.Status == EngineStatus.Degraded;
                 if (running && _engine.CurrentAttempt.SameConfig(requested)) return Result(AudioApplyOutcome.Unchanged, "바뀐 것 없음");
 

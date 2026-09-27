@@ -20,6 +20,13 @@ namespace SCOdyssey.App
     //   검증: 모르는 출력 타입은 WASAPI, 파싱할 수 없는 GUID는 빈 값, 프리셋에 없는 길이는 가까운 프리셋, 개수는 2~8 밖이면 타입 기본값.
     public static class SettingsMigration
     {
+        // v1에만 있던 출력 필드(SettingsData에서는 지웠다). 마이그레이션 때 원문에서 따로 읽는다.
+        [Serializable]
+        private sealed class V1Fields
+        {
+            public int audioBufferIndex = 2;
+        }
+
         public const string PrefsKey = "SCOdyssey.Settings.v1";
         public const string V1BackupKey = PrefsKey + ".bak";
         public const string CorruptBackupKey = PrefsKey + ".corrupt.bak";
@@ -53,7 +60,7 @@ namespace SCOdyssey.App
 
             if (json.IndexOf(VersionField, StringComparison.Ordinal) < 0)
             {
-                MigrateFromV1(data);
+                MigrateFromV1(data, JsonAdapter.FromJson<V1Fields>(json).audioBufferIndex);
                 outcome = SettingsLoadOutcome.MigratedFromV1;
             }
             else
@@ -64,15 +71,14 @@ namespace SCOdyssey.App
             return data;
         }
 
-#pragma warning disable CS0618 // v1 필드는 마이그레이션과 옛 화면 호환에만 쓴다
-        public static void MigrateFromV1(SettingsData data)
+        public static void MigrateFromV1(SettingsData data, int v1BufferIndex)
         {
             data.settingsVersion = SettingsData.CurrentVersion;
             data.audioOutputType = AudioSettingsMapper.Wasapi;
             data.deviceGuid = "";
             data.deviceName = "";
             data.systemRate = 0;
-            data.dspBufferLength = AudioSettingsMapper.BufferLengthForIndex(data.audioBufferIndex);
+            data.dspBufferLength = AudioSettingsMapper.BufferLengthForIndex(v1BufferIndex);
             data.dspBufferCount = AudioSettingsMapper.WasapiBufferCount;
         }
 
@@ -101,10 +107,6 @@ namespace SCOdyssey.App
             data.bgmVolume = Mathf.Clamp01(data.bgmVolume);
             data.hitSoundVolume = Mathf.Clamp01(data.hitSoundVolume);
             data.sfxVolume = Mathf.Clamp01(data.sfxVolume);
-
-            // 옛 사운드 설정 화면(S5b까지)이 인덱스로 버퍼를 보여 주므로 v2 길이에 맞춘다.
-            data.audioBufferIndex = AudioSettingsMapper.NearestIndexForLength(data.dspBufferLength);
         }
-#pragma warning restore CS0618
     }
 }

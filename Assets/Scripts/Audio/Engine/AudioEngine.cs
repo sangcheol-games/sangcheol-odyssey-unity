@@ -18,6 +18,8 @@ namespace SCOdyssey.Audio.Engine
         private int _generation;
         private AudioOutputInfo _currentOutput;
         private BootAttempt _currentAttempt;
+        private BootAttempt _requestedAttempt;
+        private bool _hasRequested;
 
         public event Action<EngineStatus> StatusChanged;
 
@@ -34,6 +36,18 @@ namespace SCOdyssey.Audio.Engine
         public AudioOutputInfo CurrentOutput
         {
             get { return _currentOutput; }
+        }
+
+        public bool IsRequestedConfig
+        {
+            get { return _hasRequested && _status == EngineStatus.Running && _currentAttempt.SameConfig(_requestedAttempt); }
+        }
+
+        // 사용자가 요청한 구성(부팅 설정, 설정 화면 적용). 폴백으로 동작하는지 판단하는 기준이다.
+        public void SetRequested(AudioOutputRequest request)
+        {
+            _requestedAttempt = BootPlan.FromRequest(request, "요청 구성");
+            _hasRequested = true;
         }
 
         public bool IsUsable
@@ -62,6 +76,7 @@ namespace SCOdyssey.Audio.Engine
             if (_status != EngineStatus.Uninitialized) throw new InvalidOperationException("이미 부팅한 엔진입니다: " + _status);
 
             SetStatus(EngineStatus.Starting);
+            SetRequested(requested);
             FmodDebugBridge.Install();
 
             List<BootAttempt> attempts = BootPlan.Build(requested, safeMode, asioAllowed);

@@ -92,6 +92,7 @@ namespace SCOdyssey.Audio
         EngineStatus Status { get; }
         int Generation { get; }
         AudioOutputInfo CurrentOutput { get; }   // 타입, 장치 GUID·이름, 레이트, 버퍼 길이·개수
+        bool IsRequestedConfig { get; }          // 마지막으로 요청한 구성(부팅 설정, 설정 화면 적용)으로 동작 중인지. false면 폴백
         event Action<EngineStatus> StatusChanged;
     }
 
@@ -265,7 +266,7 @@ Running → (설정 적용·장치 손실) → 재구성 → Running | Degraded
 |---|---|---|
 | Follow-Default | ERROR, DEVICELOST, DEVICEREINITIALIZE | FMOD 자동 전환에 맡긴다. DEVICEREINITIALIZE가 오면 곡 시계를 리셋하고, 게임 중이면 일시정지한다. |
 | Pinned | 위 마스크 + DEVICELISTCHANGED | 목록이 바뀌면 GUID가 있는지 확인한다. 없어졌으면 1초 디바운스 뒤 기본 장치로 close→init한다. 장치가 돌아와도 자동으로 복귀하지 않는다(다음 부팅이나 재적용 때 복원). |
-| 공통 | – | DEVICELOST는 재구성 경로(적용 폴백)로 처리한다. 게임 중이면 즉시 일시정지하고, 재개는 사용자가 Pause UI에서 한다. NOSOUND로 떨어지면 상태 줄과 로비 경고 1회로 알린다. |
+| 공통 | – | DEVICELOST는 재구성 경로(적용 폴백)로 처리한다. 게임 중이면 즉시 일시정지하고, 재개는 사용자가 Pause UI에서 한다. NOSOUND로 떨어지면 로비에 처음 들어갈 때 경고 로그를 1회 남긴다. |
 
 - 장치 콜백은 `system.update()` 안(메인 스레드)에서 오므로 bool 플래그로 받는다. 플래그는 지역 변수로 복사하고 지운 뒤 처리한다. 세대가 바뀌면 플래그를 초기화한다.
 
@@ -431,14 +432,22 @@ public int    dspBufferCount  = 4;          // UI에 노출하지 않음. ASIO�
 - v1이면 원문을 `…v1.bak`에 한 번 저장한다.
 - 출력은 WASAPI, 장치는 Follow-Default로 둔다(v1 인덱스는 믿을 수 없음).
 - 버퍼 길이는 `{64, 128, 256, 512, 1024}[audioBufferIndex]`로 구한다. 범위 밖이면 256이다. 64·128을 256으로 올릴지는 SP13 결과로 정한다.
-- 손상된 값을 검증한다(매 부팅): GUID 파싱 실패는 빈 값(장치 이름도 비움), 모르는 타입 문자열은 WASAPI, 프리셋(`64, 128, 256, 480, 512, 1024`)에 없는 길이는 가까운 프리셋(같은 거리면 작은 쪽), 개수가 2~8 밖이면 타입 기본값(WASAPI 4, ASIO 2), 볼륨은 0~1로 자른다.
-- v1 필드(`audioDeviceIndex`, `audioBufferIndex`)는 `[Obsolete]`로 남긴다. 옛 사운드 설정 화면(S5b까지)이 쓰므로 `audioBufferIndex`는 검증 때 v2 길이에 맞추고, 그 화면은 저장 때 `dspBufferLength`도 함께 쓴다. 그 화면의 장치 선택(과도기 어댑터)은 v2에 저장하지 않는다(옛 코드처럼 재시작하면 기본 장치).
+- 손상된 값을 검증한다(매 부팅): GUID 파싱 실패는 빈 값(장치 이름도 비움), 모르는 타입 문자열은 WASAPI, 프리셋(`64, 128, 256, 512, 1024`, WASAPI·ASIO 공통, 480 등 추가는 SP13)에 없는 길이는 가까운 프리셋(같은 거리면 작은 쪽), 개수가 2~8 밖이면 타입 기본값(WASAPI 4, ASIO 2), 볼륨은 0~1로 자른다.
+- v1 필드(`audioDeviceIndex`, `audioBufferIndex`)는 S5b에서 지웠다. 마이그레이션은 원문 JSON에서 `audioBufferIndex`만 따로 읽는다.
 - `ResetToDefault`는 새 SettingsData로 바꾸므로 출력 필드도 기본값(WASAPI, 기본 장치, 256×4)이 되고, 다음 부팅부터 적용한다.
 
 **적용과 저장**
 - `SettingsManager.Apply`: 볼륨을 `IAudioMixer`에 넣고, `Application.runInBackground = playInBackground`로 둔다. 출력 설정은 적용하지 않는다(부팅은 Installer, 설정 화면은 ApplyAsync가 맡는다).
 - 로비 음소거는 FocusPolicy가 `Func<bool>`(playInBackground)을 포커스 변경 때마다 읽어 처리한다.
-- 출력 설정은 ApplyAsync가 요청 구성으로 성공했을 때만 저장한다.
+- 출력 설정은 ApplyAsync가 요청 구성으로 성공했을 때(Applied, Unchanged)만 저장한다. 폴백, Busy, Rejected, Failed는 저장하지 않고 경고 로그를 남긴다.
+
+**사운드 설정 화면**(`UI/Settings/SoundSettingUI`)
+- 출력 타입을 따로 고르지 않는다. 장치 목록 하나(기본 장치 → WASAPI 장치 → ASIO 드라이버, ASIO는 지원할 때만)에서 고르면 `audioOutputType`, `deviceGuid`, `deviceName`이 함께 정해진다. 이름은 구분 표시 없이 그대로 보여 준다. 목록은 비동기로 읽고 "검색 중"을 표시하며, 목록에 없는 저장 장치는 "(연결 안 됨)"으로 보인다.
+- 버퍼는 프리셋 하나(`64, 128, 256, 512, 1024`)의 샘플 수만 보여 준다(블록 ms는 실제 출력 지연으로 오해하기 쉬워 표시하지 않는다). 장치를 골라 타입이 바뀌어도 길이는 그대로 두고, UI에 없는 개수만 타입 기본값(WASAPI 4, ASIO 2)으로 둔다. ASIO는 실제 버퍼를 드라이버 제어판 값으로 정한다.
+- Save: 볼륨·백그라운드 재생은 바로 저장하고, 출력은 ApplyAsync 결과를 본 뒤 저장한다. 적용 중에는 Save를 막는다(`_applying`).
+- 부팅 폴백은 MainUI가 처음 표시될 때 한 번 경고 로그로 남긴다(공용 알림 UI가 생기면 화면에 띄운다). 새 문자열은 `App/AudioUiText`에 모은다.
+- 빌드 검증기(`Editor/AudioBuildValidator`): MusicSO 곡·프리뷰, MainUI 로비 BGM, ChartManager 타격음 파일이 StreamingAssets에 있는지 확인하고 없으면 빌드를 멈춘다. Force Single Instance가 꺼져 있으면 경고한다.
+- 에디터에서 ASIO를 시험하려면 메뉴 SCOdyssey → Audio → 에디터에서 ASIO 허용을 켠다(`AsioPolicy`, EditorPrefs).
 
 ## 10. 스레드 규칙
 

@@ -40,6 +40,13 @@
 - S4b(옛 경로 제거): **완료**(2026-09-27). 게임 전체 흐름·ChartEditorScene·릴리스 스모크 빌드 정상, RuntimeManager 가드 오류 0(7장)
 - S5a(설정 v2): **완료**(2026-09-27). Test Runner 102개 통과, v1 → v2 마이그레이션 1회(`.v1.bak` 백업), 버퍼·볼륨·노트 싱크·판정 싱크 유지, 버퍼 변경 뒤 재시작 반영, 로비 playInBackground ON/OFF alt-tab 정상(SP14 로비)
   - 사운드 설정에서 ASIO는 아직 고를 수 없다. v2에 출력 타입 필드만 생겼고, 선택 UI는 S5b
+- S5b(사운드 설정 화면): **완료**(2026-09-27, SP13 제외). 통합 장치 목록(WASAPI·ASIO), 장치·버퍼 적용과 저장, 재시작 뒤 복원, Save 두 번, Pinned 장치 분리 정상. Force Single Instance 켬
+  - 사용자 요청으로 바꾼 것: 출력 타입 선택을 없애고 장치 목록 하나로 합침(이름만 표시), 상태 줄 없음(적용 결과는 로그), 버퍼 목록에서 480 제거(원래 목록 유지, 장치 타입이 바뀌어도 길이 유지), 버퍼 ms 표시 없음
+  - `SoundSettingUI` 새로 씀(WASAPI·ASIO 통합 장치 목록 비동기(출력 타입을 따로 고르지 않음, 이름만 표시), 버퍼 프리셋(숫자만, ms 표시 없음), `_applying` 가드, 요청 구성 성공 때만 v2 저장, 적용 결과는 로그). 프리팹 변경 없음(상태 줄은 두지 않기로 함)
+  - `IAudioEngine.IsRequestedConfig`(부팅·적용 요청과 현재 구성 비교), `App/AudioUiText`, MainUI 부팅 폴백 경고 1회(로그. 공용 알림 UI 없음)
+  - v1 필드 삭제(마이그레이션은 원문에서 `audioBufferIndex`만 읽음). 버퍼 프리셋은 원래 목록 `64, 128, 256, 512, 1024` 하나(S5a에서 초안대로 넣었던 480은 뺐다. 추가 여부는 SP13). 장치 타입이 바뀌어도 길이는 유지하고 개수만 WASAPI 4·ASIO 2
+  - `Editor/AudioBuildValidator`(음원 파일 확인, 없으면 빌드 중단), `Editor/AudioEditorMenu`(에디터에서 ASIO 허용 토글)
+  - 임시 컴파일: 모듈·하네스 세 조건, Assembly-CSharp, 에디터 코드 오류 0. 테스트 104개(설정 23개)
   - `SettingsData` v2 필드와 v1 필드 `[Obsolete]`, `App/SettingsMigration`(v1 판별·이동·검증, `.v1.bak`/`.v1.corrupt.bak`), `AudioSettingsMapper` v2(`ToBootRequest`가 v2 필드를 읽음, 버퍼 프리셋)
   - `SettingsManager`: Load에서 마이그레이션·백업·저장, Apply에서 볼륨은 `IAudioMixer`, `Application.runInBackground = playInBackground`
   - 옛 `SoundSettingUI`: 저장 때 `dspBufferLength`도 씀(파일 첫 줄의 CS0618 억제는 S5b에서 지움)
@@ -96,11 +103,11 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S5b(사운드 설정 화면)를 진행한다: SoundSettingUI에 출력 타입 선택(WASAPI/ASIO), GUID 장치 목록(비동기, 검색 중 표시), 타입별 버퍼 프리셋과 ms 표시(ASIO 안내), 실제 적용값 상태 줄, `_applying` 가드, 적용 결과 처리(요청 구성으로 성공했을 때만 v2 저장), v1 필드 삭제, MainUI 부팅 폴백 경고 1회, 빌드 검증기(`Assets/Scripts/Editor/AudioBuildValidator.cs`), 새 문자열은 `App/AudioUiText`.
-2. (사용자) S5b 에디터 작업: SoundSettingUI 프리팹에 `Btn_OutputTypePrev`, `Btn_OutputTypeNext`, `Text_OutputTypeValue`, `Text_AudioStatusValue` 추가(기존 장치 선택 줄과 같은 형태), Player Settings → Resolution and Presentation → Force Single Instance 켜기.
-3. (사용자) S5b 확인: 출력 타입·장치·버퍼를 각각 바꿔 Save → 로비 BGM·프리뷰·곡 한 판·타격음, 재시작 뒤 장치 복원, Save 빠르게 두 번, 재생 중 Pinned 장치 분리, SP13(버퍼 프리셋 확정).
+1. (Claude) SP13(버퍼 프리셋 확정) 측정 방법을 안내하고 결과로 프리셋(480 추가 여부, 64·128 유지 여부)과 기본값을 정한다. S5b 통과 기준에 남은 항목이다.
+2. (Claude) 그다음 S6(로비와 곡 선택): MainUI·AdventureUI의 BGM·프리뷰를 `IMusicPlayers`(Lobby, Preview)로 옮긴다.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 - C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
+- 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고를 화면에 띄운다.
 
 ---
 
@@ -277,16 +284,15 @@
 
 ### S5b. 사운드 설정 화면
 - **내용**
-  - SoundSettingUI: 출력 타입 선택, GUID 장치 목록(비동기, "검색 중" 표시), 버퍼(WASAPI/ASIO별 프리셋과 ms 표시, ASIO 안내), 실제 적용값 상태 줄, `_applying` 가드
+  - SoundSettingUI: WASAPI·ASIO 통합 GUID 장치 목록(출력 타입 선택 없음, 비동기, "검색 중" 표시), 버퍼(공통 프리셋, 숫자만), `_applying` 가드
   - 적용 결과 처리, v1 필드 삭제
   - MainUI에서 부팅 폴백 경고 1회
   - 빌드 검증기(`Assets/Scripts/Editor/AudioBuildValidator.cs`)
   - 새 문자열은 `App/AudioUiText`에 모은다.
 - **에디터 작업**
-  1. SoundSettingUI 프리팹에 `Btn_OutputTypePrev`, `Btn_OutputTypeNext`, `Text_OutputTypeValue`, `Text_AudioStatusValue`를 추가한다(`BaseUI.Bind`의 enum 이름과 같게, 기존 장치 선택 줄과 같은 형태로).
-  2. Player Settings → Resolution and Presentation → Force Single Instance를 켠다.
+  1. Player Settings → Resolution and Presentation → Force Single Instance를 켠다.
 - **확인**
-  - 출력 타입, 장치, 버퍼를 각각 바꾸고 Save를 누른다. 설정을 닫은 뒤 로비 BGM, 프리뷰, 곡 한 판, 타격음이 정상인지 본다.
+  - 장치(WASAPI·ASIO), 버퍼를 각각 바꾸고 Save를 누른다. 설정을 닫은 뒤 로비 BGM, 프리뷰, 곡 한 판, 타격음이 정상인지 본다.
   - 재시작 후 장치가 복원되는지 본다.
   - Save를 빠르게 두 번 누른다.
   - 로비·프리뷰 재생 중 Pinned 장치를 분리한다.
@@ -525,6 +531,8 @@
 | 2026-09-27 (데스크탑) | S4b 옛 경로 제거 | Editor / Release 플레이어 | WASAPI BenQ 64x4 | PASS | 게임 전체 흐름, ChartEditorScene(음원 로드·재생·자동 채보) 정상, RuntimeManager 가드 오류 0. 릴리스 스모크: `D:\게임 테스트\test - 복사본`에서 곡 한 판 풀콤보까지 정상, Player.log 예외 0, `fmodstudio.dll`만 포함(`fmodstudioL.dll` 제외), StreamingAssets Music 5·HitSound 5(원본과 같음), Addressables `aa` 포함. 곡 종료 뒤 `ERR_INVALID_HANDLE` 1건(과도기 채널 isPlaying) → END 콜백으로 고친 뒤 에디터에서 0건 |
 
 | 2026-09-27 (데스크탑) | S5a 설정 v2 · SP14(로비) | Editor | WASAPI BenQ 64x4 | PASS | 기존 v1 설정으로 부팅해 v2로 1회 마이그레이션(`.v1.bak` 백업), 두 번째 Play부터 마이그레이션 없음. 버퍼 64x4·볼륨·노트 싱크·판정 싱크 유지, 버퍼 변경 뒤 재시작 반영. 로비 alt-tab: playInBackground OFF 음소거, ON 계속 재생. Test Runner EditMode 102개 통과 |
+
+| 2026-09-27 (데스크탑) | S5b 사운드 설정 화면 | Editor | WASAPI BenQ·S/PDIF, ASIO4ALL | PASS(SP13 제외) | 통합 장치 목록(기본 장치 → WASAPI → ASIO)에서 장치·버퍼를 바꿔 Save → 로비 BGM·프리뷰·곡 한 판·타격음 정상, 재시작 뒤 장치·버퍼 복원, Save 빠르게 두 번, 재생 중 Pinned 장치 분리 → 기본 장치 전환 정상. Test Runner 104개 통과 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.

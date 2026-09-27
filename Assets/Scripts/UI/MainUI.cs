@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using SCOdyssey.App;
+using SCOdyssey.Audio;
 using SCOdyssey.UI;
 using UnityEngine.EventSystems;
 using SCOdyssey.Core;
@@ -13,6 +14,15 @@ namespace SCOdyssey
         [SerializeField] private string bgmFileName = "Lobby BGM.wav";
 
         private Coroutine bgmRoutine;
+
+        // 부팅 때 저장한 출력 구성으로 열지 못했으면 로비에 처음 들어올 때 한 번만 알린다.
+        private static bool s_audioNoticeShown;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetAudioNotice()
+        {
+            s_audioNoticeShown = false;
+        }
 
         private enum Buttons
         {
@@ -39,6 +49,21 @@ namespace SCOdyssey
 
             // MainUI가 표시될 때마다 BGM을 처음부터 재생
             bgmRoutine = StartCoroutine(PlayBgm());
+            NotifyAudioFallbackOnce();
+        }
+
+        // TODO: 공용 알림 UI가 생기면 화면에 띄운다. 지금은 로그로 남기고, 사운드 설정 화면 상태 줄이 계속 보여 준다.
+        private static void NotifyAudioFallbackOnce()
+        {
+            if (s_audioNoticeShown) return;
+            s_audioNoticeShown = true;
+
+            if (!ServiceLocator.TryGet<IAudioEngine>(out var engine) || engine.Status == EngineStatus.Failed || engine.Status == EngineStatus.Degraded)
+            {
+                Debug.LogWarning(AudioUiText.BootUnavailableNotice);
+                return;
+            }
+            if (!engine.IsRequestedConfig) Debug.LogWarning(AudioUiText.BootFallbackNotice);
         }
 
         protected override void OnDisable()

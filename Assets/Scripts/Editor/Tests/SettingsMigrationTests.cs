@@ -1,4 +1,3 @@
-#pragma warning disable CS0618 // v1 필드 마이그레이션 확인
 using System;
 using NUnit.Framework;
 using SCOdyssey.App;
@@ -67,7 +66,7 @@ namespace SCOdyssey.App.Tests
             Assert.AreEqual(0.25f, data.bgmVolume, 1e-6f);
             Assert.IsTrue(data.playInBackground);
             Assert.AreEqual(120, data.targetFrameRate);
-            Assert.AreEqual(1, data.audioBufferIndex);
+            Assert.AreEqual(128, data.dspBufferLength);
         }
 
         [Test]
@@ -78,7 +77,7 @@ namespace SCOdyssey.App.Tests
             saved.deviceGuid = SomeGuid;
             saved.deviceName = "Speakers";
             saved.systemRate = 44100;
-            saved.dspBufferLength = 480;
+            saved.dspBufferLength = 128;
             saved.dspBufferCount = 2;
 
             SettingsData data = SettingsMigration.Parse(JsonAdapter.ToJson(saved), out SettingsLoadOutcome outcome);
@@ -88,7 +87,7 @@ namespace SCOdyssey.App.Tests
             Assert.AreEqual(SomeGuid, data.deviceGuid);
             Assert.AreEqual("Speakers", data.deviceName);
             Assert.AreEqual(44100, data.systemRate);
-            Assert.AreEqual(480, data.dspBufferLength);
+            Assert.AreEqual(128, data.dspBufferLength);
             Assert.AreEqual(2, data.dspBufferCount);
         }
 
@@ -115,24 +114,27 @@ namespace SCOdyssey.App.Tests
             Assert.AreEqual(4, data.dspBufferCount);
             Assert.AreEqual(1f, data.masterVolume);
             Assert.AreEqual(0f, data.sfxVolume);
-            Assert.AreEqual(2, data.audioBufferIndex);
         }
 
         [Test]
-        public void Validate_AsioCountFallsBackToTwo()
+        public void Validate_AsioKeepsLengthAndUsesTwoBuffers()
         {
             var data = new SettingsData();
             data.audioOutputType = "asio";
             data.dspBufferCount = 99;
+            data.dspBufferLength = 128;
 
             SettingsMigration.Validate(data);
 
             Assert.AreEqual("ASIO", data.audioOutputType);
             Assert.AreEqual(2, data.dspBufferCount);
+            Assert.AreEqual(128, data.dspBufferLength);
         }
 
         [TestCase(1000, 1024)]
-        [TestCase(496, 480)]
+        [TestCase(480, 512)]
+        [TestCase(384, 256)]
+        [TestCase(100, 128)]
         [TestCase(1, 64)]
         [TestCase(5000, 1024)]
         [TestCase(512, 512)]
