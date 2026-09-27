@@ -292,8 +292,9 @@ System Master      ← 곡 시계 기준 클록. pause·mute·pitch·volume을 �
 ```
 Z = leadIn + audioOffsetMs / 1000.0          // 노트 싱크를 적용하는 유일한 지점(실수 나눗셈)
 pos = τ0 - Z                                  // τ0: 커밋할 곡 시각(시작 0, 재개 T_p)
-채널 준비: playSound(sound, SCO.Song, paused: true), 위치 = max(0, round(pos·Fs)) 샘플
-준비 완료 확인: 열기·seek·버퍼링 중이 아니고 굶주리지 않음
+채널 준비: playSound(sound, SCO.Song, paused: true) → 준비 완료 대기(NONBLOCKING 스트림은 playSound 뒤 비동기로 되감는다)
+          → pos > 0이면 setPosition(round(pos·Fs), PCM). ERR_NOTREADY면 다음 프레임에 다시 시도하고, 그 밖의 실패는 로드 실패로 처리
+준비 완료 확인: 상태가 READY 또는 PLAYING(열기·seek·버퍼링 중 아님)이고 굶주리지 않음
 p    = 곡 그룹 DSP 클록(부모 클록)
 lead = max(3·L, 0.015·R)
 Cf   = p + lead                               // 곡 시계가 움직이기 시작하는 DSP 시각
@@ -306,11 +307,13 @@ setDelay(S), setPaused(false)
 
 **곡 시계 계산(최소안)**
 - 매 프레임 (QPC 앞, DSP 클록, QPC 뒤)을 읽는다. 두 QPC 차이가 50µs를 넘으면 버린다.
-- DSP↔QPC 관계는 최근 구간에서 "DSP가 가장 늦게 읽힌 값"(하한 포락선)으로 오프셋을 잡는다.
-- **클램프**: `c_read ≤ DspAt(q) ≤ c_read + S_max`(c_read는 이번 프레임의 원시 DSP 값). 믹서가 멈추면 곡 시계도 곧바로 멈춘다. S_max 초기값은 `L·(N+1)` 샘플이고, 세대마다 관측한 최대 계단 폭으로 갱신한다.
+- DSP↔QPC 관계는 최근 1초 창에서 `c - q·R`의 최댓값(하한 포락선)으로 오프셋을 잡는다. 믹서는 블록마다가 아니라 OS 믹스 주기(WASAPI 약 10ms)마다 여러 블록을 몰아 믹스하므로 원시 DSP는 그 주기만큼 계단진다.
+- **클램프**: `c_read ≤ DspAt(q) ≤ c_read + S_max`(c_read는 이번 프레임의 원시 DSP 값). 믹서가 멈추면 곡 시계도 곧바로 멈춘다. `S_max = max(L·(N+1) 샘플, 32ms)`로 고정한다. 프레임 사이 계단으로 갱신하지 않는다(메인 스레드 멈춤이 섞여 부풀려진다).
+- **단조 보장**: 세그먼트 안에서 DspAt이 직전 값보다 작으면 직전 값을 쓴다(포락선 창이 밀릴 때 최대 약 2ms 역행이 관측됨).
 - 곡 시각: 세그먼트 시작 전이면 τ0, 시작 뒤면 `τ0 + (DspAt(q) - Cf) / R`
 - 불연속(시작, 일시정지, 재개, Generation 변경, DEVICEREINITIALIZE)에서 리셋한다.
-- 스파이크 SP3 결과 드리프트나 떨림이 문제가 되면 그때 드리프트 항과 평활 렌더 시계를 추가한다. 평활 시계를 넣으면 세션 불연속에서 스냅한다. 그 전까지 Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다.
+- 드리프트 항과 평활 렌더 시계는 두지 않는다(SP3). 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms이고, 이 모델만으로 프레임 사이 오차 p99가 1ms 이하였다. Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다.
+- `Channel.getPosition`은 믹스 블록 단위로만 맞으므로(±2블록) 싱크 판단에 쓰지 않는다.
 - 콜백 없는 정지 감지: Starting이나 Playing 중에 포커스가 있는데 원시 DSP 값이 0.5초 넘게 그대로면, 세션을 Recovering으로 두고 일시정지 경로를 탄다(재초기화는 하지 않음).
 
 **일시정지와 재개**
@@ -428,6 +431,6 @@ public int    dspBufferCount  = 4;          // UI에 노출하지 않음. ASIO�
 
 ## 12. 알려진 한계와 후속
 
-- 키보드 입력 시각은 Unity가 프레임마다 처리하는 시점에 찍힌다(60fps에서 0~16.7ms). Raw Input 소스는 `IInputTimestampSource`를 구현해 후속 작업으로 붙인다.
-- 새 곡 시계는 기존 계단식 읽기보다 평균 "계단 폭/2"만큼 앞선다. 같은 노트 싱크 값의 체감이 256×4에서 약 +2.7ms 달라진다. 저장값은 바꾸지 않는다.
+- 키보드 입력은 Unity가 프레임마다 처리한다(60fps에서 처리까지 0~16.7ms). SP11(데스크탑 에디터)에서 `ctx.time`은 처리 시점보다 앞선 1ms 미만 해상도의 시각이었지만, 실제 누른 시각과의 차이는 재지 않았다. Raw Input 소스는 `IInputTimestampSource`를 구현해 후속 작업으로 붙인다.
+- 새 곡 시계는 기존 계단식 읽기보다 평균 "OS 믹스 주기/2"만큼 앞선다. 같은 노트 싱크 값의 체감이 달라진다(SP3 데스크탑 WASAPI 256×4에서 약 +5.9ms, ASIO4ALL 256×2에서 약 +9ms). 저장값은 바꾸지 않는다.
 - 캘리브레이션 씬, ASIO 출력 채널 선택, 곡 Sound 캐시, 판정 방식 개선(구간 교차 홀드, 다중 miss)은 후속 작업이다.

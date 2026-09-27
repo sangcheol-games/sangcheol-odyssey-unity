@@ -20,11 +20,16 @@
 
 **현재 단계**
 - S-1(설계 문서 이관): 완료
-- S-0.5(버리는 최소 스파이크): 진행 중
-  - 하네스 코드: `Assets/Scripts/Testing/AudioSpike/`(파일 전체가 `#if SCO_AUDIO_HARNESS`로 감싸져 있음)
+- S-0.5(버리는 최소 스파이크): **완료**(2026-09-27). 게이트 SP1, SP2, SP3, SP4, SP11, SP15 모두 PASS
+  - 하네스 코드: `Assets/Scripts/Testing/AudioSpike/`(파일 전체가 `#if SCO_AUDIO_HARNESS`로 감싸져 있음). S1에서 모듈 하네스로 교체한다.
   - 씬 `Assets/Scenes/AudioSpikeScene.unity`, Build Profile `Assets/Settings/Build Profiles/AudioSpike-{Dev,Release}.asset`. 두 프로필 모두 define `SCO_AUDIO_HARNESS`가 들어 있고, 자체 씬 목록에는 스파이크 씬만 있다. 전체 씬 목록(EditorBuildSettings)은 건드리지 않는다.
-- 지금까지의 결과는 7장 표에 있다.
-- 2026-09-27에 고친 하네스 버그와 추가한 측정: SP4 준비 판정(`PLAYING` 포함), SP4 채널 위치 오차 측정, SP3 2초 연속 읽기, fps 경고
+- S0(어셈블리와 순수 코어): 다음 단계
+- 지금까지의 결과는 7장 표에 있다. SP3·SP4 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
+- S-0.5로 정한 것: B안(Core System 직접 소유) 유지, 메인 스레드에서 ASIO 처리, 곡 시계 모델(드리프트 항·평활 시계 없음, 단조 보장), `S_max = max(L·(N+1), 32ms)`, 게임 곡 스트리밍 유지, WASAPI 버퍼 프리셋 초안(480이 10ms 주기와 맞음, 확정은 SP13)
+- 2026-09-27에 고친 하네스 버그와 추가한 측정
+  - 1차(노트북): SP4 준비 판정(`PLAYING` 포함), SP4 채널 위치 오차 측정, SP3 2초 연속 읽기, fps 경고
+  - 2차(데스크탑): SP4 seek 미적용 수정(비동기 되감기가 끝난 뒤 seek, `ERR_NOTREADY` 재시도, seek 반영 확인, 요약에 seek 실패 수 표시). SP3 판정을 "원시 잔차 폭 ≤ 1블록"에서 "곡 시계 모델 프레임 오차 p99 ≤ 1ms"로 바꾸고, 요약에 모델 결과(역행, 클램프, 최대 앞섬)를 추가
+- 데스크탑 에디터는 60fps로 돌아서 SP3·SP11을 에디터에서 측정할 수 있다.
 
 **확정 결정 요약**(자세한 내용은 `Audio_architecture.md`)
 - FMOD Core System을 직접 소유한다(RuntimeManager는 게임 경로에서 쓰지 않음). Studio와 곡별 EQ는 쓰지 않는다.
@@ -34,7 +39,7 @@
 - 백그라운드: `playInBackground`를 살린다. 게임 중에는 항상 자동 일시정지한다.
 - GameManager/ChartManager는 팀이 병행 리팩터 중이다. 모듈은 두 Manager를 모르고, 심볼 기준 통합 지점만 편집한다. 기준 브랜치는 `refactor-FMOD`이며, Illustar는 아직 머지되지 않았다.
 - asmdef를 둔다: Core, Audio, Game/Timing, 테스트. 설계는 단순화 방향이다.
-- 음원 파일명은 그대로 둔다. 새 노트 싱크 체감 변화(약 +2.7ms)도 저장값을 바꾸지 않는다.
+- 음원 파일명은 그대로 둔다. 새 노트 싱크 체감 변화(데스크탑 WASAPI 256x4에서 약 +5.9ms)도 저장값을 바꾸지 않는다.
 
 **작업 규칙**
 - 소통은 한국어로 한다.
@@ -46,28 +51,13 @@
   - `UnityEditor.dll`은 따로 넣지 않는다(`UnityEditor.CoreModule`과 형식이 겹침).
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
-**다음 할 일(사용자)**
-1. 데스크탑 준비
-   - 저장소를 pull한다.
-   - Unity를 열고 File → Build Profiles에서 `AudioSpike-Dev`로 Switch Profile 한다.
-   - FlexASIO를 설치하고, Audacity를 준비한다(Host: Windows WASAPI, 녹음 장치: loopback, 스테레오).
-   - Windows 오디오 향상, 공간 음향, 모노 오디오를 끈다.
-   - 전원 모드를 최고 성능으로 둔다.
-2. 하네스에서 실행
-   - **SP2**: ASIO 선택 → SP2 버튼(지난번에 빠짐)
-   - **SP4**: WASAPI 256x4 → 시스템 켜기 → SP4. 요약의 "위치 오차(seek 있음)"가 핵심이다. 녹음은 선택이다.
-   - **SP3**: 256x4에서 1분. 앞부분 연속 읽기 결과가 중요하다. ASIO4ALL(또는 FlexASIO)로도 1분(지난번 ASIO4ALL에서 클록이 60초 멈춤).
-   - **SP1**: Play/Exit 반복
-3. 가능하면 `AudioSpike-Dev` 빌드 실행 파일에서도 SP1, SP2, SP3, SP4를 하고, fps가 60 이상일 때 SP11을 한다.
-4. `persistentDataPath/audio_spike/audio_spike_summary.txt`의 새 줄을 붙여 넣는다.
-   - 노트북에서는 경로가 `C:\Users\serdi\AppData\LocalLow\DefaultCompany\sangcheol-odyssey\audio_spike`였다.
-
-**다음 할 일(Claude, 결과를 받은 뒤)**
-- 7장 표에 기록한다.
-- SP4 위치 오차에 따라 게임 곡을 스트리밍으로 유지할지, 메모리 로드(CREATESAMPLE)로 바꿀지 정한다. 이전 녹음에서 seek 뒤 약 100ms 어긋남이 의심됐다.
-- SP3 연속 읽기로 클록 계단과 S_max를 정하고, 드리프트 항이 필요한지 판단한다(이전 측정 -1.3ppm으로 불필요할 가능성이 높음).
-- SP1·SP2 플레이어 결과로 B안과 ASIO 범위를 확정한다.
-- 게이트를 모두 통과하면 S0으로 넘어간다.
+**다음 할 일**
+1. (사용자) S-0.5 결과를 커밋할지 정한다. 커밋 대상: 하네스 3개(`AudioSpikeHarness.cs`, `SpikeClockRecorder.cs`, `SpikeSchedule.cs`), `Audio_migration.md`, `Audio_architecture.md`
+2. (Claude) S0을 시작한다. 1장 규칙대로 이슈를 먼저 만들고 `refactor/` 브랜치에서 한다.
+   - asmdef: `SCOdyssey.Core`, `SCOdyssey.Audio`, `SCOdyssey.Game.Timing`, 테스트 asmdef 두 개
+   - `Core/Qpc.cs`, Audio 루트 계약 파일, `Audio/Clock`: 7장 결정대로(하한 포락선 1초 창, 클램프 `S_max = max(L·(N+1), 32ms)`, 세그먼트 안 단조 보장, 드리프트 항 없음)
+   - Game/Timing 순수 부분과 EditMode 테스트. SP3 CSV를 테스트 입력으로 쓸 수 있다(`persistentDataPath/audio_spike/sp3_clock_*.csv`).
+   - `.slnx`를 저장소에 둘지 `.gitignore`에 넣을지 정한다.
 
 ---
 
@@ -321,7 +311,7 @@
 |---|---|---|---|
 | SP1 수명주기 | S-0.5, S1 | 에디터 Play/Exit 20회(WASAPI, ASIO), 재컴파일 5회, 플레이어 실행·종료 5회 | 매번 init OK. `ERR_OUTPUT_ALLOCATED` 0회. 리로드 뒤 콜백 크래시 0회. RuntimeManager 미초기화. 생성·해제 20회 뒤에도 생성 성공. 메모리 추세 안정 |
 | SP2 STA·ASIO | S-0.5 | 에디터와 플레이어에서 아파트먼트 기록, ASIO init·목록·close→init 10회 | STA이거나, STA가 아니어도 ASIO 동작 이상 없음 |
-| SP3 시계 품질 | S-0.5 | 프리셋별 5분 CSV, ASIO, 96kHz | 계단 폭과 드리프트(ppm) 수치 확보. 클램프만으로 잔차 p99 ≤ 1블록. 기본 버퍼에서 언더런 0 |
+| SP3 시계 품질 | S-0.5 | 프리셋별 5분 CSV, ASIO, 96kHz | 계단 폭과 드리프트(ppm) 수치 확보. 곡 시계 모델(하한 포락선 + 클램프)의 프레임 오차 p99 ≤ 1ms. 기본 버퍼에서 언더런 0 |
 | SP4 예약·seek | S-0.5, S2a, I1 | 루프백 녹음으로 곡 클릭과 메트로놈 시작 차 측정, 일시정지·재개 20회(리드인 포함), seek 준비 시간 | 평균 ≤ 1ms, 표준편차 ≤ 0.5ms. seek 준비 < 1초 |
 | SP6 재구성 반복 | S2b | close→init 50회, 음악 재생 중 적용 50회 | 크래시 0. 1회 < 1초. 원샷·음악·어댑터 슬롯 복원 |
 | SP8 ASIO 드라이버 | S2b | FlexASIO(필수), ASIO4ALL·실제 장비(가능하면). 블록 불일치, 44.1k/48k, 다른 앱 점유, 포커스 복귀 | 실패가 모두 명확한 결과 코드로 드러나고, 폴백이 들리는 WASAPI로 끝남 |
@@ -451,6 +441,30 @@
 | 2026-09-27 | SP4 | Editor | WASAPI 256x4 | 무효(재측정) | 하네스 버그: 스트림 상태 PLAYING을 준비 완료로 보지 않아 매번 3초 대기(수정함). 루프백 녹음은 Windows 오디오 향상 때문에 좌우 채널이 섞임. 그래도 곡 도중 재개(seek 있음) 뒤 곡과 메트로놈이 약 100ms 어긋나는 패턴이 보임 → 채널 위치 비교 측정을 추가해 재확인 |
 | 2026-09-27 | SP11 | Editor | – | 부분 | fps 6~7이라 fps 비교는 무효. `ctx.time`은 fps와 관계없이 콜백 약 8ms 전에 찍힘 → 누른 시각이 아니라 Unity 처리 시점(프레임 양자화 확인). 매퍼 오프셋 변동 0.001ms(단순 오프셋 변환 채택 가능) |
 | 2026-09-27 | SP15 | Editor | WASAPI 256x4 | PASS | 동기 오류 콜백 1건, 메인 스레드. 비동기 오류 콜백은 오지 않음. Debug 콜백 0건. 크래시 없음 |
+| 2026-09-27 (데스크탑) | SP1 | Editor | WASAPI NVIDIA HDMI 48k 256x4 | PASS(부팅만) | 부팅 2회, init 41~69ms, RuntimeManager 미초기화. Play/Exit 반복은 미실시 |
+| 2026-09-27 (데스크탑) | SP2 | Editor | ASIO4ALL 44.1k 256x2 | PASS | 아파트먼트 MAINSTA(STA). init 실패 0/10, close→init 실패 0/10. FlexASIO는 미설치(목록에 ASIO4ALL만 있음). 플레이어 빌드는 미실시 |
+| 2026-09-27 (데스크탑) | SP3 | Editor | WASAPI S/PDIF 48k 256x4, 1분 | PASS(재판정) | 연속 읽기: 계단 256샘플, 갱신 간격 p50 9.7ms → WASAPI 엔진 주기(10ms)마다 2블록을 몰아 믹스한다. 그래서 원시 잔차 폭 11.7ms로 옛 기준(1블록)은 FAIL. 곡 시계 모델을 CSV에 적용하면 프레임 오차 p1~p99 0.000ms, 최대 0.6ms, 클램프 0회, 역행 3회(≤0.5ms), 원시 대비 최대 앞섬 12.5ms(평균 5.9ms). 드리프트 0.7ppm |
+| 2026-09-27 (데스크탑) | SP3 | Editor | ASIO4ALL 44.1k 256x2, 1분 | PASS(재판정, S_max 조건) | 3블록씩 약 15~17ms 주기로 믹스. S_max 초기값 `L·(N+1)` = 17.4ms면 상한 클램프 170회(프레임 오차 p99 0.5ms, 최대 2.9ms). S_max를 20ms 이상으로 두면 클램프 0회, p99 0.000ms, 최대 1.7ms. 원시 대비 최대 앞섬 20.0ms. 드리프트 0.9ppm. 이번에는 클록 정지 없음(최대 간격 65.8ms는 메인 스레드 멈춤과 같음) |
+| 2026-09-27 (데스크탑) | SP4 | Editor | WASAPI S/PDIF 48k 256x4 | 무효(재측정) | 하네스 버그: seek 19회가 모두 적용되지 않았다. 채널 위치 로그와 루프백 녹음이 모두 곡이 위치 0부터 재생됐음을 보여 준다. 원인 추정: NONBLOCKING 스트림은 playSound 뒤 비동기로 되감는데, 그동안 부른 setPosition의 ERR_NOTREADY를 무시함. 이전 노트북의 "약 100ms 어긋남"도 같은 버그다(클릭이 0.5초 주기라 어긋남이 접혀 보임). **seek 없는 재개 구간의 곡–메트로놈 시작 차는 녹음에서 0.000ms(클릭 5개)로, setDelay 예약은 샘플 단위로 정확하다.** 수정: 준비된 뒤 seek, 반환값 확인, 재생 전 위치로 반영 확인 |
+
+| 2026-09-27 (데스크탑) | SP4 | Editor | WASAPI S/PDIF 48k 256x4 | PASS | seek 수정 후. 일시정지 20회, 늦은 예약 0, seek 실패 0(목표 위치와 반영 위치가 19회 모두 같음), seek 준비 평균 71ms 최대 100ms. 채널 위치 오차 -10.7~0ms(getPosition의 블록 단위 갱신). **루프백 녹음(모노 다운믹스)에서 클릭 119개가 모두 피크 0.80, 길이 4.97ms로 곡과 메트로놈이 녹음 1샘플(0.023ms) 이내로 겹침** → 시작 차 평균·표준편차 사실상 0. 게임 곡은 스트리밍 유지 |
+| 2026-09-27 (데스크탑) | SP3 | Editor | WASAPI S/PDIF 48k 480x4 / 512x4 / 1024x4(GC 부하), 각 1분 | PASS | 곡 시계 모델 프레임 오차 p99 0.08 / 0.06 / 0.88ms, 최대 2.8 / 3.2 / 3.4ms, 클램프 0회, 역행 0 / 3 / 8회. 원시 대비 최대 앞섬 10.4 / 19.9 / 28.0ms. 갱신은 10ms 배수 주기(480은 10ms마다 1블록, 512는 10·20ms, 1024는 20·30ms). 드리프트 추정은 -20~+21ppm으로 추정 방식에 따라 흔들림 → 1분 기록으로는 ±20ppm을 가릴 수 없는 잡음 |
+| 2026-09-27 (데스크탑) | SP11 | Editor | 60 / 144 / 무제한(404)fps | PASS | 매퍼 오프셋 변동 0.000ms. 처리 지연(처리 시각 - ctx.time) 평균 9.8 / 4.3 / 2.0ms, p95 15.7 / 6.5 / 2.7ms. 60fps에서 지연이 0~16ms에 고르게 퍼지고 ctx.time 해상도가 1ms 미만 → ctx.time은 프레임 처리 시점이 아니라 그보다 앞선 이벤트 시각(노트북 6fps 결과와 다름). 실제 누른 시각과의 차이는 미측정 |
+
+| 2026-09-27 (데스크탑) | SP1 | Dev / Release 플레이어 | WASAPI NVIDIA HDMI 48k 256x4 | PASS | 실행·종료 Dev 6회, Release 5회. 매번 init OK(24~28ms), RuntimeManager 미초기화. Player.log에 오류 없음 |
+| 2026-09-27 (데스크탑) | SP2 | Dev 플레이어 | ASIO4ALL 44.1k 256x2 | PASS | 아파트먼트 MAINSTA(STA). init 실패 0/10, close→init 실패 0/10. 에디터와 같음 → 스레드를 따로 만들지 않고 메인 스레드에서 ASIO를 다룬다 |
+| 2026-09-27 (데스크탑) | SP3 | Dev 플레이어 | WASAPI NVIDIA HDMI 48k 256x4, 1분 | PASS | 곡 시계 모델 프레임 오차 p99 0.46ms, 최대 1.7ms, 역행 0, 클램프 0, 원시 대비 최대 앞섬 14.6ms(S_max 26.7ms 안). 갱신 간격 p50 9.95ms(10ms 주기에 2블록). 최대 샘플 간격 19.5ms(에디터보다 메인 스레드 멈춤이 짧음) |
+| 2026-09-27 (데스크탑) | SP15 | Dev 플레이어 | WASAPI NVIDIA HDMI 48k 256x4 | PASS | ERROR 콜백 1건(ERR_FILE_NOTFOUND), 메인 스레드, 메인 외 스레드 0건. 크래시 없음 |
+| 2026-09-27 (데스크탑) | SP1 재컴파일 | Editor | – | PASS | 1차: 리로드가 일어나지 않음(Script Changes While Playing 설정). 2차(11:23): 리로드 5회, 오류 0이지만 시스템 상태 미기록. 3차(11:29): `SP1-reload` 5회 모두 시스템 켜짐 True(1회는 SP3 기록 중), 예외·크래시 0. 콜백이 등록된 상태의 리로드는 S1에서 실제 엔진으로 재확인 |
+
+**S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
+- 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
+- 별도 평활 렌더 시계는 넣지 않는다. 하한 포락선 + 클램프 모델만으로 모든 프리셋에서 프레임 오차 p99 ≤ 0.9ms였다.
+- 세그먼트 안에서 곡 시각의 단조 증가를 보장한다(이전 값보다 작으면 이전 값 유지). 포락선 창이 밀릴 때 최대 1.7ms 역행이 관측됐다.
+- S_max = max(`L·(N+1)`, 32ms). 프레임 사이 계단으로 갱신하지 않는다. 메인 스레드가 멈춘 시간이 섞여 최대 75ms까지 부풀려지기 때문이다. 관측한 최대 앞섬은 모든 프리셋에서 이 값 안에 있었다.
+- 게임 곡은 스트리밍(CREATESTREAM | NONBLOCKING)을 유지한다. 단, playSound 뒤 비동기 되감기가 끝난 다음 setPosition하고 반환값을 확인한다. getPosition은 싱크 판단에 쓰지 않는다.
+- WASAPI 버퍼 프리셋 초안: OS 믹스 주기(10ms)와 맞는 480이 계단이 가장 고르다(10ms마다 1블록, 역행 0). 기본값과 프리셋은 SP13에서 확정한다.
+- 새 곡 시계가 원시 계단보다 앞서는 평균은 "블록/2"(2.7ms)가 아니라 "OS 믹스 주기/2"다. 이 데스크탑의 WASAPI는 5.9ms, ASIO4ALL은 9.0ms였다. 노트 싱크 체감 변화가 문서 예상보다 크다.
 
 ## 8. 후속 백로그 (이번 범위 밖)
 
