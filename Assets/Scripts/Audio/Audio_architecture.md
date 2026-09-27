@@ -59,12 +59,12 @@ Assembly-CSharp (기존 코드)
 | 폴더 | 컴포넌트 | 역할 |
 |---|---|---|
 | 루트 | 계약(3장) | 게임플레이가 쓰는 공개 인터페이스와 값 타입 |
-| Engine | AudioEngine, EngineConfigurator, SystemCallbackHub, FmodDebugBridge | System 생성·설정·init·검증, 폴백, 상태, 세대, 콜백 마스크, FMOD 로그 전달 |
-| Output | DeviceCatalog, AudioOutputService | 출력 타입별 장치 목록(GUID), 출력 설정 적용(close→init) |
+| Engine | AudioEngine, EngineConfigurator, BootPlan, SystemCallbackHub, FmodDebugBridge, AsioPolicy, AudioThread | System 생성·설정·init·검증, 폴백 순서, 상태, 세대, 콜백 마스크, FMOD 로그 전달, ASIO 허용 여부, 메인 스레드 검사 |
+| Output | DriverLookup, DeviceCatalog, AudioOutputService | 장치 번호 찾기(GUID → 이름 → 기본), 출력 타입별 장치 목록(GUID), 출력 설정 적용(close→init) |
 | Mixing | FmodMixer, FmodMixBus | ChannelGroup 트리와 버스 볼륨 |
 | Playback | OneShotBank, FmodMusicPlayer, SongPlayer, FmodSongSession, StreamLoader | 원샷, 로비·프리뷰 음악, 게임 곡 세션, NONBLOCKING 로드 |
 | Clock | DspQpcModel, SongTimeline, SongClock, SongAnchor | DSP↔QPC 대응, 세그먼트, 프레임 스냅샷, 앵커 커밋 계산 |
-| Hosting | AudioModuleInstaller, AudioModule, AudioEngineRunner, FocusPolicy, EditorAudioLifecycle | 설치, 프레임 구동, 포커스 정책, 에디터 정리 |
+| Hosting | AudioModuleInstaller, AudioModuleOptions, AudioModule, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle | 설치와 설치 인자, 모듈 한 벌과 종료, 프레임 구동, 포커스 정책, RuntimeManager 가드, 에디터 정리 |
 | Legacy | LegacyTransport(`ILegacyTransport`) | 과도기 어댑터가 쓰는 공개 API. 모든 소비자를 옮긴 뒤 삭제한다. |
 | Diagnostics | 오디오 오버레이 | 엔진 상태, 세대, 출력, 버퍼, 클록 품질(개발 빌드) |
 
@@ -195,7 +195,7 @@ namespace SCOdyssey.Game.Timing
 
 ## 4. 엔진 수명주기
 
-**설치**(`Managers.InitServices`에서, 설정을 읽은 뒤)
+**설치**(`Managers.InitServices`에서, 설정을 읽은 뒤 `AudioModuleInstaller.Install(host, AudioModuleOptions)`)
 1. 에디터 정리 훅을 가장 먼저 등록한다.
 2. 메인 스레드와 COM 아파트먼트(STA 여부)를 기록한다.
 3. 부팅 시도를 순서대로 실행한다(아래). 성공하면 믹서, 원샷, 음악 재생기를 만든다.
@@ -238,7 +238,8 @@ Running → (설정 적용·장치 손실) → 재구성 → Running | Degraded
 - 순서: 모듈 CTS 취소 → 콜백 해제(`setCallback(null, 0)`) → 채널·Sound·ChannelGroup 해제 → System release → FMOD Debug 종료(에디터는 FILE 모드로 되돌림, EditorUtils와 같게) → 에디터 이벤트 구독 해제
 - 호출 시점: 플레이 모드 종료, 도메인 리로드 직전, 앱 종료, Runner가 소유자일 때의 OnDestroy
 - 도메인 리로드 뒤 Runner는 자신이 엔진 소유자가 아니면 스스로 비활성화한다.
-- 부팅과 씬 로드 때 RuntimeManager가 초기화되지 않았는지 확인한다. 초기화되어 있으면 오류 로그를 남긴다.
+- 부팅과 씬 로드 때 RuntimeManager가 초기화되지 않았는지 확인한다. 초기화되어 있으면 오류 로그를 남긴다. 옛 경로가 남아 있는 동안(S4b 전)은 `AudioModuleOptions.EnforceRuntimeManagerGuard`를 꺼 둔다.
+- 모듈 하네스(`Testing/AudioHarness`, `SCO_AUDIO_HARNESS`)는 게임 없이 모듈만 설치해 시험한다.
 
 ## 5. 출력 변경과 장치
 

@@ -3,25 +3,25 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace SCOdyssey.Testing.AudioSpike
+namespace SCOdyssey.Testing.AudioHarness
 {
-    // 스파이크용 PCM16 WAV를 코드로 만든다. 클릭은 시작이 날카로운 5ms 2kHz 버스트라서
-    // 루프백 녹음에서 시작 시각을 눈으로 재기 쉽다.
-    public static class SpikeWav
+    // 하네스용 PCM16 WAV를 코드로 만든다. 클릭은 시작이 날카로운 5ms 2kHz 버스트라서
+    // 루프백 녹음에서 시작 시각을 재기 쉽다.
+    public static class HarnessWav
     {
         public const double ClickSeconds = 0.005;
         public const double ClickFrequency = 2000.0;
 
-        // 짧은 클릭 한 개(모노).
-        public static byte[] BuildClick(int sampleRate)
+        // 짧은 클릭 한 개(모노)를 파일로 쓴다.
+        public static void WriteClick(string path, int sampleRate)
         {
             int frames = (int)Math.Round(ClickSeconds * sampleRate);
             short[] samples = new short[frames];
-            WriteClick(samples, 0, 1, 0, sampleRate);
-            return Encode(samples, sampleRate, 1);
+            WriteBurst(samples, 0, 1, 0, sampleRate);
+            File.WriteAllBytes(path, Encode(samples, sampleRate, 1));
         }
 
-        // interval초마다 왼쪽 채널에만 클릭이 있는 스테레오 트랙을 파일로 쓴다.
+        // interval초마다 왼쪽 채널에만 클릭이 있는 스테레오 트랙을 파일로 쓴다(곡 재생 확인용).
         public static void WriteClickTrack(string path, int sampleRate, double lengthSeconds, double interval)
         {
             int frames = (int)Math.Round(lengthSeconds * sampleRate);
@@ -29,12 +29,12 @@ namespace SCOdyssey.Testing.AudioSpike
             for (double t = 0; t < lengthSeconds - ClickSeconds; t += interval)
             {
                 int startFrame = (int)Math.Round(t * sampleRate);
-                WriteClick(samples, startFrame, 2, 0, sampleRate);
+                WriteBurst(samples, startFrame, 2, 0, sampleRate);
             }
             File.WriteAllBytes(path, Encode(samples, sampleRate, 2));
         }
 
-        private static void WriteClick(short[] samples, int startFrame, int channels, int channel, int sampleRate)
+        private static void WriteBurst(short[] samples, int startFrame, int channels, int channel, int sampleRate)
         {
             int frames = (int)Math.Round(ClickSeconds * sampleRate);
             int totalFrames = samples.Length / channels;

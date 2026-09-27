@@ -21,7 +21,7 @@
 **현재 단계**
 - S-1(설계 문서 이관): 완료
 - S-0.5(버리는 최소 스파이크): **완료**(2026-09-27). 게이트 SP1, SP2, SP3, SP4, SP11, SP15 모두 PASS
-  - 하네스 코드: `Assets/Scripts/Testing/AudioSpike/`(파일 전체가 `#if SCO_AUDIO_HARNESS`로 감싸져 있음). S1에서 모듈 하네스로 교체한다.
+  - 하네스 코드: S1에서 `Assets/Scripts/Testing/AudioHarness/`(모듈 하네스)로 교체했다. 파일 전체가 `#if SCO_AUDIO_HARNESS`로 감싸져 있다.
   - 씬 `Assets/Scenes/AudioSpikeScene.unity`, Build Profile `Assets/Settings/Build Profiles/AudioSpike-{Dev,Release}.asset`. 두 프로필 모두 define `SCO_AUDIO_HARNESS`가 들어 있고, 자체 씬 목록에는 스파이크 씬만 있다. 전체 씬 목록(EditorBuildSettings)은 건드리지 않는다.
 - S0(어셈블리와 순수 코어): **완료**(2026-09-27). 콘솔 오류 0, Test Runner EditMode 39개 통과, 로비·곡 한 판·ChartEditorScene·하네스 컴파일 정상
   - asmdef: `Core/SCOdyssey.Core`, `Audio/SCOdyssey.Audio`, `Game/Timing/SCOdyssey.Game.Timing`, 테스트 `Audio/Tests/Editor`, `Game/Timing/Tests/Editor`
@@ -31,7 +31,10 @@
   - `.slnx`는 `.gitignore`에 넣고 추적을 끊었다(`.sln`, `.csproj`와 같은 생성 파일)
   - `Assets/Scripts/Editor/Tests/` 폴더는 빈 폴더라 git에 남지 않으므로 첫 App 테스트를 넣는 S5a에서 만든다
   - 곡 시계 창을 1초에서 10초로 바꾸고 하향 계단 규칙을 넣었다(7장 결정 아래 참고)
-- S1(엔진): 다음 단계
+- S1(엔진): **완료**(2026-09-27). SP1 재확인 PASS(7장)
+  - `Audio/Engine/{AudioEngine, EngineConfigurator, BootPlan, SystemCallbackHub, FmodDebugBridge, AsioPolicy, AudioThread}`, `Audio/Output/DriverLookup`, `Audio/Mixing/FmodMixer`, `Audio/Playback/OneShotBank`, `Audio/Hosting/{AudioModule, AudioModuleInstaller, AudioModuleOptions, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle}`, `Audio/Diagnostics/AudioOverlay`
+  - 모듈 하네스: `Testing/AudioSpike/`를 `Testing/AudioHarness/`로 옮기고 S-0.5 코드를 지웠다. 하네스 컴포넌트는 `.meta`를 함께 옮겨 GUID를 유지했으므로 씬에서 컴포넌트를 바꿀 필요가 없다. 결과는 `persistentDataPath/audio_harness/audio_harness_summary.txt`
+  - 임시 csproj로 에디터·플레이어·define 없음 세 조건 컴파일(오류·경고 0), 테스트 42개 통과(BootPlan 4개 추가, `LogAssert` 1개는 Test Runner 전용)
 - 지금까지의 결과는 7장 표에 있다. S-0.5·S0 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
 - S-0.5로 정한 것: B안(Core System 직접 소유) 유지, 메인 스레드에서 ASIO 처리, 곡 시계 모델(드리프트 항·평활 시계 없음, 단조 보장), `S_max = max(L·(N+1), 32ms)`, 게임 곡 스트리밍 유지, WASAPI 버퍼 프리셋 초안(480이 10ms 주기와 맞음, 확정은 SP13)
 - 2026-09-27에 고친 하네스 버그와 추가한 측정
@@ -60,14 +63,8 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (사용자) S0 커밋 여부를 정한다.
-2. (Claude) S1을 시작한다(2장 카드).
-   - Engine: 부팅 시도와 폴백, 검증, 콜백 마스크, FMOD Debug 전달, 에디터 정리 훅, Shutdown
-   - Mixer, OneShotBank
-   - Hosting: Installer, Runner(-1010), FocusPolicy, RuntimeManager 가드
-   - 오디오 오버레이
-   - 모듈 하네스: S-0.5 코드를 지우고 새 모듈을 단독 설치해 시험하는 하네스로 바꾼다. SP1(Play/Exit 20회, 재컴파일 5회, 두 프로필 빌드 실행·종료 5회)을 다시 확인한다. 이번에는 콜백이 항상 등록된 상태로 리로드를 확인한다.
-   - 게임 확인은 기본 Windows 프로필에서 한다(`AudioSpike-*` 프로필 씬 목록에는 스파이크 씬만 있다).
+1. (사용자) S1 커밋 여부를 정한다.
+2. (Claude) S2a(곡 재생)를 시작한다: StreamLoader, 로비·프리뷰 음악 재생기, SongPlayer와 곡 세션(상태 머신, 앵커 커밋, 일시정지·재개, 재구성 중 처리, 종료 감지), 곡 시계 샘플링. 하네스에 곡 재생, 메트로놈 비교(루프백), 강제 재구성 메뉴를 붙이고 SP4를 다시 확인한다.
 
 ---
 
@@ -163,7 +160,7 @@
   - Hosting: Installer, Runner(-1010), FocusPolicy, RuntimeManager 가드
   - 오디오 오버레이
   - **모듈 하네스**: S-0.5 코드를 지우고, 새 모듈을 단독으로 설치해 시험하는 하네스로 바꾼다.
-- **에디터 작업**: AudioSpikeScene의 하네스 컴포넌트를 모듈 하네스로 교체한다.
+- **에디터 작업**: 없음(하네스 파일의 GUID를 유지해 씬의 컴포넌트가 그대로 모듈 하네스를 가리킨다).
 - **확인**: 하네스로 설치 → 원샷 재생 → 플레이 종료를 20회, 재컴파일 5회, 두 프로필 빌드 실행·종료 5회
 - **통과 기준**: SP1 재확인
 - **보고**: 요약 파일
@@ -468,6 +465,8 @@
 | 2026-09-27 (데스크탑) | SP1 재컴파일 | Editor | – | PASS | 1차: 리로드가 일어나지 않음(Script Changes While Playing 설정). 2차(11:23): 리로드 5회, 오류 0이지만 시스템 상태 미기록. 3차(11:29): `SP1-reload` 5회 모두 시스템 켜짐 True(1회는 SP3 기록 중), 예외·크래시 0. 콜백이 등록된 상태의 리로드는 S1에서 실제 엔진으로 재확인 |
 
 | 2026-09-27 (데스크탑) | S0 확인 | Editor | – | PASS | 전체 컴파일(콘솔 오류 0), Test Runner EditMode 39개 통과, 로비·곡 한 판·ChartEditorScene 정상, `AudioSpike-Dev`에서 하네스 컴파일 정상. 참고: `AudioSpike-*` 프로필에서는 GameScene이 씬 목록에 없어 곡 진입이 안 되므로 게임 확인은 기본 Windows 프로필에서 한다 |
+
+| 2026-09-27 (데스크탑) | SP1 (S1 모듈) | Editor / Dev / Release | WASAPI NVIDIA HDMI(BenQ) 48k 256x4, ASIO4ALL 44.1k 256x2 | PASS | 모듈 부팅 33회(Editor 22, Dev 6, Release 5) 모두 Running·원샷 등록·RM(Studio) 미초기화, init 20~30ms. 설치·원샷·종료 20회 × 2 실패 0, 원샷 멱등, FMOD 메모리 변화 0KB. Play 중 리로드 5회 모두 모듈 동작 중(ASIO 3회 포함), 크래시 0. 볼륨·포커스 음소거·ASIO 설치·게임(기본 프로필) 정상. 참고: 게임 판정이 약간 늦게 느껴진다는 보고가 있었다. S1은 게임 경로를 바꾸지 않았고, Windows 기본 출력 장치가 모니터(HDMI)라 출력 지연이 큰 것이 유력한 원인이다(아래 사용자 확인) |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
