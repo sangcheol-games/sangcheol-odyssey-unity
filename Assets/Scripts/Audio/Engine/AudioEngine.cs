@@ -17,6 +17,7 @@ namespace SCOdyssey.Audio.Engine
         private EngineStatus _status = EngineStatus.Uninitialized;
         private int _generation;
         private AudioOutputInfo _currentOutput;
+        private BootAttempt _currentAttempt;
 
         public event Action<EngineStatus> StatusChanged;
 
@@ -87,20 +88,7 @@ namespace SCOdyssey.Audio.Engine
                 if (error == null)
                 {
                     InitMilliseconds = watch.Elapsed.TotalMilliseconds;
-                    _currentOutput = actual;
-                    _generation++;
-                    BootSummary = Describe(attempt.Label, failures);
-                    Debug.Log("[Audio] 엔진 부팅: " + BootSummary);
-
-                    if (attempt.Kind == AudioOutputKind.NoSound)
-                    {
-                        Debug.LogWarning("[Audio] 소리 없이(NOSOUND) 동작합니다.");
-                        SetStatus(EngineStatus.Degraded);
-                    }
-                    else
-                    {
-                        SetStatus(EngineStatus.Running);
-                    }
+                    Adopted(attempt, actual, failures, "엔진 부팅");
                     return;
                 }
 
@@ -114,6 +102,47 @@ namespace SCOdyssey.Audio.Engine
             InitMilliseconds = watch.Elapsed.TotalMilliseconds;
             BootSummary = "실패 | " + string.Join(" | ", failures);
             Debug.LogError("[Audio] 엔진 부팅 실패: " + BootSummary);
+            SetStatus(EngineStatus.Failed);
+        }
+
+        // 같은 System을 close → init 한다(재구성). 현재 구성 → WASAPI 기본 512×4 → NOSOUND 순서로 시도한다.
+        // 호출 전에 채널·Sound·ChannelGroup을 모두 해제해야 한다. 성공하면 세대가 오른다.
+        public void Reinitialize()
+        {
+            AudioThread.AssertMain("AudioEngine.Reinitialize");
+            if (!_system.hasHandle()) return;
+
+            var attempts = new List<BootAttempt>(3);
+            attempts.Add(_currentAttempt);
+            List<BootAttempt> fallbacks = BootPlan.Build(default, true, false);
+            for (int i = 0; i < fallbacks.Count; i++)
+            {
+                if (!fallbacks[i].SameConfig(_currentAttempt)) attempts.Add(fallbacks[i]);
+            }
+
+            var failures = new List<string>();
+            var watch = Stopwatch.StartNew();
+            for (int i = 0; i < attempts.Count; i++)
+            {
+                _system.close();
+                _systemMaster = default;
+                string error = EngineConfigurator.TryInit(_system, attempts[i], out AudioOutputInfo actual);
+                if (error == null) error = AdoptSystem(_system);
+                if (error == null)
+                {
+                    InitMilliseconds = watch.Elapsed.TotalMilliseconds;
+                    Adopted(attempts[i], actual, failures, "엔진 재구성");
+                    return;
+                }
+                failures.Add(attempts[i].Label + ": " + error);
+            }
+
+            BootSummary = "재구성 실패 | " + string.Join(" | ", failures);
+            Debug.LogError("[Audio] " + BootSummary);
+            SystemCallbackHub.Uninstall(_system);
+            _system.release();
+            _system = default;
+            _systemMaster = default;
             SetStatus(EngineStatus.Failed);
         }
 
@@ -150,6 +179,25 @@ namespace SCOdyssey.Audio.Engine
             _systemMaster = default;
             FmodDebugBridge.Uninstall();
             SetStatus(EngineStatus.Disposed);
+        }
+
+        private void Adopted(BootAttempt attempt, AudioOutputInfo actual, List<string> failures, string what)
+        {
+            _currentAttempt = attempt;
+            _currentOutput = actual;
+            _generation++;
+            BootSummary = Describe(attempt.Label, failures);
+            Debug.Log("[Audio] " + what + ": " + BootSummary);
+
+            if (attempt.Kind == AudioOutputKind.NoSound)
+            {
+                Debug.LogWarning("[Audio] 소리 없이(NOSOUND) 동작합니다.");
+                SetStatus(EngineStatus.Degraded);
+            }
+            else
+            {
+                SetStatus(EngineStatus.Running);
+            }
         }
 
         private string AdoptSystem(FMOD.System system)

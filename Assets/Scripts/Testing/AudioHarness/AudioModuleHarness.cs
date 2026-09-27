@@ -5,6 +5,7 @@ using System.IO;
 using SCOdyssey.Audio;
 using SCOdyssey.Audio.Diagnostics;
 using SCOdyssey.Audio.Engine;
+using Cysharp.Threading.Tasks;
 using SCOdyssey.Audio.Hosting;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace SCOdyssey.Testing.AudioHarness
 {
     // 오디오 모듈 하네스. AudioSpikeScene의 빈 GameObject에 붙여 쓴다(S-0.5 하네스의 파일 GUID를 이어받아 씬은 그대로다).
     // 새 오디오 모듈을 게임 없이 단독으로 설치해 부팅, 원샷, 볼륨, 포커스 음소거, 수명주기를 시험하고 요약 파일에 남긴다.
-    // 곡 재생(S2a), 출력 변경(S2b), 탭 테스트(S3) 메뉴는 해당 단계에서 붙인다.
+    // 곡 재생·재구성·프리뷰 확인은 HarnessSongChecks(S2a). 출력 변경(S2b), 탭 테스트(S3) 메뉴는 해당 단계에서 붙인다.
     public sealed class AudioModuleHarness : MonoBehaviour
     {
         private const string ClickFile = "harness_click.wav";
@@ -31,10 +32,16 @@ namespace SCOdyssey.Testing.AudioHarness
         private string _status = "대기";
         private bool _busy;
         private Vector2 _scroll;
+        private HarnessSongChecks _songs;
 
         private static string HitSoundFolder
         {
             get { return Path.Combine(HarnessReport.Folder, "hitsound"); }
+        }
+
+        private static string MusicFolder
+        {
+            get { return Path.Combine(HarnessReport.Folder, "music"); }
         }
 
         private bool IsInstalled
@@ -62,6 +69,8 @@ namespace SCOdyssey.Testing.AudioHarness
             Application.targetFrameRate = 60;
             Directory.CreateDirectory(HitSoundFolder);
             HarnessWav.WriteClick(Path.Combine(HitSoundFolder, ClickFile), 48000);
+            HarnessSongChecks.PrepareFiles(MusicFolder);
+            _songs = new HarnessSongChecks(CurrentModule, SetStatus);
             BootCheck();
         }
 
@@ -91,6 +100,7 @@ namespace SCOdyssey.Testing.AudioHarness
             options.Output = new AudioOutputRequest(_kind, Guid.Empty, "", BufferLengths[_lengthIndex], BufferCounts[_countIndex]);
             options.SafeMode = _safeMode;
             options.HitSoundFolder = HitSoundFolder;
+            options.MusicFolder = MusicFolder;
             options.PlayInBackground = ReadPlayInBackground;
             options.EnforceRuntimeManagerGuard = true;
 
@@ -100,6 +110,7 @@ namespace SCOdyssey.Testing.AudioHarness
 
         private void ShutdownModule()
         {
+            if (_songs != null) _songs.Detach();
             if (_module == null) return;
             _module.Shutdown();
             _module = null;
@@ -109,6 +120,23 @@ namespace SCOdyssey.Testing.AudioHarness
         private bool ReadPlayInBackground()
         {
             return _playInBackground;
+        }
+
+        private AudioModule CurrentModule()
+        {
+            return _module;
+        }
+
+        private void SetStatus(string text)
+        {
+            _status = text;
+        }
+
+        private IEnumerator RunBusy(IEnumerator routine)
+        {
+            _busy = true;
+            yield return routine;
+            _busy = false;
         }
 
         // SP1: 설치 → 원샷 → 3프레임 → 종료를 반복한다. 끝나면 다시 설치해 둔다.
@@ -189,7 +217,7 @@ namespace SCOdyssey.Testing.AudioHarness
             GUILayout.BeginArea(new Rect(10, 10, Screen.width / scale - 460, Screen.height / scale - 20));
             _scroll = GUILayout.BeginScrollView(_scroll);
 
-            GUILayout.Label("<b>오디오 모듈 하네스 (S1)</b>");
+            GUILayout.Label("<b>오디오 모듈 하네스 (S2a)</b>");
             GUILayout.Label("fps: " + HarnessReport.Num(1.0 / Time.smoothDeltaTime, "0") + ", 상태: " + _status);
             GUILayout.Label("결과 폴더: " + HarnessReport.Folder);
             GUILayout.Label("RM(Studio) 초기화: " + RuntimeManagerGuard.IsInitialized);
@@ -200,6 +228,8 @@ namespace SCOdyssey.Testing.AudioHarness
             DrawModuleControls();
             GUILayout.Space(8);
             DrawPlayback();
+            GUILayout.Space(8);
+            DrawSong();
             GUILayout.Space(8);
             DrawChecks();
 
@@ -287,11 +317,50 @@ namespace SCOdyssey.Testing.AudioHarness
             GUILayout.EndHorizontal();
         }
 
+        private void DrawSong()
+        {
+            if (!IsInstalled || _songs == null) return;
+            GUI.enabled = !_busy;
+            GUILayout.Label("<b>곡</b> (0.5초 클릭 트랙: 곡은 왼쪽, 메트로놈은 오른쪽)");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("로드", GUILayout.Width(80))) StartCoroutine(_songs.Load());
+            if (GUILayout.Button("시작", GUILayout.Width(80))) _songs.Start();
+            if (GUILayout.Button("일시정지", GUILayout.Width(80))) _songs.Pause();
+            if (GUILayout.Button("재개", GUILayout.Width(80))) _songs.Resume();
+            if (GUILayout.Button("정지", GUILayout.Width(80))) _songs.Stop();
+            if (GUILayout.Button("강제 재구성", GUILayout.Width(120))) _module.Reinitialize();
+            GUILayout.EndHorizontal();
+
+            ISongSession session = _songs.Session;
+            if (session != null)
+            {
+                SongFrame frame = session.Clock.Frame;
+                GUILayout.Label(string.Format("상태 {0}, 곡 시각 {1}, 흐름 {2}, Epoch {3}, 일시정지 사유 {4}, 음원 종료 {5}",
+                    session.State, HarnessReport.Num(frame.SongTime, "0.000"), frame.IsRunning, frame.Epoch, session.PauseReason, session.IsAudioFinished));
+                GUILayout.Label("이벤트: " + _songs.RecentEvents);
+            }
+            GUILayout.Label("마지막 로드: " + _songs.LastLoad);
+            _module.Metronome.Enabled = GUILayout.Toggle(_module.Metronome.Enabled, "메트로놈(오른쪽)");
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("로비 BGM 재생(루프)", GUILayout.Width(160))) _module.Music.Lobby.PlayAsync(HarnessSongChecks.TrackFile, true, System.Threading.CancellationToken.None).Forget();
+            if (GUILayout.Button("로비 BGM 정지", GUILayout.Width(120))) _module.Music.Lobby.Stop();
+            GUILayout.Label("로비 재생 중: " + _module.Music.Lobby.IsPlaying + ", 프리뷰 재생 중: " + _module.Music.Preview.IsPlaying);
+            GUILayout.EndHorizontal();
+            GUI.enabled = true;
+        }
+
         private void DrawChecks()
         {
             GUI.enabled = !_busy;
             GUILayout.Label("<b>확인</b>");
             if (GUILayout.Button("SP1: 설치·원샷·종료 " + Cycles + "회 (현재 출력 요청)")) StartCoroutine(RunCycles());
+            if (IsInstalled && _songs != null)
+            {
+                if (GUILayout.Button("SP4: 곡 일시정지·재개 21회 (루프백 녹음을 먼저 시작하세요, 약 80초)")) StartCoroutine(RunBusy(_songs.RunSp4()));
+                if (GUILayout.Button("재구성: Ready·Starting·Playing·Paused에서 강제 재구성")) StartCoroutine(RunBusy(_songs.RunReconfigure()));
+                if (GUILayout.Button("프리뷰: 한 프레임에 5번 요청")) StartCoroutine(RunBusy(_songs.RunPreviewSupersede()));
+            }
             GUI.enabled = true;
         }
 

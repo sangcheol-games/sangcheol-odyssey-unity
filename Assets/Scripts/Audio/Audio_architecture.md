@@ -62,11 +62,11 @@ Assembly-CSharp (기존 코드)
 | Engine | AudioEngine, EngineConfigurator, BootPlan, SystemCallbackHub, FmodDebugBridge, AsioPolicy, AudioThread | System 생성·설정·init·검증, 폴백 순서, 상태, 세대, 콜백 마스크, FMOD 로그 전달, ASIO 허용 여부, 메인 스레드 검사 |
 | Output | DriverLookup, DeviceCatalog, AudioOutputService | 장치 번호 찾기(GUID → 이름 → 기본), 출력 타입별 장치 목록(GUID), 출력 설정 적용(close→init) |
 | Mixing | FmodMixer, FmodMixBus | ChannelGroup 트리와 버스 볼륨 |
-| Playback | OneShotBank, FmodMusicPlayer, SongPlayer, FmodSongSession, StreamLoader | 원샷, 로비·프리뷰 음악, 게임 곡 세션, NONBLOCKING 로드 |
-| Clock | DspQpcModel, SongTimeline, SongClock, SongAnchor | DSP↔QPC 대응, 세그먼트, 프레임 스냅샷, 앵커 커밋 계산 |
+| Playback | OneShotBank, FmodMusicPlayer(+MusicPlayers), SongPlayer, FmodSongSession, StreamLoader | 원샷, 로비·프리뷰 음악, 게임 곡 세션, NONBLOCKING 로드 판정 |
+| Clock | ClockSampler, DspQpcModel, SongTimeline, SongClock, SongAnchor | DSP 원천(SCO.Song 클록 또는 가상 QPC 클록), DSP↔QPC 대응, 세그먼트, 프레임 스냅샷, 앵커 커밋 계산 |
 | Hosting | AudioModuleInstaller, AudioModuleOptions, AudioModule, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle | 설치와 설치 인자, 모듈 한 벌과 종료, 프레임 구동, 포커스 정책, RuntimeManager 가드, 에디터 정리 |
 | Legacy | LegacyTransport(`ILegacyTransport`) | 과도기 어댑터가 쓰는 공개 API. 모든 소비자를 옮긴 뒤 삭제한다. |
-| Diagnostics | 오디오 오버레이 | 엔진 상태, 세대, 출력, 버퍼, 클록 품질(개발 빌드) |
+| Diagnostics | AudioOverlay, SongMetronome | 엔진 상태·세대·출력·버퍼(개발 빌드), 곡 시각 기준 클릭 예약(SP4 루프백 비교, 캘리브레이션 바탕) |
 
 **Game/Timing(`SCOdyssey.Game.Timing`)**
 
@@ -314,7 +314,8 @@ setDelay(S), setPaused(false)
 - 음원이 없거나 끝난 뒤의 재개, 엔진 Failed일 때는 채널 없이 같은 세그먼트만 기록한다(무음 커밋).
 
 **곡 시계 계산(최소안)**
-- 매 프레임 (QPC 앞, DSP 클록, QPC 뒤)을 읽는다. 두 QPC 차이가 50µs를 넘으면 버린다.
+- 매 프레임 Update와 LateUpdate에서 (QPC 앞, DSP 클록, QPC 뒤)를 읽는다. 두 QPC 차이가 50µs를 넘으면 버린다. DSP는 `SCO.Song` 그룹 클록이다(곡 채널 `setDelay`와 같은 도메인). 엔진을 쓸 수 없으면(Degraded·Failed) QPC로 흐르는 가상 클록(48kHz)을 넣어 무음 세션도 같은 경로로 진행한다.
+- 모델은 모듈이 하나 두고 세대마다 리셋한다. 세션마다 곡 시계(세그먼트)를 따로 가진다.
 - DSP↔QPC 관계는 최근 10초 창에서 `c - q·R`의 최댓값(하한 포락선)으로 오프셋을 잡는다. 믹서는 블록마다가 아니라 OS 믹스 주기(WASAPI 약 10ms)마다 여러 블록을 몰아 믹스하므로 원시 DSP는 그 주기만큼 계단진다.
   - 창이 1초면 프레임 읽기 위상이 몇 개로 묶여(60fps에서 약 3.3ms 간격) 추정이 0.7~4.5ms 오르내렸다(SP3 CSV). 10초 창은 0.25~2.2ms였다.
   - **하향 계단**: 1초보다 오래된 최댓값이 최근 1초 최댓값보다 8ms 넘게 높으면 버린다. 언더런 등으로 DSP가 영구히 뒤처져도 1초 안에 따라간다. 정상 측정에서 두 값의 차이는 최대 4.7ms라 오판정은 없었다.
@@ -361,6 +362,7 @@ setDelay(S), setPaused(false)
 | 모든 상태 | Stop / Dispose | Stopped / Disposed |
 
 - Ended 상태는 없다. 음원이 끝나도 Playing으로 남아 일시정지할 수 있다.
+- 이벤트는 상태 전이가 끝난 뒤 순서대로 발행한다(구독자 안에서 다시 호출해도 순서가 지켜진다). Resumed는 재개 커밋 때, Recovered는 재구성 뒤 다시 열고 seek가 끝났을 때 발행한다.
 
 **음원 종료 감지**(Playing이고 아직 끝나지 않았을 때만)
 - 채널이 멈췄고 곡 시각이 끝 무렵이면 종료로 처리한다.

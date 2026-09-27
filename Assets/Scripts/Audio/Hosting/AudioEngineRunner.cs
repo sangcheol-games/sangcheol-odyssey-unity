@@ -38,6 +38,11 @@ namespace SCOdyssey.Audio.Hosting
             _module.Tick();
         }
 
+        private void LateUpdate()
+        {
+            if (_module != null) _module.LateTick();
+        }
+
         private void OnApplicationFocus(bool hasFocus)
         {
             if (_module != null) _module.OnFocusChanged(hasFocus);

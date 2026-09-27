@@ -13,6 +13,9 @@ namespace SCOdyssey.Audio.Hosting
         // 타격음 파일 폴더(전체 경로).
         public string HitSoundFolder { get; set; } = "";
 
+        // 곡·로비 BGM·프리뷰 음원 폴더(전체 경로).
+        public string MusicFolder { get; set; } = "";
+
         // 로비에서 포커스를 잃었을 때 계속 재생할지. 포커스가 바뀔 때마다 읽는다. null이면 계속 재생한다.
         public Func<bool> PlayInBackground { get; set; }
 

@@ -32,6 +32,10 @@
   - `Assets/Scripts/Editor/Tests/` 폴더는 빈 폴더라 git에 남지 않으므로 첫 App 테스트를 넣는 S5a에서 만든다
   - 곡 시계 창을 1초에서 10초로 바꾸고 하향 계단 규칙을 넣었다(7장 결정 아래 참고)
 - S1(엔진): **완료**(2026-09-27). SP1 재확인 PASS(7장)
+- S2a(곡 재생): **완료**(2026-09-27). SP4 PASS(녹음 1샘플 이내), 재구성·프리뷰 PASS(7장)
+  - `Audio/Clock/ClockSampler`, `Audio/Playback/{StreamLoader, FmodSongSession, SongPlayer, FmodMusicPlayer}`, `Audio/Diagnostics/SongMetronome`, 엔진 재구성(`AudioEngine.Reinitialize`, `AudioModule.Reinitialize`)
+  - 하네스: `Testing/AudioHarness/HarnessSongChecks`(곡 재생, SP4, 상태별 강제 재구성, 프리뷰 대체)
+  - 테스트 50개(세션 상태 머신 7개 추가). 임시 csproj로 세 조건 컴파일 오류·경고 0, 49개 통과(`LogAssert` 1개는 Test Runner 전용)
   - `Audio/Engine/{AudioEngine, EngineConfigurator, BootPlan, SystemCallbackHub, FmodDebugBridge, AsioPolicy, AudioThread}`, `Audio/Output/DriverLookup`, `Audio/Mixing/FmodMixer`, `Audio/Playback/OneShotBank`, `Audio/Hosting/{AudioModule, AudioModuleInstaller, AudioModuleOptions, AudioEngineRunner, FocusPolicy, RuntimeManagerGuard, EditorAudioLifecycle}`, `Audio/Diagnostics/AudioOverlay`
   - 모듈 하네스: `Testing/AudioSpike/`를 `Testing/AudioHarness/`로 옮기고 S-0.5 코드를 지웠다. 하네스 컴포넌트는 `.meta`를 함께 옮겨 GUID를 유지했으므로 씬에서 컴포넌트를 바꿀 필요가 없다. 결과는 `persistentDataPath/audio_harness/audio_harness_summary.txt`
   - 임시 csproj로 에디터·플레이어·define 없음 세 조건 컴파일(오류·경고 0), 테스트 42개 통과(BootPlan 4개 추가, `LogAssert` 1개는 Test Runner 전용)
@@ -63,8 +67,8 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (사용자) S1 커밋 여부를 정한다.
-2. (Claude) S2a(곡 재생)를 시작한다: StreamLoader, 로비·프리뷰 음악 재생기, SongPlayer와 곡 세션(상태 머신, 앵커 커밋, 일시정지·재개, 재구성 중 처리, 종료 감지), 곡 시계 샘플링. 하네스에 곡 재생, 메트로놈 비교(루프백), 강제 재구성 메뉴를 붙이고 SP4를 다시 확인한다.
+1. (Claude) S2b(출력 관리)를 진행한다: DeviceCatalog(타입별 장치 목록, 임시 System 열거), AudioOutputService.ApplyAsync(close→init, 적용 폴백, 요청 구성 성공 때만 저장 신호), 장치 콜백 처리(Follow-Default, Pinned 1초 디바운스, DEVICELOST), 콜백 없는 정지 감지. 하네스에 출력 전환·버퍼 변경·적용 반복 메뉴를 붙인다.
+2. (사용자) S2b 확인: SP6(재구성 반복), SP8(ASIO 드라이버), SP9(장치 목록), SP10(핫플러그). USB 장치나 두 번째 출력 장치가 필요하다.
 
 ---
 
@@ -467,6 +471,11 @@
 | 2026-09-27 (데스크탑) | S0 확인 | Editor | – | PASS | 전체 컴파일(콘솔 오류 0), Test Runner EditMode 39개 통과, 로비·곡 한 판·ChartEditorScene 정상, `AudioSpike-Dev`에서 하네스 컴파일 정상. 참고: `AudioSpike-*` 프로필에서는 GameScene이 씬 목록에 없어 곡 진입이 안 되므로 게임 확인은 기본 Windows 프로필에서 한다 |
 
 | 2026-09-27 (데스크탑) | SP1 (S1 모듈) | Editor / Dev / Release | WASAPI NVIDIA HDMI(BenQ) 48k 256x4, ASIO4ALL 44.1k 256x2 | PASS | 모듈 부팅 33회(Editor 22, Dev 6, Release 5) 모두 Running·원샷 등록·RM(Studio) 미초기화, init 20~30ms. 설치·원샷·종료 20회 × 2 실패 0, 원샷 멱등, FMOD 메모리 변화 0KB. Play 중 리로드 5회 모두 모듈 동작 중(ASIO 3회 포함), 크래시 0. 볼륨·포커스 음소거·ASIO 설치·게임(기본 프로필) 정상. 참고: 게임 판정이 약간 늦게 느껴진다는 보고가 있었다. S1은 게임 경로를 바꾸지 않았고, Windows 기본 출력 장치가 모니터(HDMI)라 출력 지연이 큰 것이 유력한 원인이다(아래 사용자 확인) |
+
+| 2026-09-27 (데스크탑) | SP4 (S2a 모듈) | Editor | WASAPI NVIDIA HDMI(BenQ) 48k 256x4 | PASS | 곡 세션으로 리드인 중 1회 + 곡 도중 20회 일시정지·재개. 재개 지연 최대 0.2ms, 메트로놈 예약 119회 늦은 예약 0, 상태 이상 0. 루프백 녹음(좌우 섞임, 상관 1.000)에서 클릭 115개 모두 피크 0.80·길이 4.97ms → 곡과 메트로놈이 녹음 1샘플(0.023ms) 이내로 겹침. 시작 차 평균·표준편차 사실상 0 |
+| 2026-09-27 (데스크탑) | 재구성 (S2a) | Editor | 같음 | 부분 | Ready→시작, Playing→장치 일시정지·Recovered·재개, Paused→Recovering·Recovered·재개 모두 OK. "Starting→진행" 실패는 하네스 시나리오 문제(스트림이 열려 있으면 Start가 즉시 커밋해 LeadIn이 되고, 재구성이 흐르는 곡에 걸려 설계대로 장치 일시정지됨). 시나리오를 고쳐 재확인 |
+| 2026-09-27 (데스크탑) | 재구성 재확인 (S2a) | Editor | 같음 | PASS | 시나리오 수정 뒤 Ready→시작, Starting(재구성으로 스트림을 닫은 직후 Start, Starting 중 한 번 더 재구성)→진행, Playing·Paused 복구 모두 OK. 강제 재구성 5회(세대 1→6). 같은 로그에서 진단 메트로놈이 끝난 클릭 채널에 stop을 불러 ERR_CHANNEL_STOLEN·ERR_INVALID_HANDLE 오류 콜백이 일시정지마다 약 5건 났다 → 끝나지 않은 클릭만 멈추도록 고침(S2b 하네스 실행 때 확인) |
+| 2026-09-27 (데스크탑) | 프리뷰 대체 (S2a) | Editor | 같음 | PASS | 한 프레임 5회 요청: Superseded 4, 마지막 Ok·재생 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
