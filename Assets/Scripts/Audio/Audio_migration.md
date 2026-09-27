@@ -23,8 +23,16 @@
 - S-0.5(버리는 최소 스파이크): **완료**(2026-09-27). 게이트 SP1, SP2, SP3, SP4, SP11, SP15 모두 PASS
   - 하네스 코드: `Assets/Scripts/Testing/AudioSpike/`(파일 전체가 `#if SCO_AUDIO_HARNESS`로 감싸져 있음). S1에서 모듈 하네스로 교체한다.
   - 씬 `Assets/Scenes/AudioSpikeScene.unity`, Build Profile `Assets/Settings/Build Profiles/AudioSpike-{Dev,Release}.asset`. 두 프로필 모두 define `SCO_AUDIO_HARNESS`가 들어 있고, 자체 씬 목록에는 스파이크 씬만 있다. 전체 씬 목록(EditorBuildSettings)은 건드리지 않는다.
-- S0(어셈블리와 순수 코어): 다음 단계
-- 지금까지의 결과는 7장 표에 있다. SP3·SP4 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
+- S0(어셈블리와 순수 코어): **완료**(2026-09-27). 콘솔 오류 0, Test Runner EditMode 39개 통과, 로비·곡 한 판·ChartEditorScene·하네스 컴파일 정상
+  - asmdef: `Core/SCOdyssey.Core`, `Audio/SCOdyssey.Audio`, `Game/Timing/SCOdyssey.Game.Timing`, 테스트 `Audio/Tests/Editor`, `Game/Timing/Tests/Editor`
+  - `Core/Qpc.cs`, Audio 루트 계약 11개 파일, `Audio/Clock/{DspQpcModel, SongTimeline, SongClock, SongAnchor}`
+  - Game/Timing 루트 계약(LaneInputEvent, IInputTimestampSource, JudgedInput, IJudgementClient, TimingSample, IJudgementTimingLog), `Judgement/{JudgementTimeline, JudgementPump}`
+  - EditMode 테스트 39개. 임시 csproj로 5개 어셈블리 컴파일(오류·경고 0)과 참조 경계를 확인했고, 리플렉션 실행기로 38개 통과(`LogAssert`를 쓰는 1개는 Test Runner에서만 실행)
+  - `.slnx`는 `.gitignore`에 넣고 추적을 끊었다(`.sln`, `.csproj`와 같은 생성 파일)
+  - `Assets/Scripts/Editor/Tests/` 폴더는 빈 폴더라 git에 남지 않으므로 첫 App 테스트를 넣는 S5a에서 만든다
+  - 곡 시계 창을 1초에서 10초로 바꾸고 하향 계단 규칙을 넣었다(7장 결정 아래 참고)
+- S1(엔진): 다음 단계
+- 지금까지의 결과는 7장 표에 있다. S-0.5·S0 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
 - S-0.5로 정한 것: B안(Core System 직접 소유) 유지, 메인 스레드에서 ASIO 처리, 곡 시계 모델(드리프트 항·평활 시계 없음, 단조 보장), `S_max = max(L·(N+1), 32ms)`, 게임 곡 스트리밍 유지, WASAPI 버퍼 프리셋 초안(480이 10ms 주기와 맞음, 확정은 SP13)
 - 2026-09-27에 고친 하네스 버그와 추가한 측정
   - 1차(노트북): SP4 준비 판정(`PLAYING` 포함), SP4 채널 위치 오차 측정, SP3 2초 연속 읽기, fps 경고
@@ -52,12 +60,14 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (사용자) S-0.5 결과를 커밋할지 정한다. 커밋 대상: 하네스 3개(`AudioSpikeHarness.cs`, `SpikeClockRecorder.cs`, `SpikeSchedule.cs`), `Audio_migration.md`, `Audio_architecture.md`
-2. (Claude) S0을 시작한다. 1장 규칙대로 이슈를 먼저 만들고 `refactor/` 브랜치에서 한다.
-   - asmdef: `SCOdyssey.Core`, `SCOdyssey.Audio`, `SCOdyssey.Game.Timing`, 테스트 asmdef 두 개
-   - `Core/Qpc.cs`, Audio 루트 계약 파일, `Audio/Clock`: 7장 결정대로(하한 포락선 1초 창, 클램프 `S_max = max(L·(N+1), 32ms)`, 세그먼트 안 단조 보장, 드리프트 항 없음)
-   - Game/Timing 순수 부분과 EditMode 테스트. SP3 CSV를 테스트 입력으로 쓸 수 있다(`persistentDataPath/audio_spike/sp3_clock_*.csv`).
-   - `.slnx`를 저장소에 둘지 `.gitignore`에 넣을지 정한다.
+1. (사용자) S0 커밋 여부를 정한다.
+2. (Claude) S1을 시작한다(2장 카드).
+   - Engine: 부팅 시도와 폴백, 검증, 콜백 마스크, FMOD Debug 전달, 에디터 정리 훅, Shutdown
+   - Mixer, OneShotBank
+   - Hosting: Installer, Runner(-1010), FocusPolicy, RuntimeManager 가드
+   - 오디오 오버레이
+   - 모듈 하네스: S-0.5 코드를 지우고 새 모듈을 단독 설치해 시험하는 하네스로 바꾼다. SP1(Play/Exit 20회, 재컴파일 5회, 두 프로필 빌드 실행·종료 5회)을 다시 확인한다. 이번에는 콜백이 항상 등록된 상태로 리로드를 확인한다.
+   - 게임 확인은 기본 Windows 프로필에서 한다(`AudioSpike-*` 프로필 씬 목록에는 스파이크 씬만 있다).
 
 ---
 
@@ -457,6 +467,8 @@
 | 2026-09-27 (데스크탑) | SP15 | Dev 플레이어 | WASAPI NVIDIA HDMI 48k 256x4 | PASS | ERROR 콜백 1건(ERR_FILE_NOTFOUND), 메인 스레드, 메인 외 스레드 0건. 크래시 없음 |
 | 2026-09-27 (데스크탑) | SP1 재컴파일 | Editor | – | PASS | 1차: 리로드가 일어나지 않음(Script Changes While Playing 설정). 2차(11:23): 리로드 5회, 오류 0이지만 시스템 상태 미기록. 3차(11:29): `SP1-reload` 5회 모두 시스템 켜짐 True(1회는 SP3 기록 중), 예외·크래시 0. 콜백이 등록된 상태의 리로드는 S1에서 실제 엔진으로 재확인 |
 
+| 2026-09-27 (데스크탑) | S0 확인 | Editor | – | PASS | 전체 컴파일(콘솔 오류 0), Test Runner EditMode 39개 통과, 로비·곡 한 판·ChartEditorScene 정상, `AudioSpike-Dev`에서 하네스 컴파일 정상. 참고: `AudioSpike-*` 프로필에서는 GameScene이 씬 목록에 없어 곡 진입이 안 되므로 게임 확인은 기본 Windows 프로필에서 한다 |
+
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
 - 별도 평활 렌더 시계는 넣지 않는다. 하한 포락선 + 클램프 모델만으로 모든 프리셋에서 프레임 오차 p99 ≤ 0.9ms였다.
@@ -464,6 +476,7 @@
 - S_max = max(`L·(N+1)`, 32ms). 프레임 사이 계단으로 갱신하지 않는다. 메인 스레드가 멈춘 시간이 섞여 최대 75ms까지 부풀려지기 때문이다. 관측한 최대 앞섬은 모든 프리셋에서 이 값 안에 있었다.
 - 게임 곡은 스트리밍(CREATESTREAM | NONBLOCKING)을 유지한다. 단, playSound 뒤 비동기 되감기가 끝난 다음 setPosition하고 반환값을 확인한다. getPosition은 싱크 판단에 쓰지 않는다.
 - WASAPI 버퍼 프리셋 초안: OS 믹스 주기(10ms)와 맞는 480이 계단이 가장 고르다(10ms마다 1블록, 역행 0). 기본값과 프리셋은 SP13에서 확정한다.
+- **S0에서 바꿈: 포락선 창 1초 → 10초 + 하향 계단 규칙.** S-0.5 판정은 프레임 사이 오차만 봤다. S0 테스트(프레임 주기와 믹스 주기가 맞물리는 경우)에서 드러나 SP3 CSV를 다시 분석했다. 1초 창은 프레임 읽기 위상이 몇 개로 묶여 추정이 몇 번의 점프로 0.7~4.5ms 오르내렸다(요약의 "프레임 오차 최대 2.8~3.4ms"가 이 점프). 10초 창은 0.25~2.2ms였다. 긴 창은 언더런처럼 DSP가 영구히 뒤처질 때 늦게 따라가므로, 1초보다 오래된 최댓값이 최근 1초 최댓값보다 8ms 넘게 높으면 버린다. 실측 6개 CSV에서 오판정 0회(정상 차이 최대 4.7ms)였고, 합성 20ms 언더런은 1초 안에 따라갔다.
 - 새 곡 시계가 원시 계단보다 앞서는 평균은 "블록/2"(2.7ms)가 아니라 "OS 믹스 주기/2"다. 이 데스크탑의 WASAPI는 5.9ms, ASIO4ALL은 9.0ms였다. 노트 싱크 체감 변화가 문서 예상보다 크다.
 
 ## 8. 후속 백로그 (이번 범위 밖)

@@ -8,7 +8,9 @@ Rhythm game client for Sangcheol Odyssey. Unity **6000.3.13f1** (URP, Input Syst
 
 ## Build / Run
 
-The `.csproj` and `.sln` files at the repo root are Unity-generated and gitignored — open the project through Unity Hub (Unity 6000.3.13f1). There is no command-line build, lint, or test pipeline; iteration happens inside the editor. The Unity test framework package is installed (`com.unity.test-framework`) but no test assemblies currently exist.
+The `.csproj`, `.sln` and `.slnx` files at the repo root are Unity-generated and gitignored — open the project through Unity Hub (Unity 6000.3.13f1). There is no command-line build, lint, or test pipeline; iteration happens inside the editor. EditMode tests live in the audio-redesign test assemblies (`Assets/Scripts/Audio/Tests/Editor`, `Assets/Scripts/Game/Timing/Tests/Editor`) and run from the Unity Test Runner.
+
+Assembly definitions: `SCOdyssey.Core` (`Assets/Scripts/Core`), `SCOdyssey.Audio` (`Assets/Scripts/Audio`) and `SCOdyssey.Game.Timing` (`Assets/Scripts/Game/Timing`) are separate asmdefs; everything else is still in Assembly-CSharp. Dependencies flow Core ← Audio ← Game.Timing ← Assembly-CSharp only. See `Assets/Scripts/Audio/Audio_architecture.md` for the audio/timing layer.
 
 Scenes (in `Assets/Scenes/`):
 - `MainScene` — lobby / menus (UI flow entry point)

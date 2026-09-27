@@ -63,7 +63,7 @@ Assembly-CSharp (기존 코드)
 | Output | DeviceCatalog, AudioOutputService | 출력 타입별 장치 목록(GUID), 출력 설정 적용(close→init) |
 | Mixing | FmodMixer, FmodMixBus | ChannelGroup 트리와 버스 볼륨 |
 | Playback | OneShotBank, FmodMusicPlayer, SongPlayer, FmodSongSession, StreamLoader | 원샷, 로비·프리뷰 음악, 게임 곡 세션, NONBLOCKING 로드 |
-| Clock | DspQpcModel, SongTimeline, SongClock | DSP↔QPC 대응, 앵커와 세그먼트, 프레임 스냅샷 |
+| Clock | DspQpcModel, SongTimeline, SongClock, SongAnchor | DSP↔QPC 대응, 세그먼트, 프레임 스냅샷, 앵커 커밋 계산 |
 | Hosting | AudioModuleInstaller, AudioModule, AudioEngineRunner, FocusPolicy, EditorAudioLifecycle | 설치, 프레임 구동, 포커스 정책, 에디터 정리 |
 | Legacy | LegacyTransport(`ILegacyTransport`) | 과도기 어댑터가 쓰는 공개 API. 모든 소비자를 옮긴 뒤 삭제한다. |
 | Diagnostics | 오디오 오버레이 | 엔진 상태, 세대, 출력, 버퍼, 클록 품질(개발 빌드) |
@@ -72,9 +72,9 @@ Assembly-CSharp (기존 코드)
 
 | 폴더 | 컴포넌트 | 역할 |
 |---|---|---|
-| LaneInput | IInputTimestampSource, UnityInputSystemTimestampSource, LaneInputEvent, RealtimeQpcMapper | 레인 입력 수집, `ctx.time` → QPC 변환, Synthetic 표시 |
-| Judgement | JudgementTimeline, JudgementPump, IJudgementClient, TimingSample, TimingLog | 판정 싱크 적용, 입력·시간 진행 전달, 판정 오차 기록 |
-| 루트 | JudgementDriver, GameplayTimingBinding | 프레임 구동(유일한 MonoBehaviour), 게임플레이 쪽 얇은 어댑터 |
+| 루트 | 계약(LaneInputEvent, IInputTimestampSource, JudgedInput, IJudgementClient, TimingSample, IJudgementTimingLog), JudgementDriver, GameplayTimingBinding | 공개 계약, 프레임 구동(유일한 MonoBehaviour), 게임플레이 쪽 얇은 어댑터 |
+| LaneInput | UnityInputSystemTimestampSource, RealtimeQpcMapper | 레인 입력 수집, `ctx.time` → QPC 변환, Synthetic 표시 |
+| Judgement | JudgementTimeline, JudgementPump, TimingLog | 판정 싱크 적용, 입력·시간 진행 전달, 판정 오차 기록 |
 | Diagnostics | 타이밍 오버레이 | 입력 배치, 매퍼 오프셋, 판정 오차 분포(JudgementDriver의 OnGUI에서 그림) |
 
 ## 3. 계약
@@ -137,13 +137,13 @@ namespace SCOdyssey.Audio
         void Pause(PauseReason reason);
         void Resume();
         void Stop();
-        event Action<SongSessionEvent> Changed;   // Started, Paused, Resumed, AudioStarted, AudioEnded, Recovered, Stopped, Disposed
+        event Action<SongSessionEvent> Changed;   // enum: Started, Paused, Resumed, AudioStarted, AudioEnded, Recovered, Stopped, Disposed
     }
 
     public interface ISongClock
     {
         SongFrame Frame { get; }                  // 이번 프레임 스냅샷
-        bool TrySongTimeAt(long qpcTicks, out double songTime, out int epoch);
+        bool TrySongTimeAt(long qpcTicks, out SongTimePoint point);   // 보관한 세그먼트(최근 8개)보다 오래됐으면 false
         event Action<ClockDiscontinuity> Discontinuity;
     }
 
@@ -153,6 +153,13 @@ namespace SCOdyssey.Audio
         public readonly long QpcTicks;     // 스냅샷을 만든 시각
         public readonly int Epoch;
         public readonly bool IsRunning;
+    }
+
+    public readonly struct SongTimePoint   // 임의 시각의 곡 시각(입력 판정용, 결정적)
+    {
+        public readonly double SongTime;
+        public readonly int Epoch;
+        public readonly bool IsRunning;    // 그 시각에 곡 시계가 흐르고 있었는지
     }
 }
 ```
@@ -172,7 +179,7 @@ namespace SCOdyssey.Game.Timing
 
     public interface IJudgementClient
     {
-        void OnLaneInput(in JudgedInput input);        // lane, isDown, songTime, judgeTime, judgeable
+        void OnLaneInput(in JudgedInput input);        // lane, isDown, qpc, songTime, judgeTime, judgeable, epoch
         void Advance(double songTime, double judgeTime);
         void OnFrame(ISongSession session);            // 매 프레임 호출. 상태 확인용
     }
@@ -307,12 +314,15 @@ setDelay(S), setPaused(false)
 
 **곡 시계 계산(최소안)**
 - 매 프레임 (QPC 앞, DSP 클록, QPC 뒤)을 읽는다. 두 QPC 차이가 50µs를 넘으면 버린다.
-- DSP↔QPC 관계는 최근 1초 창에서 `c - q·R`의 최댓값(하한 포락선)으로 오프셋을 잡는다. 믹서는 블록마다가 아니라 OS 믹스 주기(WASAPI 약 10ms)마다 여러 블록을 몰아 믹스하므로 원시 DSP는 그 주기만큼 계단진다.
+- DSP↔QPC 관계는 최근 10초 창에서 `c - q·R`의 최댓값(하한 포락선)으로 오프셋을 잡는다. 믹서는 블록마다가 아니라 OS 믹스 주기(WASAPI 약 10ms)마다 여러 블록을 몰아 믹스하므로 원시 DSP는 그 주기만큼 계단진다.
+  - 창이 1초면 프레임 읽기 위상이 몇 개로 묶여(60fps에서 약 3.3ms 간격) 추정이 0.7~4.5ms 오르내렸다(SP3 CSV). 10초 창은 0.25~2.2ms였다.
+  - **하향 계단**: 1초보다 오래된 최댓값이 최근 1초 최댓값보다 8ms 넘게 높으면 버린다. 언더런 등으로 DSP가 영구히 뒤처져도 1초 안에 따라간다. 정상 측정에서 두 값의 차이는 최대 4.7ms라 오판정은 없었다.
 - **클램프**: `c_read ≤ DspAt(q) ≤ c_read + S_max`(c_read는 이번 프레임의 원시 DSP 값). 믹서가 멈추면 곡 시계도 곧바로 멈춘다. `S_max = max(L·(N+1) 샘플, 32ms)`로 고정한다. 프레임 사이 계단으로 갱신하지 않는다(메인 스레드 멈춤이 섞여 부풀려진다).
 - **단조 보장**: 세그먼트 안에서 DspAt이 직전 값보다 작으면 직전 값을 쓴다(포락선 창이 밀릴 때 최대 약 2ms 역행이 관측됨).
 - 곡 시각: 세그먼트 시작 전이면 τ0, 시작 뒤면 `τ0 + (DspAt(q) - Cf) / R`
 - 불연속(시작, 일시정지, 재개, Generation 변경, DEVICEREINITIALIZE)에서 리셋한다.
-- 드리프트 항과 평활 렌더 시계는 두지 않는다(SP3). 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms이고, 이 모델만으로 프레임 사이 오차 p99가 1ms 이하였다. Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다.
+- 드리프트 항과 평활 렌더 시계는 두지 않는다(SP3). 오프셋을 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.2ms이고, 이 모델만으로 프레임 사이 오차 p99가 1ms 이하였다.
+- 곡 시계는 세션이 커밋·일시정지 때 넣는 세그먼트(멈춤 또는 흐름)를 최근 8개 보관한다. 프레임보다 조금 이른 입력이 이전 세그먼트(예: 일시정지 직전)에 속할 수 있기 때문이다. 모델이 리셋되기 전에 만든 흐르는 세그먼트는 DSP 도메인이 달라 계산하지 않는다. Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다.
 - `Channel.getPosition`은 믹스 블록 단위로만 맞으므로(±2블록) 싱크 판단에 쓰지 않는다.
 - 콜백 없는 정지 감지: Starting이나 Playing 중에 포커스가 있는데 원시 DSP 값이 0.5초 넘게 그대로면, 세션을 Recovering으로 두고 일시정지 경로를 탄다(재초기화는 하지 않음).
 
@@ -368,7 +378,7 @@ setDelay(S), setPaused(false)
 1. 입력 버퍼를 비워 복사본에 담는다(Pump 도중 Push가 와도 안전).
 2. 클라이언트가 없으면 버리고 끝낸다. Attach 이전 시각의 이벤트도 버린다.
 3. 각 입력: `qpc = min(qpc, Frame.QpcTicks)`로 클램프한 뒤 곡 시각으로 바꾼다. 보류하지 않는다.
-4. `judgeTime = songTime - 판정 싱크 단계 × 0.003`(JudgementTimeline). `Judgeable = 세션 진행 중 && !Synthetic`. NaN 시각은 거부한다.
+4. `judgeTime = songTime - 판정 싱크 단계 × 0.003`(JudgementTimeline). `Judgeable = 입력 시각에 곡 시계가 흐르고 있었음(SongTimePoint.IsRunning) && !Synthetic`. 그래서 ESC보다 먼저 눌린 같은 프레임 입력은 판정된다. NaN 시각과 세그먼트를 찾지 못한 시각은 거부한다.
 5. qpc 순서로 `OnLaneInput`을 부른 뒤 `Advance(Frame.SongTime, 판정 시각)`을 부른다(FrameBatched).
 6. `OnFrame(session)`을 부른다.
 7. 세션이 Disposed되면 클라이언트를 자동으로 뗀다.
