@@ -4,7 +4,7 @@
 
 - **브랜치**(2026-09-28 결정). FMOD 작업은 develop과 Illustar 둘 다에 들어가야 하고, GameManager·ChartManager 리팩터는 develop에서 분기한 브랜치에서 진행 중이며 Illustar에는 들어가지 않는다.
   - `refactor-FMOD`: 공통 부분(S-1~S6, develop 3e859a0 기준). develop의 GameManager·ChartManager 리팩터가 끝나 develop에 들어가면 develop을 병합하고, 그 코드 기준으로 I1 → I2 → C를 진행한다.
-  - `refactor-FMOD-Illustar`: `refactor-FMOD`(S6, b336dcc)에서 분기해 `Illustar`를 병합한 브랜치. Illustar의 GameManager·ChartManager 기준으로 I1 → I2 → C를 진행한다.
+  - `refactor-FMOD-Illustar`: `refactor-FMOD`(S6 + 브랜치 문서, fe0411a)에서 분기해 `Illustar`(d309db0)를 병합한 브랜치(95b5003, 충돌 없음). Illustar의 GameManager·ChartManager 기준으로 I1 → I2 → C를 진행한다.
   - 두 브랜치에서 같은 파일(BGAController, GameDataLoader, 모듈 쪽 수정 등)은 한쪽에서 커밋한 뒤 cherry-pick한다. 6장 통합 지점 표는 develop 3e859a0 기준이므로 각 브랜치에서 시작할 때 다시 대조한다.
 - 각 단계가 끝나면 게임을 처음부터 끝까지 플레이할 수 있어야 한다.
 
