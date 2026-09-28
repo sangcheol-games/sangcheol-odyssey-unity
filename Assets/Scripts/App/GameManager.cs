@@ -47,11 +47,13 @@ namespace SCOdyssey.App
 
         // 캐릭터 애니메이터 구독용 이벤트. 아래 On* 콜백(ChartManager가 호출)이 이 이벤트를 발행하고,
         // CharacterAnimator가 groupID로 필터링해 자기 그룹 이벤트만 처리한다.
-        public event Action<JudgeType, NotePosition, int> OnNoteJudgedEvent;
+        //
+        // 판정 이벤트는 일부러 두지 않았다. CheckHoldingBody가 홀드 본체의 Holding 노트마다,
+        // TryJudgeRelease가 릴리즈 판정마다 OnNoteJudged를 쏘는데 둘 다 캐릭터에는 잡음이다.
+        // 히트 등급은 OnLaneInputEvent가 예측값으로 싣고 오므로 타격음과 그림이 어긋날 수 없다.
         public event Action<NotePosition, int> OnHoldStartEvent;
-        public event Action<NotePosition, int> OnHoldEndEvent;
-        public event Action<NotePosition, int> OnHoldReleaseEvent;
-        public event Action<NotePosition, int> OnLaneInputEvent;
+        public event Action<NotePosition, int> OnHoldStopEvent;
+        public event Action<LaneInputResult> OnLaneInputEvent;
 
 
         [Header("게임 상태")]
@@ -66,6 +68,8 @@ namespace SCOdyssey.App
         public TextMeshProUGUI scoreText;
         public GameObject comboRoot;   // Combo 그룹 루트("Combo" 라벨 + 숫자 + 인디케이터). 콤보 0이면 통째로 숨긴다
         public TextMeshProUGUI comboText;
+        public ComboIndicatorAnimator comboIndicator; // Combo 화살표 밀림 연출. 미할당이면 연출만 생략된다
+        public ComboCountAnimator comboCountAnimator; // 콤보 숫자 팝 연출. 미할당이면 연출만 생략된다
         public TextMeshProUGUI gaugeText;
         public Image gaugeBar; // fillAmount로 게이지 바 표현 시
         public Image clearEffectImage; // 클리어 등급 / 재개 카운트다운 연출 이미지
@@ -266,7 +270,6 @@ namespace SCOdyssey.App
         public void OnNoteJudged(JudgeType judgeType, NotePosition pos, int groupID)
         {
             scoreManager.ProcessJudge(judgeType);
-            OnNoteJudgedEvent?.Invoke(judgeType, pos, groupID);
         }
 
         public void OnNoteMissed()
@@ -279,19 +282,15 @@ namespace SCOdyssey.App
             OnHoldStartEvent?.Invoke(pos, groupID);
         }
 
-        public void OnHoldEnd(NotePosition pos, int groupID)
+        // 홀드가 끝났다. 키를 뗐거나, 본체를 완주했거나, 본체를 놓쳤거나 — 구독자는 구분하지 않는다.
+        public void OnHoldStop(NotePosition pos, int groupID)
         {
-            OnHoldEndEvent?.Invoke(pos, groupID);
+            OnHoldStopEvent?.Invoke(pos, groupID);
         }
 
-        public void OnHoldRelease(NotePosition pos, int groupID)
+        public void OnLaneInput(LaneInputResult result)
         {
-            OnHoldReleaseEvent?.Invoke(pos, groupID);
-        }
-
-        public void OnLaneInput(NotePosition pos, int groupID)
-        {
-            OnLaneInputEvent?.Invoke(pos, groupID);
+            OnLaneInputEvent?.Invoke(result);
         }
 
 
@@ -318,6 +317,12 @@ namespace SCOdyssey.App
             {
                 comboText.gameObject.SetActive(combo > 0);   // comboRoot 미할당 시 기존 동작으로 폴백
             }
+
+            // 인디케이터 밀림 연출과 숫자 팝 연출. 반드시 SetActive 이후에 호출한다
+            // (SetActive(true)가 OnEnable을 동기 실행해 위상/포즈를 리셋하므로, 먼저 부르면 이번 콤보가 지워진다)
+            // OnComboChanged는 판정마다 같은 값·0으로도 재발행되므로 증가 판별은 각 컴포넌트가 한다
+            comboIndicator?.SetCombo(combo);
+            comboCountAnimator?.SetCombo(combo);
         }
 
         public void UpdateGauge(float percentage)
