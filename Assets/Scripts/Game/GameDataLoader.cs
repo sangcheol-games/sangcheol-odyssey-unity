@@ -1,14 +1,19 @@
 using System.Collections;
+using Cysharp.Threading.Tasks;
 using SCOdyssey.App;
+using SCOdyssey.Audio;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
     // GameScene 진입 시 선택된 곡의 오디오/BGA/채보를 로딩한 뒤 GameManager.StartGame()으로 게임을 시작시키는 부트로더.
     // 채보는 ChartParser.Parse로 변환 후 GameManager에 캐싱 → 다시하기 시 재파싱 없이 캐시를 재사용한다.
+    // 곡은 ISongPlayer로 연다(세션은 이 씬이 언로드될 때 Dispose된다). 음원을 열지 못하면 로비로 돌아간다.
+    // 음원 경로가 비어 있는 곡은 무음 세션으로 진행한다(곡 시계만 흐른다).
     public class GameDataLoader : MonoBehaviour
     {
 
@@ -35,10 +40,10 @@ namespace SCOdyssey.Game
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
-            // FMOD 오디오 로딩
-            if (!ServiceLocator.TryGet<IAudioManager>(out var audioManager))
+            // 곡 세션 로딩
+            if (!ServiceLocator.TryGet<ISongPlayer>(out var songs))
             {
-                Debug.LogError("[GameDataLoader] IAudioManager not found in ServiceLocator!");
+                Debug.LogError("[GameDataLoader] ISongPlayer not found in ServiceLocator!");
                 yield break;
             }
 
@@ -47,13 +52,22 @@ namespace SCOdyssey.Game
 
             if (!string.IsNullOrEmpty(music.audioFilePath))
             {
-                audioManager.LoadAudio(music.audioFilePath);
-                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
-                while (!audioManager.IsLoaded) yield return null;
+                // NONBLOCKING 로드 완료까지 대기 (보통 몇 프레임, 최대 10초)
+                SongLoadResult result = default;
+                yield return songs.LoadAsync(music.audioFilePath, this.GetCancellationTokenOnDestroy()).ToCoroutine(r => result = r);
+                if (!result.Ok)
+                {
+                    if (result.Status == AudioLoadStatus.Cancelled || result.Status == AudioLoadStatus.Superseded) yield break;
+                    // TODO: 공용 알림 UI가 생기면 로비에서 안내한다.
+                    Debug.LogWarning("[GameDataLoader] 곡 음원을 열지 못해 로비로 돌아갑니다(" + result.Status + "): " + result.Detail);
+                    SceneManager.LoadScene("MainScene");
+                    yield break;
+                }
             }
             else
             {
-                Debug.LogWarning("[GameDataLoader] audioFilePath is empty!");
+                Debug.LogWarning("[GameDataLoader] audioFilePath is empty! 소리 없이 진행합니다.");
+                songs.CreateSilent();
             }
 
             yield return LoadChart(music);

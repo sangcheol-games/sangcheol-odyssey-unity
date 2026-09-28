@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using SCOdyssey.Audio;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
+using SCOdyssey.Game.Timing;
 using SCOdyssey.UI;
 using TMPro;
 using UnityEngine;
@@ -13,20 +15,19 @@ namespace SCOdyssey.App
 {
     // ── 흐름 (게임 오케스트레이터) ──────────────────────────────────────────
     //
-    //  준비: Awake()에서 자신을 ServiceLocator에 등록하고 IAudioManager를 얻는다.
-    //        Start()에서 IInputManager의 입력 이벤트와 ScoreManager의 UI 이벤트를 구독한다.
+    //  준비: Awake()에서 자신을 ServiceLocator에 등록하고 ISongPlayer와 JudgementDriver를 얻는다.
+    //        Start()에서 IInputManager의 재시작·일시정지 이벤트와 ScoreManager의 UI 이벤트를 구독한다.
     //
-    //  게임 시작: GameDataLoader가 StartGame()을 호출한다.
-    //        chartManager.Init() -> scoreManager.Init() -> globalStartTime 기록(현재 DSP 시각) -> 입력 동기점 설정
+    //  게임 시작: GameDataLoader가 곡 세션을 연 뒤 StartGame()을 호출한다.
+    //        판정 타이밍 연결(GameplayTimingBinding) -> chartManager.Init()(안에서 StartMusic -> 세션 Start) -> scoreManager.Init()
     //
-    //  시간: GetCurrentTime()은 (현재 DSP - globalStartTime), 즉 게임 상대시간을 돌려준다.
-    //        일시정지 중에는 _pauseDspTime 기준으로 고정하고, 재개 시 흐른 만큼 globalStartTime을 보정한다.
-    //        ※ FMOD DSP 클럭만 사용한다. AudioSettings.dspTime은 기준점이 달라 쓰지 않는다.
+    //  시간: GetCurrentTime()은 곡 시계의 곡 시각(Frame.SongTime)을 돌려준다. 0은 게임 시작, 음원은 리드인 + 노트 싱크 뒤에 시작한다.
+    //        일시정지 중에는 세션이 곡 시계를 멈추고, 재개 때 같은 곡 시각에서 다시 흐른다.
     //
-    //  매 프레임: Update() -> chartManager.SyncTime(GetCurrentTime())
+    //  매 프레임: JudgementDriver(-900)가 binding을 거쳐 OnTimingAdvance -> chartManager.SyncTime(songTime, judgeTime)
     //
-    //  입력: HandleLaneInput()/HandleLaneRelease() -> chartManager.TryJudgeInput()/TryJudgeRelease()
-    //        (입력 DSP 시각을 globalStartTime 기준 상대시간으로 변환해 전달한다)
+    //  입력: JudgementDriver가 입력 시각을 곡 시각·판정 시각으로 바꿔 OnTimingLaneInput으로 넘긴다
+    //        -> chartManager.TryJudgeInput()/TryJudgeRelease() (판정 싱크는 JudgementDriver가 judgeTime에 한 번만 적용한다)
     //
     //  판정 수신: ChartManager가 OnNoteJudged()/OnNoteMissed()/OnHoldStart() 등을 호출하면
     //        scoreManager.ProcessJudge()로 점수를 넘기고, *Event를 발행해 CharacterAnimator에 전파한다.
@@ -36,7 +37,11 @@ namespace SCOdyssey.App
     public class GameManager : MonoBehaviour, IGameManager
     {
         [Header("참조")]
-        private IAudioManager _audioManager;
+        // [AUDIO-IP:G1] 곡 세션과 판정 타이밍
+        private ISongPlayer _songs;
+        private ISongSession _session;
+        private JudgementDriver _judgement;
+        private GameplayTimingBinding _timing;
         private IInputManager _inputManager;
         public ScoreManager scoreManager;
         public ChartManager chartManager;
@@ -57,11 +62,10 @@ namespace SCOdyssey.App
 
 
         [Header("게임 상태")]
-        private double globalStartTime;  // 게임 상대시간의 원점(StartGame 시점의 DSP 시각)
         public bool IsGameRunning { get; private set; } = false;
         public bool IsPaused { get; private set; } = false;
-        private double _pauseDspTime;
-        public bool IsAudioPlaying => _audioManager != null && _audioManager.IsPlaying;
+        // [AUDIO-IP:G10] 음원이 끝나기 전까지 true. 음원이 끝난 뒤에도 세션은 일시정지할 수 있다.
+        public bool IsAudioPlaying => _session != null && !_session.IsAudioFinished;
 
         [Header("UI")]
         public Canvas gameCanvas; // GameScene의 메인 Canvas (결과화면 표시 시 비활성화)
@@ -84,8 +88,10 @@ namespace SCOdyssey.App
         private void Awake()
         {
             ServiceLocator.TryRegister<IGameManager>(this);
-            if (!ServiceLocator.TryGet<IAudioManager>(out _audioManager))
-                Debug.LogError("[GameManager] IAudioManager not found in ServiceLocator!");
+            if (!ServiceLocator.TryGet<ISongPlayer>(out _songs))
+                Debug.LogError("[GameManager] ISongPlayer not found in ServiceLocator!");
+            if (!ServiceLocator.TryGet<JudgementDriver>(out _judgement))
+                Debug.LogError("[GameManager] JudgementDriver not found in ServiceLocator!");
 
             // gameCanvas가 Screen Space - Camera이면 worldCamera 설정
             if (gameCanvas != null && Camera.main != null
@@ -101,8 +107,7 @@ namespace SCOdyssey.App
             if (ServiceLocator.TryGet<IInputManager>(out _inputManager))
             {
                 _inputManager.SwitchToGameplay(); // 게임용 키 세팅으로 전환
-                _inputManager.OnLanePressed += HandleLaneInput;
-                _inputManager.OnLaneReleased += HandleLaneRelease;
+                // [AUDIO-IP:G2] 레인 입력은 JudgementDriver → binding으로 받는다(OnTimingLaneInput)
                 _inputManager.OnRestart += HandleRestart;
                 _inputManager.OnPause += HandlePause;
             }
@@ -120,10 +125,12 @@ namespace SCOdyssey.App
         {
             ServiceLocator.Remove<IGameManager>();
 
+            // [AUDIO-IP:G2] SwitchToUI가 만드는 합성 release보다 먼저 판정 연결을 끊는다
+            _timing?.Dispose();
+            _timing = null;
+
             if (_inputManager != null)
             {
-                _inputManager.OnLanePressed -= HandleLaneInput;
-                _inputManager.OnLaneReleased -= HandleLaneRelease;
                 _inputManager.OnRestart -= HandleRestart;
                 _inputManager.OnPause -= HandlePause;
                 _inputManager.SwitchToUI();
@@ -132,20 +139,20 @@ namespace SCOdyssey.App
 
         public void StartGame()
         {
-            if (chartManager == null || _audioManager == null || chartData == null)
+            // [AUDIO-IP:G3] GameDataLoader가 연 곡 세션에 판정 타이밍을 붙인 뒤 채보를 초기화한다
+            if (_songs != null) _session = _songs.Current;
+            if (chartManager == null || _session == null || _judgement == null || chartData == null)
             {
                 Debug.LogError("GameManager 초기화 실패!");
                 return;
             }
 
+            _timing?.Dispose();
+            _timing = GameplayTimingBinding.Attach(_judgement, _session, OnTimingAdvance, OnTimingLaneInput, IsGameRunningNow, OnSongPausedExternally);
+            bgaController?.Follow(_session);
+
             chartManager.Init(chartData, this);
             scoreManager.Init(chartData.totalNotes);
-
-            globalStartTime = _audioManager.GetDSPTime();
-
-            // 동기점 기록: FMOD DSP 클럭(globalStartTime)과 OS 클럭을 같은 시점에 연속으로 읽어 변환 기준을 설정
-            // AudioSettings.dspTime(Unity 내장)은 FMOD 클럭과 기준점이 다르므로 사용 금지
-            _inputManager?.SetTimeSyncPoint(globalStartTime, Time.realtimeSinceStartupAsDouble);
 
             IsGameRunning = true;
         }
@@ -157,32 +164,23 @@ namespace SCOdyssey.App
 
         public void StartMusic(double delayTime)
         {
-            // 노트싱크 오프셋 적용 (양수: 음악 늦게 시작, 음수: 음악 일찍 시작)
-            double offsetSec = 0;
+            // [AUDIO-IP:G4] 노트싱크 오프셋은 세션이 적용한다 (양수: 음악 늦게 시작, 음수: 음악 일찍 시작)
+            int audioOffsetMs = 0;
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
-                offsetSec = settingsManager.Current.audioOffsetMs / 1000.0;
+                audioOffsetMs = settingsManager.Current.audioOffsetMs;
 
-            double dspStartTime = _audioManager.GetDSPTime() + delayTime + offsetSec;
-            _audioManager.PlayScheduled(dspStartTime);
-            bgaController?.SchedulePlay(dspStartTime);
+            _session?.Start(delayTime, audioOffsetMs);
         }
 
         public double GetCurrentTime()
         {
-            if (!IsGameRunning) return 0f;
-            // 일시정지 중: DSP 클록이 계속 진행해도 채보 시간은 일시정지 시점으로 고정
+            if (!IsGameRunning || _session == null) return 0f;
+            // [AUDIO-IP:G5] 일시정지 중에는 세션이 곡 시계를 멈추므로 채보 시간도 고정된다
             // → TimelineController, NoteController 등 GetCurrentTime() 기반 위치 계산이 모두 멈춤
-            if (IsPaused) return _pauseDspTime - globalStartTime;
-            return _audioManager.GetDSPTime() - globalStartTime;
+            return _session.Clock.Frame.SongTime;
         }
 
-
-        private void Update()
-        {
-            if (!IsGameRunning || IsPaused) return;
-
-            chartManager.SyncTime(GetCurrentTime());
-        }
+        // [AUDIO-IP:G6] 매 프레임 SyncTime은 JudgementDriver가 OnTimingAdvance로 대신한다
 
         private void OnApplicationFocus(bool focus)
         {
@@ -194,9 +192,8 @@ namespace SCOdyssey.App
         {
             if (!IsGameRunning || IsPaused) return;
             IsPaused = true;
-            _pauseDspTime = _audioManager.GetDSPTime();
-            _audioManager.Pause();
-            bgaController?.Pause();
+            // [AUDIO-IP:G7] 입력 맵을 끄기 전에 곡 시계를 멈춘다(그 뒤 합성 release는 판정되지 않는다)
+            _session?.Pause(PauseReason.User);
             _inputManager.SwitchToUI();
             if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
             {
@@ -226,10 +223,8 @@ namespace SCOdyssey.App
                 clearEffectImage.gameObject.SetActive(false);
             }
 
-            // 일시정지 동안 흐른 DSP 시간만큼 globalStartTime을 보정하여 채보 위치를 유지
-            globalStartTime += _audioManager.GetDSPTime() - _pauseDspTime;
-            _audioManager.Resume();
-            bgaController?.Resume();
+            // [AUDIO-IP:G8] 멈춘 곡 시각에서 다시 예약한다(BGA는 곡 시계를 따라 다시 재생된다)
+            _session?.Resume();
             _inputManager.SetInputActive(true);
             _inputManager.SwitchToGameplay();
             IsPaused = false;
@@ -244,17 +239,31 @@ namespace SCOdyssey.App
             // chartManager.Initialize(data); 
         }
 
-        private void HandleLaneInput(int laneIndex, double inputDspTime)
+        // ── 판정 타이밍 콜백 (GameplayTimingBinding) ── [AUDIO-IP:G9]
+        // 진행: 마디 진행은 songTime, miss·홀드는 judgeTime으로 한다. [AUDIO-IP:G13]
+        private void OnTimingAdvance(double songTime, double judgeTime)
         {
-            if (!IsGameRunning) return;
-            chartManager.TryJudgeInput(laneIndex, inputDspTime - globalStartTime);
+            chartManager.SyncTime(songTime, judgeTime);
         }
 
-        private void HandleLaneRelease(int laneIndex, double inputDspTime)
+        // 입력: 판정 시각으로 판정한다. 판정할 수 없는 입력은 binding이 release만 넘기고,
+        // 그 release(합성 release, 멈춘 동안의 release)는 홀드 상태만 푼다. [AUDIO-IP:G14]
+        private void OnTimingLaneInput(in JudgedInput input)
         {
             if (!IsGameRunning) return;
-            //Debug.Log($"Lane {laneIndex} Released");
-            chartManager.TryJudgeRelease(laneIndex, inputDspTime - globalStartTime);
+            if (input.IsDown) chartManager.TryJudgeInput(input.Lane, input.JudgeTime);
+            else chartManager.TryJudgeRelease(input.Lane, input.JudgeTime, input.Judgeable);
+        }
+
+        private bool IsGameRunningNow()
+        {
+            return IsGameRunning;
+        }
+
+        // [AUDIO-IP:G12] 포커스 상실·장치 변경·스트림 끊김으로 세션이 멈췄으면 일시정지 UI를 띄운다
+        private void OnSongPausedExternally(PauseReason reason)
+        {
+            if (IsGameRunning && !IsPaused) Pause();
         }
 
         private void HandleRestart()
@@ -347,8 +356,8 @@ namespace SCOdyssey.App
         {
             IsGameRunning = false;
 
-            // 음악 정지
-            _audioManager?.Stop();
+            // [AUDIO-IP:G11] 음악 정지
+            _session?.Stop();
 
             // UI 모드로 전환
             if (ServiceLocator.TryGet<IInputManager>(out var inputManager))

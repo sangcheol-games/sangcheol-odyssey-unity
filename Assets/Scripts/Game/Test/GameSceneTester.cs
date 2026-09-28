@@ -8,7 +8,6 @@ public class GameSceneTester : MonoBehaviour
     [Header("Test Settings")]
     public TextAsset testChartFile;
     public int testBpm = 160;
-    public string testAudioPath;   // StreamingAssets 기준 상대 경로 (예: "Music/test.ogg")
 
     void Start()
     {
@@ -20,12 +19,6 @@ public class GameSceneTester : MonoBehaviour
         }
 
         Debug.Log("--- [TEST MODE] Starting Game ---");
-
-        if (!string.IsNullOrEmpty(testAudioPath) &&
-            ServiceLocator.TryGet<IAudioManager>(out var audioManager))
-        {
-            audioManager.LoadAudio(testAudioPath);
-        }
 
         if (testChartFile != null)
         {

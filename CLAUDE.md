@@ -8,7 +8,9 @@ Rhythm game client for Sangcheol Odyssey. Unity **6000.3.13f1** (URP, Input Syst
 
 ## Build / Run
 
-The `.csproj` and `.sln` files at the repo root are Unity-generated and gitignored — open the project through Unity Hub (Unity 6000.3.13f1). There is no command-line build, lint, or test pipeline; iteration happens inside the editor. The Unity test framework package is installed (`com.unity.test-framework`) but no test assemblies currently exist.
+The `.csproj`, `.sln` and `.slnx` files at the repo root are Unity-generated and gitignored — open the project through Unity Hub (Unity 6000.3.13f1). There is no command-line build, lint, or test pipeline; iteration happens inside the editor. EditMode tests live in the audio-redesign test assemblies (`Assets/Scripts/Audio/Tests/Editor`, `Assets/Scripts/Game/Timing/Tests/Editor`) and run from the Unity Test Runner.
+
+Assembly definitions: `SCOdyssey.Core` (`Assets/Scripts/Core`), `SCOdyssey.Audio` (`Assets/Scripts/Audio`) and `SCOdyssey.Game.Timing` (`Assets/Scripts/Game/Timing`) are separate asmdefs; everything else is still in Assembly-CSharp. Dependencies flow Core ← Audio ← Game.Timing ← Assembly-CSharp only. See `Assets/Scripts/Audio/Audio_architecture.md` for the audio/timing layer.
 
 Scenes (in `Assets/Scenes/`):
 - `MainScene` — lobby / menus (UI flow entry point)
@@ -36,7 +38,7 @@ Each installer registers services (`CoreLogger`, `GameClock`, `ServerTimeSkew`, 
 
 `Managers` is a `DontDestroyOnLoad` singleton placed in `MainScene` that directly instantiates and registers the gameplay-side managers into the same `ServiceLocator`, in this exact order:
 
-`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → `IAudioManager` (FMOD, attached as component)
+`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → audio module (`AudioModuleInstaller.Install`, registers `IAudioEngine`/`IAudioOutputService`/`IAudioMixer`/`IOneShotPlayer`/`IMusicPlayers`/`ISongPlayer`; falls back to `InstallDisabled`, a silent module, if install throws) → `JudgementDriver` (+ `IJudgementTimingLog`)
 
 Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate`, resolution etc. during their init.
 
@@ -46,15 +48,15 @@ Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate
 
 ## Rhythm engine (`Assets/Scripts/Game/`)
 
-### Time model — **FMOD DSP clock is authoritative**
+### Time model — **song clock is authoritative**
 
-`GameManager` uses `IAudioManager.GetDSPTime()` (FMOD's DSP clock) as the single time source. **Never use `AudioSettings.dspTime`** — its epoch differs from FMOD's and will cause desync.
+Gameplay time comes from the song session's clock (`ISongPlayer` → `ISongSession.Clock`), built on FMOD's DSP clock and QPC. See `Assets/Scripts/Audio/Audio_architecture.md` §7–8. **Never use `AudioSettings.dspTime`, `Time.*` or raw FMOD calls for song time.**
 
-- `globalStartTime` is captured at `StartGame()` from the DSP clock.
-- Chart time = `GetDSPTime() - globalStartTime` (frozen to `_pauseDspTime - globalStartTime` during pause).
-- On resume, `globalStartTime += GetDSPTime() - _pauseDspTime` so chart position is preserved.
-- `InputManager.SetTimeSyncPoint(dspNow, realtimeNow)` records one sync sample; input timestamps (`InputAction.context.time`, OS realtime) are converted back to DSP time by linear offset in `ConvertToDspTime`.
-- Audio offset from `SettingsManager.Current.audioOffsetMs` is applied in `StartMusic()` (positive = music starts later).
+- `GameDataLoader` opens the song with `ISongPlayer.LoadAsync` (silent session via `CreateSilent` if the chart has no audio; back to the lobby if loading fails). `GameManager.StartGame()` attaches `GameplayTimingBinding` to the session, then `ChartManager.Init()` calls `StartMusic(barDuration)` → `ISongSession.Start(leadIn, audioOffsetMs)`.
+- `GameManager.GetCurrentTime()` = `ISongSession.Clock.Frame.SongTime` (0 at game start; audio starts at `leadIn + audioOffsetMs`, positive = music later). Pause/resume go through `ISongSession.Pause(PauseReason.User)` / `Resume()`, which freeze and re-anchor the clock, so no manual time correction is needed.
+- Every frame `JudgementDriver` (execution order -900, right after the audio runner at -1010) converts lane inputs (`InputManager.LaneTimestampSource`, `ctx.time` → QPC → song time) and calls, in input-time order, `ChartManager.TryJudgeInput/TryJudgeRelease(lane, judgeTime)` and then `ChartManager.SyncTime(songTime, judgeTime)` via the binding.
+- `judgeTime = songTime - judgmentOffset × 3ms` is applied in one place (`JudgementTimeline`). Bar progression uses `songTime`; hit windows, misses and hold bodies compare `judgeTime`. Synthetic releases (ESC / input-map disable / focus loss) only clear hold state.
+- BGA follows the song clock (`BGAController.Follow(session)`); the timeline follows `GetCurrentTime()`.
 
 ### Chart format and parsing
 
@@ -83,7 +85,7 @@ Character animation: `CharacterAnimator` subscribes to `GameManager.OnLaneInputE
 
 - **Namespaces mirror folders**: `SCOdyssey.Boot`, `SCOdyssey.Core`, `SCOdyssey.App`, `SCOdyssey.App.Interfaces`, `SCOdyssey.Game`, `SCOdyssey.Domain.Dto`, `SCOdyssey.Domain.Service`, `SCOdyssey.Net`, `SCOdyssey.UI`, `SCOdyssey.Testing.*`.
 - **Interfaces for managers live separately** in `Assets/Scripts/App/Interfaces/` — consumers always depend on `I*Manager`, not the concrete class, so the API/mock can be swapped via `TestingConfig.useMockApi`.
-- **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `FMODAudioManager.cs`).
+- **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `Assets/Scripts/Audio/`).
 - **Logging**: call `CoreLogger` from `ServiceLocator` (tag strings like `"boot"`, `"unity"`). `LoggerDriver` forwards `Application.logMessageReceivedThreaded` to `CoreLogger` so Debug.Log reaches the file/ring/console sinks, but has a reentrancy guard — don't call Debug.Log while draining.
 - **Comments and identifiers are mixed Korean/English**; match the surrounding file's style when editing rather than translating.
 

@@ -1,8 +1,10 @@
-using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using SCOdyssey.App;
+using SCOdyssey.Audio;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
 using static SCOdyssey.Domain.Service.Constants;
@@ -22,6 +24,9 @@ namespace SCOdyssey.UI
 
         private RectTransform albumArtRect;
         private float albumArtAngle; // 시계방향 누적 각도(양수, 0~360)
+
+        // 프리뷰 요청 취소용(화면을 떠나면 취소). 곡을 빠르게 넘기면 재생기가 마지막 요청만 남긴다(150ms 디바운스).
+        private CancellationTokenSource _previewCts;
 
         private int selectedIndex;
         private MusicSO selectedMusic => musicList[selectedIndex];
@@ -63,7 +68,7 @@ namespace SCOdyssey.UI
         {
             base.OnEnable();
 
-            StartCoroutine(PlayPreviewAudio());
+            PlayPreviewAudio();
         }
 
         protected override void OnDisable()
@@ -71,8 +76,8 @@ namespace SCOdyssey.UI
             base.OnDisable();
 
             // stop preview audio when ui change
-            var audioManager = ServiceLocator.Get<IAudioManager>();
-            audioManager.Stop();
+            CancelPreview();
+            if (ServiceLocator.TryGet<IMusicPlayers>(out var music)) music.Preview.Stop();
         }
 
         private void Init()
@@ -145,30 +150,47 @@ namespace SCOdyssey.UI
             albumArtAngle = 0f;
             albumArtRect.localRotation = Quaternion.identity;
 
-            StartCoroutine(PlayPreviewAudio());
+            PlayPreviewAudio();
         }
 
-        private IEnumerator PlayPreviewAudio()
+        private void PlayPreviewAudio()
         {
-            var audioManager = ServiceLocator.Get<IAudioManager>();
-            if(audioManager.IsPlaying) audioManager.Stop();
+            if (!isActiveAndEnabled || musicList == null || musicList.Count == 0) return;
+            if (!ServiceLocator.TryGet<IMusicPlayers>(out var music))
+            {
+                Debug.LogWarning("[AdventureUI] IMusicPlayers를 찾지 못해 프리뷰를 재생하지 않습니다.");
+                return;
+            }
 
             var audioFilePath = selectedMusic.previewAudioFilePath;
-
-            if(string.IsNullOrEmpty(audioFilePath))
+            if (string.IsNullOrEmpty(audioFilePath))
             {
-                Debug.LogWarning("[AdventureUI] previewAudioFilePath is empty!");
-                yield break;
+                // 이전 곡 프리뷰가 남지 않게 멈춘다. TODO: 공용 알림 UI가 생기면 화면에 안내한다.
+                music.Preview.Stop();
+                Debug.LogWarning("[AdventureUI] 프리뷰 음원이 없습니다: " + selectedMusic.name);
+                return;
             }
-            else
-            {
-                audioManager.LoadAudio(audioFilePath, loopHint: true);
-                // NONBLOCKING 로드 완료까지 대기 (보통 1-3프레임)
-                while(!audioManager.IsLoaded) yield return null;
 
-                var dspStartTime = audioManager.GetDSPTime();
-                audioManager.PlayScheduled(dspStartTime, loopPlay: true);
+            if (_previewCts == null) _previewCts = new CancellationTokenSource();
+            PlayPreviewAsync(music.Preview, audioFilePath, _previewCts.Token).Forget();
+        }
+
+        private static async UniTaskVoid PlayPreviewAsync(IMusicPlayer preview, string fileName, CancellationToken ct)
+        {
+            AudioLoadResult result = await preview.PlayAsync(fileName, true, ct);
+            if (result.Status == AudioLoadStatus.NotFound || result.Status == AudioLoadStatus.DecodeError || result.Status == AudioLoadStatus.Timeout)
+            {
+                // TODO: 공용 알림 UI가 생기면 화면에 안내한다.
+                Debug.LogWarning("[AdventureUI] 프리뷰를 재생하지 못했습니다(" + result.Status + "): " + result.Detail);
             }
+        }
+
+        private void CancelPreview()
+        {
+            if (_previewCts == null) return;
+            _previewCts.Cancel();
+            _previewCts.Dispose();
+            _previewCts = null;
         }
 
         protected override void HandleSelect(Vector2 direction)
