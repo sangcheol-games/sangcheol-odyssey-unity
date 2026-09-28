@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
+using SCOdyssey.Audio;
 using SCOdyssey.Core;
+using SCOdyssey.Game.Timing;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
@@ -13,15 +15,19 @@ namespace SCOdyssey.Game
     //  게임 시작 시 Init()을 1회 호출한다.
     //    PrepareNextBar() -> StartCurrentBar() -> StartMusic()
     //
-    //  이후 매 프레임 GameManager.Update()가 SyncTime(time)을 호출하고,
+    //  이후 매 프레임 JudgementDriver가 GameManager를 거쳐 SyncTime(songTime, judgeTime)을 호출하고,
     //  SyncTime()은 아래를 순서대로 수행한다.
-    //    1) 현재 시간이 마디 종료 시각을 넘었으면  StartCurrentBar() -> CheckGameClear()
-    //    2) 레인마다 CheckMissedNotes(), 홀드 중인 레인은 CheckHoldingBody()
+    //    1) 곡 시각이 마디 종료 시각을 넘었으면  StartCurrentBar() -> CheckGameClear()
+    //    2) 레인마다 CheckMissedNotes(), 홀드 중인 레인은 CheckHoldingBody()  (판정 시각 기준)
     //    3) UpdateCountdowns()
     //
-    //  키 입력은 프레임 루프와 별개로 들어온다.
+    //  키 입력은 같은 프레임에 진행보다 먼저, 입력 시각 순서로 들어온다.
     //    누르면 TryJudgeInput(), 떼면 TryJudgeRelease() 가 호출되고,
     //    판정에 성공하면 ApplyJudgment() 로 마무리한다.
+    //
+    //  시각: songTime은 곡 시계의 곡 시각(마디 진행·카운트다운), judgeTime은 판정 싱크를 적용한 판정 시각이다
+    //        (judgeTime = songTime - 판정 싱크 단계 × 3ms, JudgementDriver가 한 곳에서만 적용한다).
+    //        노트 시각과는 judgeTime만 비교한다. [AUDIO-IP:C1]
     //
     //  마디 전환은 StartCurrentBar() 내부에서 일어난다.
     //    ActivateTimelines() -> ActivateGhostNotes() -> currentBarNumber 증가 -> PrepareNextBar()
@@ -103,8 +109,6 @@ namespace SCOdyssey.Game
 
         private Action<JudgeType, NoteController> judgeEffectAction;
 
-        private double _judgmentOffsetSec;   // 유저 설정 판정 오프셋(초). 판정 윈도우 중심을 이동시킴
-
         // 판정 등급별 타격음 파일명. 인덱스 = (int)JudgeType (Perfect/Master/Ideal/Kind/Umm 순) — 순서를 바꾸면 안 된다.
         // StreamingAssets/HitSound/ 기준. 소리를 바꾸려면 같은 이름으로 WAV를 덮어쓰면 코드 수정 없이 교체된다.
         // TODO: 노트 스킨별 타격음을 지원하게 되면 이 테이블을 NoteSkinSO로 올리고
@@ -118,8 +122,10 @@ namespace SCOdyssey.Game
             "hit_umm.wav",
         };
 
-        private IAudioManager _audio;
-        private readonly int[] _hitSoundSlots = new int[HitSoundFiles.Length];
+        // [AUDIO-IP:C2] 타격음(원샷)과 판정 오차 기록
+        private IOneShotPlayer _oneShots;
+        private IJudgementTimingLog _timingLog;
+        private readonly OneShotId[] _hitSounds = new OneShotId[HitSoundFiles.Length];
 
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
@@ -145,18 +151,16 @@ namespace SCOdyssey.Game
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
 
-            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
-            {
-                _judgmentOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
-            }
+            // 판정 싱크는 JudgementDriver가 판정 시각(judgeTime)에 적용해 넘겨준다. 여기서는 읽지 않는다. [AUDIO-IP:C1]
 
-            // 타격음 슬롯 확보. RegisterOneShot은 파일명 기준 멱등이라 리트라이로 다시 불려도 재로드가 없다.
-            // GameManager.StartGame()이 globalStartTime을 잡기 전에 Init()이 끝나므로 이 로드 비용은 게임 시계에 영향이 없다.
-            if (ServiceLocator.TryGet<IAudioManager>(out _audio))
+            // [AUDIO-IP:C2] 타격음 id 확보. Register는 파일명 기준 멱등이라 리트라이로 다시 불려도 재로드가 없다.
+            // 곡 시계는 Init() 안의 StartMusic → 세션 Start 뒤 커밋될 때 흐르기 시작하므로 이 로드 비용은 곡 시각에 영향이 없다.
+            if (ServiceLocator.TryGet<IOneShotPlayer>(out _oneShots))
             {
                 for (int i = 0; i < HitSoundFiles.Length; i++)
-                    _hitSoundSlots[i] = _audio.RegisterOneShot(HitSoundFiles[i]);
+                    _hitSounds[i] = _oneShots.Register(HitSoundFiles[i]);
             }
+            ServiceLocator.TryGet<IJudgementTimingLog>(out _timingLog);
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
@@ -184,12 +188,12 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 매 프레임 GameManager가 현재 게임 시간을 주입하는 진입점.
-        /// 마디 종료 시각을 넘으면 다음 마디로 전환하고, 레인별 miss/holding 판정과 카운트다운을 갱신한다.
+        /// 매 프레임 GameManager가 곡 시각과 판정 시각을 주입하는 진입점. [AUDIO-IP:C4]
+        /// 마디 종료 시각을 넘으면 다음 마디로 전환하고(songTime), 레인별 miss/holding 판정(judgeTime)과 카운트다운(songTime)을 갱신한다.
         /// </summary>
-        public void SyncTime(double time)
+        public void SyncTime(double songTime, double judgeTime)
         {
-            this.currentTime = time;
+            this.currentTime = songTime;
 
             // 현재 마디 종료 시각을 넘어서면 다음 마디로 전환하고 종료 조건도 확인
             if (remainingChart.Count >= 0 && currentTime >= currentBarEndTime)
@@ -200,8 +204,8 @@ namespace SCOdyssey.Game
 
             for (int i = 0; i < LANE_COUNT; i++)
             {
-                CheckMissedNotes(i, currentTime);            // 판정 윈도우를 지나친 노트 miss 처리
-                if (_lanes[i].isHolding) CheckHoldingBody(i); // 홀드 중이면 Holding/HoldEnd 본체 판정
+                CheckMissedNotes(i, judgeTime);                          // 판정 윈도우를 지나친 노트 miss 처리
+                if (_lanes[i].isHolding) CheckHoldingBody(i, judgeTime); // 홀드 중이면 Holding/HoldEnd 본체 판정
             }
 
             UpdateCountdowns();
@@ -673,8 +677,8 @@ namespace SCOdyssey.Game
         /// 키를 눌렀을 때 호출(GameManager가 라우팅). 해당 레인 activeNotes의 맨 앞 노트를 판정 윈도우로 판정한다.
         /// 노트가 아직 없으면 선입력으로 버퍼링. Normal/HoldStart만 눌러서 판정(홀드 본체/릴리즈는 별도 경로).
         /// </summary>
-        public void TryJudgeInput(int laneIndex, double inputGameTime)
-            => TryJudgeInput(laneIndex, inputGameTime, isFreshPress: true);
+        public void TryJudgeInput(int laneIndex, double judgeTime)
+            => TryJudgeInput(laneIndex, judgeTime, isFreshPress: true);
 
         /// <summary>
         /// isFreshPress: 플레이어가 실제로 키를 누른 순간인지 여부. FlushBufferedInput에서 재진입할 때는 false.
@@ -684,7 +688,7 @@ namespace SCOdyssey.Game
         /// ★ 이 플래그가 "OnLaneInput은 물리적 키 입력당 정확히 1회"라는 불변식을 지킨다.
         ///   CharacterAnimator의 입력 버퍼 해석이 이 불변식 위에 서 있으므로 깨뜨리면 안 된다.
         /// </summary>
-        private void TryJudgeInput(int laneIndex, double inputGameTime, bool isFreshPress)
+        private void TryJudgeInput(int laneIndex, double judgeTime, bool isFreshPress)
         {
             int listIndex = laneIndex - 1;  // 인덱스 보정
 
@@ -693,7 +697,7 @@ namespace SCOdyssey.Game
                 // 판정 예측을 한 번만 하고 타격음과 캐릭터 연출이 같은 값을 쓰게 한다.
                 // 타격음을 가장 먼저 재생한다. 판정·이펙트보다 앞에 둬서 지연을 최소화
                 // (ApplyJudgment는 이펙트 풀이 비면 Instantiate까지 하므로 그 뒤에 내면 스파이크만큼 밀린다)
-                (JudgeType sound, PressResult result) prediction = PredictInput(listIndex, inputGameTime);
+                (JudgeType sound, PressResult result) prediction = PredictInput(listIndex, judgeTime);
                 PlayHitSound(prediction.sound);
 
                 LaneInputResult inputResult = new LaneInputResult(
@@ -701,7 +705,7 @@ namespace SCOdyssey.Game
                     GetTrackGroupID(listIndex),
                     prediction.sound,
                     prediction.result,
-                    inputGameTime);
+                    judgeTime);
                 gameManager.OnLaneInput(inputResult);
             }
 
@@ -712,15 +716,15 @@ namespace SCOdyssey.Game
             if (queue.Count == 0)
             {
                 // 마디 전환 직전 선입력: 노트가 활성화되면 FlushBufferedInput에서 재판정
-                _lanes[listIndex].bufferedInput = inputGameTime;
+                _lanes[listIndex].bufferedInput = judgeTime;
                 return;
             }
 
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.Normal && targetNote.noteData.noteType != NoteType.HoldStart) return;
 
-            // 판정 타이밍 오프셋 적용: 윈도우 중심을 noteTime + offsetSec으로 이동
-            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - _judgmentOffsetSec);
+            // 판정 싱크는 judgeTime에 이미 들어 있다(윈도우 중심 = noteTime + 판정 싱크) [AUDIO-IP:C1]
+            double timeDiff = Math.Abs(judgeTime - targetNote.noteData.time);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
@@ -728,7 +732,9 @@ namespace SCOdyssey.Game
                 return;
             }
 
-            ApplyJudgment(targetNote, listIndex, GetJudgeType(timeDiff));
+            JudgeType judge = GetJudgeType(timeDiff);
+            RecordTiming(TimingKind.Press, judge, judgeTime, targetNote);
+            ApplyJudgment(targetNote, listIndex, judge);
 
         }
 
@@ -747,7 +753,7 @@ namespace SCOdyssey.Game
         ///    HitTarget = 판정이 생김. 오차가 Kind~Umm 사이면 sound가 Umm이지만 이건 "진짜 Umm 히트"다
         ///  sound == Umm 하나로 헛침을 판별하면 마지막 경우와 구분되지 않아 Hit_umm 대신 Miss가 나간다.
         /// </summary>
-        private (JudgeType sound, PressResult result) PredictInput(int listIndex, double inputGameTime)
+        private (JudgeType sound, PressResult result) PredictInput(int listIndex, double judgeTime)
         {
             var lane = _lanes[listIndex];
 
@@ -774,7 +780,7 @@ namespace SCOdyssey.Game
                 return (JudgeType.Umm, PressResult.HoldBody);
             }
 
-            double timeDiff = Math.Abs(inputGameTime - target.noteData.time - _judgmentOffsetSec);
+            double timeDiff = Math.Abs(judgeTime - target.noteData.time);
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖 = 헛침
             {
                 return (JudgeType.Umm, PressResult.NoTarget);
@@ -784,12 +790,19 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 판정 등급에 해당하는 타격음을 재생한다. 오디오 매니저가 없으면 조용히 무시한다.
+        /// 판정 등급에 해당하는 타격음을 재생한다. 원샷 재생기가 없으면 조용히 무시한다. [AUDIO-IP:C8]
         /// </summary>
         private void PlayHitSound(JudgeType type)
         {
-            if (_audio == null) return;
-            _audio.PlayOneShot(_hitSoundSlots[(int)type]);
+            if (_oneShots == null) return;
+            _oneShots.Play(_hitSounds[(int)type]);
+        }
+
+        // [AUDIO-IP:C9] 판정 확정 지점(Press/HoldBody/Release/Miss)에서 부른다. 오차는 + = 늦음.
+        private void RecordTiming(TimingKind kind, JudgeType judge, double judgeTime, NoteController note)
+        {
+            if (_timingLog == null) return;
+            _timingLog.Record(kind, (int)judge, (judgeTime - note.noteData.time) * 1000.0);
         }
 
         /// <summary>
@@ -814,7 +827,7 @@ namespace SCOdyssey.Game
         /// 홀드 중(isHolding)인 레인에 대해 매 프레임 호출. 맨 앞 노트가 Holding/HoldEnd이고
         /// Perfect 윈도우 안이면 "누르고 있음"만으로 자동 Perfect 판정한다(떼는 판정 아님).
         /// </summary>
-        private void CheckHoldingBody(int listIndex)
+        private void CheckHoldingBody(int listIndex, double judgeTime)
         {
             var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0) return;
@@ -826,11 +839,13 @@ namespace SCOdyssey.Game
             if (targetNote.noteData.noteType != NoteType.Holding &&
                 targetNote.noteData.noteType != NoteType.HoldEnd) return;
 
-            double timeDiff = Math.Abs(gameManager.GetCurrentTime() - targetNote.noteData.time - _judgmentOffsetSec);
+            // [AUDIO-IP:C5] 현재 시각을 다시 읽지 않고 이번 진행의 판정 시각을 쓴다
+            double timeDiff = Math.Abs(judgeTime - targetNote.noteData.time);
 
             if (timeDiff < JUDGE_PERFECT)
             {
                 targetNote.OnHit();
+                RecordTiming(TimingKind.HoldBody, JudgeType.Perfect, judgeTime, targetNote);
                 ApplyJudgment(targetNote, listIndex, JudgeType.Perfect);
             }
 
@@ -840,13 +855,16 @@ namespace SCOdyssey.Game
         /// <summary>
         /// 키를 뗐을 때 호출. 홀드 상태를 해제하고, 맨 앞 노트가 HoldRelease면 떼는 타이밍을 윈도우로 판정한다.
         /// (HoldRelease가 아니면 릴리즈 판정 없이 상태 해제만)
+        /// applyJudgement = false: 실제로 뗀 것이 아닌 release(ESC·입력 맵 끄기·포커스 상실로 생긴 합성 release,
+        /// 곡 시계가 멈춘 동안의 release)라 상태만 해제하고 판정하지 않는다. [AUDIO-IP:C6]
         /// </summary>
-        public void TryJudgeRelease(int laneIndex, double inputGameTime)
+        public void TryJudgeRelease(int laneIndex, double judgeTime, bool applyJudgement = true)
         {
             int listIndex = laneIndex - 1;
 
             // 키를 뗀 것은 홀드가 끝나는 세 원인 중 하나다. 판정 성공 여부와 무관하게 상태를 해제한다.
             StopHold(listIndex);
+            if (!applyJudgement) return;
 
             var queue = _lanes[listIndex].activeNotes;
             if (queue.Count == 0) return;
@@ -854,7 +872,7 @@ namespace SCOdyssey.Game
             NoteController targetNote = queue.Peek();
             if (targetNote.noteData.noteType != NoteType.HoldRelease) return; // 릴리즈 판정 노트가 없으면 무시
 
-            double timeDiff = Math.Abs(inputGameTime - targetNote.noteData.time - _judgmentOffsetSec);
+            double timeDiff = Math.Abs(judgeTime - targetNote.noteData.time);
 
             if (timeDiff > JUDGE_UMM)   // 판정 범위 밖
             {
@@ -863,6 +881,7 @@ namespace SCOdyssey.Game
             }
 
             JudgeType judge = GetJudgeType(timeDiff);
+            RecordTiming(TimingKind.Release, judge, judgeTime, targetNote);
 
             // 떼는 판정도 플레이어 입력이므로 타격음을 낸다. 단 실패했을 때는 내지 않는다 —
             // 이 함수는 모든 키 릴리즈마다 불리므로, 일반 노트를 칠 때마다 소리가 두 번 나게 된다.
@@ -933,14 +952,16 @@ namespace SCOdyssey.Game
         /// 맨 앞 노트가 Umm 윈도우(+JUDGE_UMM)까지 지나도록 판정되지 않았으면 miss 처리(Umm).
         /// SyncTime에서 레인마다 매 프레임 호출.
         /// </summary>
-        private void CheckMissedNotes(int listIndex, double currentTime)
+        private void CheckMissedNotes(int listIndex, double judgeTime)
         {
             if (_lanes[listIndex].activeNotes.Count == 0) return;
 
             NoteController targetNote = _lanes[listIndex].activeNotes.Peek();
 
-            if (currentTime > targetNote.noteData.time + JUDGE_UMM)
+            // 판정 싱크가 적용된 판정 시각으로 비교한다(치는 판정 창과 miss 컷오프가 함께 움직인다)
+            if (judgeTime > targetNote.noteData.time + JUDGE_UMM)
             {
+                RecordTiming(TimingKind.Miss, JudgeType.Umm, judgeTime, targetNote);
                 _lanes[listIndex].activeNotes.Dequeue();
                 targetNote.OnMiss();
 

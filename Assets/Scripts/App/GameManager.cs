@@ -24,10 +24,10 @@ namespace SCOdyssey.App
     //  시간: GetCurrentTime()은 곡 시계의 곡 시각(Frame.SongTime)을 돌려준다. 0은 게임 시작, 음원은 리드인 + 노트 싱크 뒤에 시작한다.
     //        일시정지 중에는 세션이 곡 시계를 멈추고, 재개 때 같은 곡 시각에서 다시 흐른다.
     //
-    //  매 프레임: JudgementDriver(-900)가 binding을 거쳐 OnTimingAdvance -> chartManager.SyncTime(songTime)
+    //  매 프레임: JudgementDriver(-900)가 binding을 거쳐 OnTimingAdvance -> chartManager.SyncTime(songTime, judgeTime)
     //
-    //  입력: JudgementDriver가 입력 시각을 곡 시각으로 바꿔 OnTimingLaneInput으로 넘긴다
-    //        -> chartManager.TryJudgeInput()/TryJudgeRelease() (판정 싱크는 아직 ChartManager가 적용한다, I2에서 옮김)
+    //  입력: JudgementDriver가 입력 시각을 곡 시각·판정 시각으로 바꿔 OnTimingLaneInput으로 넘긴다
+    //        -> chartManager.TryJudgeInput()/TryJudgeRelease() (판정 싱크는 JudgementDriver가 judgeTime에 한 번만 적용한다)
     //
     //  판정 수신: ChartManager가 OnNoteJudged()/OnNoteMissed()/OnHoldStart() 등을 호출하면
     //        scoreManager.ProcessJudge()로 점수를 넘기고, *Event를 발행해 CharacterAnimator에 전파한다.
@@ -240,18 +240,19 @@ namespace SCOdyssey.App
         }
 
         // ── 판정 타이밍 콜백 (GameplayTimingBinding) ── [AUDIO-IP:G9]
-        // 진행: 마디·miss·홀드를 곡 시각으로 진행한다. 판정 싱크는 아직 ChartManager가 적용하므로 songTime만 넘긴다(I2에서 judgeTime).
+        // 진행: 마디 진행은 songTime, miss·홀드는 judgeTime으로 한다. [AUDIO-IP:G13]
         private void OnTimingAdvance(double songTime, double judgeTime)
         {
-            chartManager.SyncTime(songTime);
+            chartManager.SyncTime(songTime, judgeTime);
         }
 
-        // 입력: 곡 시각으로 바꾼 레인 입력. 판정할 수 없는 입력은 binding이 release만 넘긴다.
+        // 입력: 판정 시각으로 판정한다. 판정할 수 없는 입력은 binding이 release만 넘기고,
+        // 그 release(합성 release, 멈춘 동안의 release)는 홀드 상태만 푼다. [AUDIO-IP:G14]
         private void OnTimingLaneInput(in JudgedInput input)
         {
             if (!IsGameRunning) return;
-            if (input.IsDown) chartManager.TryJudgeInput(input.Lane, input.SongTime);
-            else chartManager.TryJudgeRelease(input.Lane, input.SongTime);
+            if (input.IsDown) chartManager.TryJudgeInput(input.Lane, input.JudgeTime);
+            else chartManager.TryJudgeRelease(input.Lane, input.JudgeTime, input.Judgeable);
         }
 
         private bool IsGameRunningNow()

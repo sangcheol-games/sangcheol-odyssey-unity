@@ -87,6 +87,13 @@
   - 공통 커밋 ad4fb42(`refactor-FMOD`에도 cherry-pick할 것): `ISongPlayer.CreateSilent()`, `ISongSession.AudioStartSongTime`, `BGAController.Follow(session)`(곡 시각 - 음원 시작 곡 시각, 시계가 멈추면 영상 정지, 100ms 넘게 벌어질 때만 다시 맞춤)
   - 이 브랜치 전용: GameManager G1~G12(Illustar 코드로 대조, 그대로 적용됨), GameDataLoader(`ISongPlayer.LoadAsync`, 실패하면 로비로, 경로가 비면 무음 세션). ChartManager·IGameManager는 그대로(I2)
   - I1에서는 판정 싱크를 아직 ChartManager가 적용하므로 입력·진행에 `SongTime`만 넘긴다. 타임라인은 G5로 곡 시계를 따른다
+  - ERR_INVALID_HANDLE 수정 재확인 완료. 공통 커밋(ad4fb42, b135d11, c47dd6f)을 `refactor-FMOD`에 옮김(b2a1d41, c509967, 5b8e645. 에디터를 건드리지 않으려고 merge-tree로 만들었고, 공통 파일은 Illustar 브랜치와 같음)
+- I2(ChartManager 통합, `refactor-FMOD-Illustar`): **완료**(2026-09-29). 판정 싱크 -20/0/+20(치는 창·miss 함께 이동, 오버레이 Press 평균 이동), 홀드·릴리즈·miss, HoldRelease 창 안 ESC → miss, 등급별 타격음, 타이밍 오버레이 모두 정상
+  - ChartManager C1·C2·C4·C5·C6·C8·C9(Illustar 코드로 대조): `_judgmentOffsetSec`와 IAudioManager 제거, `SyncTime(songTime, judgeTime)`, miss·홀드 본체·입력 판정·선입력 버퍼·`LaneInputResult.Time`은 judgeTime, `TryJudgeRelease(…, applyJudgement)`, `IOneShotPlayer`, `IJudgementTimingLog.Record` 네 곳
+  - C3(StartMusic)·C7(IsAudioPlaying)은 I1의 G4·G10으로 이미 충족해 고치지 않음. IGameManager는 그대로
+  - GameManager G13·G14: 진행에 judgeTime, 입력에 judgeTime과 `applyJudgement: Judgeable`
+  - 의도된 변경 두 가지: miss 컷오프에도 판정 싱크가 적용된다. 합성 release(ESC·입력 맵 끄기·포커스)는 판정하지 않는다
+  - 에디터 메뉴 SCOdyssey → Audio → 오디오 오버레이 / 타이밍 오버레이 토글 추가(`Editor/AudioEditorMenu`)
 - 지금까지의 결과는 7장 표에 있다. S-0.5·S0 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
 - S-0.5로 정한 것: B안(Core System 직접 소유) 유지, 메인 스레드에서 ASIO 처리, 곡 시계 모델(드리프트 항·평활 시계 없음, 단조 보장), `S_max = max(L·(N+1), 32ms)`, 게임 곡 스트리밍 유지, WASAPI 버퍼 프리셋 초안(480이 10ms 주기와 맞음). 버퍼 선택지는 S5b에서 사용자 결정으로 `64, 128, 256, 512, 1024`(기본 256)로 확정했다(480 미포함, SP13 측정 생략)
 - 2026-09-27에 고친 하네스 버그와 추가한 측정
@@ -115,8 +122,13 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (사용자, `refactor-FMOD-Illustar`) 곡을 끝까지 한 판 해서 결과 화면으로 넘어갈 때 `ERR_INVALID_HANDLE` 경고가 없어졌는지 확인한다.
-2. (Claude) 확인되면 공통 커밋 두 개(ad4fb42 I1 공통 준비, ChannelEndWatch 수정)를 `refactor-FMOD`에 cherry-pick하고, I2(ChartManager 통합)를 Illustar의 ChartManager 기준으로 대조한다.
+1. (사용자, `refactor-FMOD-Illustar`) I2 확인. 콘솔 오류가 있으면 텍스트를 붙인다.
+   - 판정 싱크 -20 / 0 / +20으로 곡 한 판씩(치는 판정 창과 miss가 같이 움직이는지. 타이밍 오버레이의 Press 오차 평균이 설정만큼 움직이는지)
+   - 홀드, 릴리즈, miss 동작이 I1과 같은지
+   - HoldRelease 판정 창 안에서 ESC → miss(의도된 변경)
+   - 등급별 타격음
+   - 타이밍 오버레이: Play 중 메뉴 SCOdyssey → Audio → 타이밍 오버레이. 판정 싱크 래치 값, Press·Release 오차 분포가 나오는지
+2. (Claude) 결과를 판정해 기록·커밋하고 C(정리)로 넘어간다.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 - C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
 - 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고, AdventureUI의 음원 없음 안내, GameDataLoader의 음원 열기 실패 안내를 화면에 띄운다.
@@ -547,6 +559,8 @@
 | 2026-09-27 (데스크탑) | S6 로비와 곡 선택 | Editor | WASAPI | PASS | 로비 BGM(`IMusicPlayers.Lobby`), 곡 선택 프리뷰(`IMusicPlayers.Preview`, 빠르게 넘겨도 하나만), 로비 ↔ 곡 선택 ↔ 게임 전환(게임 곡·타격음 정상), 설정 왕복, 사운드 설정 장치 변경 뒤 로비 BGM 복원 정상. 콘솔 오류 0 |
 
 | 2026-09-29 (데스크탑) | I1 GameManager 통합 (Illustar) | Editor | WASAPI | PASS | 곡 세션·곡 시계·JudgementDriver 경로로 곡 한 판(시작 싱크·타격음·판정·결과), 리드인·곡 도중 일시정지·재개, alt-tab 세 경우, ESC 경계, 곡 끝 ESC·리트라이·로비, 장치 분리 자동 일시정지 → 재개, ChartEditorScene 정상. 곡 종료 때 ERR_INVALID_HANDLE 경고 1건 → ChannelEndWatch로 수정 |
+
+| 2026-09-29 (데스크탑) | I2 ChartManager 통합 (Illustar) | Editor | WASAPI | PASS | 판정 싱크 -20/0/+20에서 치는 판정 창과 miss 컷오프가 함께 이동, 타이밍 오버레이 Press 오차 평균이 설정만큼 이동. 홀드·릴리즈·miss가 I1과 같음, HoldRelease 창 안 ESC → miss(의도된 변경), 등급별 타격음(IOneShotPlayer) 정상 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.
