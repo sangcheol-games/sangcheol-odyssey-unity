@@ -7,7 +7,7 @@ FMOD 오디오 레이어 재설계(브랜치 `refactor-FMOD`)의 조사, 결정,
 | 문서 | 내용 |
 |---|---|
 | `Assets/Scripts/Audio/Audio_architecture.md` | 구조: 계층, 계약, 수명주기, 곡 시계, 판정 타이밍, 스레드 규칙 |
-| `Assets/Scripts/Audio/Audio_migration.md` | 이행: **0장 인수인계**, 단계 카드, 스파이크, 통합 지점, 스파이크 결과 |
+| `Assets/Scripts/Audio/Audio_migration.md` | 이행: **0장 인수인계**, 단계 카드, 스파이크, 통합 지점, 스파이크 결과. `refactor-FMOD-Illustar`에서는 C를 마치고 삭제했으므로 `refactor-FMOD` 브랜치에서 본다 |
 
 두 문서가 이 폴더의 자료보다 우선한다.
 
