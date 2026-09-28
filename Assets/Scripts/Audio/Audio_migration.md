@@ -10,9 +10,9 @@
 
 ---
 
-## 0. 인수인계 (2026-09-27 기준. 다른 PC나 새 세션에서 이어서 할 때 먼저 읽는다)
+## 0. 인수인계 (2026-09-29 기준. 다른 PC나 새 세션에서 이어서 할 때 먼저 읽는다)
 
-**새 Claude 세션에 줄 첫 요청 예시**: "`Assets/Scripts/Audio/Audio_migration.md`의 0장(인수인계)을 읽고 S-0.5를 이어서 진행해."
+**새 Claude 세션에 줄 첫 요청 예시**: "`Assets/Scripts/Audio/Audio_migration.md`의 0장(인수인계)을 읽고 `refactor-FMOD`에서 I1을 진행해."
 
 **근거 자료**: `Docs/audio-redesign/`
 - `01` 기존 FMOD 사용 현황과 이슈
@@ -94,6 +94,10 @@
   - GameManager G13·G14: 진행에 judgeTime, 입력에 judgeTime과 `applyJudgement: Judgeable`
   - 의도된 변경 두 가지: miss 컷오프에도 판정 싱크가 적용된다. 합성 release(ESC·입력 맵 끄기·포커스)는 판정하지 않는다
   - 에디터 메뉴 SCOdyssey → Audio → 오디오 오버레이 / 타이밍 오버레이 토글 추가(`Editor/AudioEditorMenu`)
+- C(정리, `refactor-FMOD-Illustar`): **완료**(2026-09-29). 5장 수동 시나리오, Test Runner, 개발·릴리스 빌드, ChartEditorScene, `-sco-audio-safe` 실행 모두 정상(7장). 이 문서는 `refactor-FMOD`로 옮기고 Illustar 브랜치에서는 삭제했다
+  - 공통 커밋 89e89df(`refactor-FMOD`에도 옮길 것): 설치 실패 대비 무음 모듈 `AudioModuleInstaller.InstallDisabled`(엔진 `Disable`, 재생 no-op, 곡 세션은 QPC 시계). Managers는 설치 실패 → 무음 모듈. 하네스에 '무음 모듈' 설치 토글
+  - 이 브랜치 전용 삭제: `IAudioManager`(+ `AudioOutputType`/`AudioOutputConfig`/`AudioBus`), `LegacyAudioManagerAdapter`, `Audio/Legacy`(ILegacyTransport, LegacyTransport)와 AudioModule 연결, `IInputManager.OnLanePressed/OnLaneReleased/SetTimeSyncPoint`와 DSP 변환, `BGAController.SchedulePlay/Pause/Resume`, GameSceneTester의 IAudioManager 블록(파일·씬은 그대로)
+  - R11 grep 0건(모든 스크립트). 구조 문서와 CLAUDE.md(부팅 순서, Time model)를 새 경로 기준으로 고침
 - 지금까지의 결과는 7장 표에 있다. S-0.5·S0 결정은 7장 표 아래에 있고 `Audio_architecture.md`에 반영했다.
 - S-0.5로 정한 것: B안(Core System 직접 소유) 유지, 메인 스레드에서 ASIO 처리, 곡 시계 모델(드리프트 항·평활 시계 없음, 단조 보장), `S_max = max(L·(N+1), 32ms)`, 게임 곡 스트리밍 유지, WASAPI 버퍼 프리셋 초안(480이 10ms 주기와 맞음). 버퍼 선택지는 S5b에서 사용자 결정으로 `64, 128, 256, 512, 1024`(기본 256)로 확정했다(480 미포함, SP13 측정 생략)
 - 2026-09-27에 고친 하네스 버그와 추가한 측정
@@ -122,17 +126,15 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (사용자, `refactor-FMOD-Illustar`) I2 확인. 콘솔 오류가 있으면 텍스트를 붙인다.
-   - 판정 싱크 -20 / 0 / +20으로 곡 한 판씩(치는 판정 창과 miss가 같이 움직이는지. 타이밍 오버레이의 Press 오차 평균이 설정만큼 움직이는지)
-   - 홀드, 릴리즈, miss 동작이 I1과 같은지
-   - HoldRelease 판정 창 안에서 ESC → miss(의도된 변경)
-   - 등급별 타격음
-   - 타이밍 오버레이: Play 중 메뉴 SCOdyssey → Audio → 타이밍 오버레이. 판정 싱크 래치 값, Press·Release 오차 분포가 나오는지
-2. (Claude) 결과를 판정해 기록·커밋하고 C(정리)로 넘어간다.
+- `refactor-FMOD-Illustar`는 I1·I2·C까지 끝났다(Illustar의 GameManager·ChartManager 기준). 이 브랜치(`refactor-FMOD`)에는 공통 커밋(I1 공통 준비, ERR_INVALID_HANDLE 수정, 무음 모듈)까지 옮겨져 있다.
+1. (팀) develop의 GameManager·ChartManager 리팩터가 develop에 들어가면 `refactor-FMOD`에 develop을 병합한다.
+2. (Claude) 6장 통합 지점 표를 새 코드로 다시 대조하고 I1 → I2 → C를 진행한다. Illustar 쪽 구현을 참고한다(`git log refactor-FMOD-Illustar`의 I1·I2·C 커밋, 통합 지점은 코드의 `// [AUDIO-IP:G#]`, `// [AUDIO-IP:C#]` 표시).
+   - C에서 지운 것: `IAudioManager`(+ `AudioOutputType`/`AudioOutputConfig`/`AudioBus`), `LegacyAudioManagerAdapter`, `Audio/Legacy`와 AudioModule 연결, `IInputManager.OnLanePressed/OnLaneReleased/SetTimeSyncPoint`, `BGAController.SchedulePlay/Pause/Resume`, GameSceneTester의 IAudioManager 블록. 구조 문서의 과도기 설명과 CLAUDE.md(부팅 순서, Time model)도 고쳤다
+   - C가 끝나면 이 문서를 삭제한다.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
-- C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
-- 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고, AdventureUI의 음원 없음 안내, GameDataLoader의 음원 열기 실패 안내를 화면에 띄운다.
-- 선택: 공통 부분(`refactor-FMOD`, S6까지)은 옛 경로(과도기 어댑터)로 게임이 정상 동작하므로 develop에 먼저 넣을 수 있다. 시점은 팀이 정한다.
+- 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 그대로 두었다.
+- 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고, AdventureUI의 음원 없음 안내, GameDataLoader의 음원 열기 실패 안내를 화면에 띄운다. 안전 모드(`-sco-audio-safe`)로 부팅해도 지금은 부팅 폴백 경고("저장한 출력 구성으로 열지 못해…")가 로그에 나오므로, 알림 UI를 붙일 때 안전 모드는 따로 안내한다.
+- 선택: 공통 부분(`refactor-FMOD`)은 옛 경로(과도기 어댑터)로 게임이 정상 동작하므로 develop에 먼저 넣을 수 있다. 시점은 팀이 정한다.
 
 ---
 
@@ -561,6 +563,8 @@
 | 2026-09-29 (데스크탑) | I1 GameManager 통합 (Illustar) | Editor | WASAPI | PASS | 곡 세션·곡 시계·JudgementDriver 경로로 곡 한 판(시작 싱크·타격음·판정·결과), 리드인·곡 도중 일시정지·재개, alt-tab 세 경우, ESC 경계, 곡 끝 ESC·리트라이·로비, 장치 분리 자동 일시정지 → 재개, ChartEditorScene 정상. 곡 종료 때 ERR_INVALID_HANDLE 경고 1건 → ChannelEndWatch로 수정 |
 
 | 2026-09-29 (데스크탑) | I2 ChartManager 통합 (Illustar) | Editor | WASAPI | PASS | 판정 싱크 -20/0/+20에서 치는 판정 창과 miss 컷오프가 함께 이동, 타이밍 오버레이 Press 오차 평균이 설정만큼 이동. 홀드·릴리즈·miss가 I1과 같음, HoldRelease 창 안 ESC → miss(의도된 변경), 등급별 타격음(IOneShotPlayer) 정상 |
+
+| 2026-09-29 (데스크탑) | C 정리 (Illustar) | Editor / 개발·릴리스 플레이어 | WASAPI BenQ | PASS | 옛 경로(IAudioManager, 과도기 어댑터, LegacyTransport, InputManager 옛 이벤트, BGA 옛 예약) 삭제 뒤 5장 수동 시나리오, Test Runner, 개발·릴리스 빌드, ChartEditorScene 정상. `D:\test` 빌드를 `-sco-audio-safe`로 실행 → `[Audio] 엔진 부팅: WASAPI 기본 장치 512x4 … 앞선 시도: 안전 모드: 요청 구성 건너뜀`, 로비 BGM 정상 |
 
 **S-0.5 결정(SP3·SP4, `Audio_architecture.md`에 반영함)**
 - 드리프트 항은 넣지 않는다. 오프셋을 1초 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.02ms다.

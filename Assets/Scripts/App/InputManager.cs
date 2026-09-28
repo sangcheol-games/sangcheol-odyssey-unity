@@ -8,23 +8,17 @@ namespace SCOdyssey.App
     {
         private InputSystem_Actions inputActions;
 
-        // 새 판정 타이밍 경로의 입력 소스(JudgementDriver가 매 프레임 비운다). 레거시 이벤트는 C 단계까지 함께 낸다.
+        // 레인 입력 소스(JudgementDriver가 매 프레임 비워 곡 시각으로 바꾼다). 레인 입력은 이 경로로만 나간다.
         private readonly UnityInputSystemTimestampSource _laneSource = new UnityInputSystemTimestampSource();
         public UnityInputSystemTimestampSource LaneTimestampSource => _laneSource;
 
         public event Action<Vector2> OnSelect;
         public event Action OnSubmit;
         public event Action OnCancel;
-        public event Action<int, double> OnLanePressed;
-        public event Action<int, double> OnLaneReleased;
         public event Action OnRestart;
         public event Action OnPause;
 
         public bool IsInputActive { get; private set; } = true;
-
-        private double _dspAtSync;
-        private double _realtimeAtSync;
-        private bool _hasSyncPoint = false;
 
         public InputManager()
         {
@@ -55,14 +49,12 @@ namespace SCOdyssey.App
         {
             if (!IsInputActive) return;
             _laneSource.Push(lane, true, ctxTime);
-            OnLanePressed?.Invoke(lane, ConvertToDspTime(ctxTime));
         }
 
         private void HandleLaneRelease(int lane, double ctxTime)
         {
             if (!IsInputActive) return;
             _laneSource.Push(lane, false, ctxTime);
-            OnLaneReleased?.Invoke(lane, ConvertToDspTime(ctxTime));
         }
         private void HandleRestart() { if (IsInputActive) OnRestart?.Invoke(); }
         private void HandlePause()   { if (IsInputActive) OnPause?.Invoke(); }
@@ -107,19 +99,6 @@ namespace SCOdyssey.App
         }
 
         public void SetInputActive(bool isActive) => IsInputActive = isActive;
-
-        public void SetTimeSyncPoint(double dspTime, double realtimeNow)
-        {
-            _dspAtSync = dspTime;
-            _realtimeAtSync = realtimeNow;
-            _hasSyncPoint = true;
-        }
-
-        private double ConvertToDspTime(double ctxTime)
-        {
-            if (!_hasSyncPoint) return UnityEngine.AudioSettings.dspTime; // 폴백
-            return _dspAtSync + (ctxTime - _realtimeAtSync);
-        }
 
 
 

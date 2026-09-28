@@ -9,10 +9,9 @@ using UnityEngine.Video;
 
 namespace SCOdyssey.Game
 {
-    // 배경 영상(BGA). 두 가지 방식으로 움직인다.
-    //   곡 시계 모드(Follow): 매 프레임 곡 시각 - 음원 시작 곡 시각으로 영상 위치를 정한다. 곡 시계가 멈추면 영상도 멈추고,
-    //                          100ms 넘게 벌어질 때만 위치를 다시 맞춘다. 세션 이벤트는 구독하지 않는다(읽기만 한다).
-    //   레거시(SchedulePlay/Pause/Resume): 옛 DSP 시간 기준. GameManager가 곡 세션으로 옮겨 가면 C 단계에서 지운다.
+    // 배경 영상(BGA). GameManager가 Follow(session)로 곡 세션을 넘기면 매 프레임 곡 시각 - 음원 시작 곡 시각으로
+    // 영상 위치를 정한다. 곡 시계가 멈추면(일시정지) 영상도 멈추고, 100ms 넘게 벌어질 때만 위치를 다시 맞춘다.
+    // 세션 이벤트는 구독하지 않는다(읽기만 한다).
     public class BGAController : MonoBehaviour
     {
         private const double ResyncThresholdSeconds = 0.1;
@@ -23,17 +22,9 @@ namespace SCOdyssey.Game
         public Image backgroundArt;     // 배경아트 스프라이트 표시용 Image (BGA 꺼진 경우에만 표시)
         public Image alphaOverlay;      // BGA 위에 올린 검정 Image (투명도 조절용)
 
-        private IAudioManager _audioManager;
         private bool isPrepared = false;
-        private bool isScheduled = false;
-        private double scheduledDspTime = 0;
         private bool bgaEnabled = true;
         private ISongSession _session;
-
-        private void Start()
-        {
-            ServiceLocator.TryGet<IAudioManager>(out _audioManager);
-        }
 
         /// <summary>
         /// 배경 초기화. GameDataLoader에서 호출.
@@ -97,17 +88,6 @@ namespace SCOdyssey.Game
         public void Follow(ISongSession session)
         {
             _session = session;
-            isScheduled = false;
-        }
-
-        /// <summary>
-        /// 재생 시각 예약. GameManager.StartMusic()에서 호출.
-        /// dspStartTime = AudioSettings.dspTime + barDuration (1마디 시작 타이밍)
-        /// </summary>
-        public void SchedulePlay(double dspStartTime)
-        {
-            scheduledDspTime = dspStartTime;
-            isScheduled = true;
         }
 
         /// <summary>
@@ -147,25 +127,8 @@ namespace SCOdyssey.Game
         /// </summary>
         public void Stop()
         {
-            isScheduled = false;
             _session = null;
             if (videoPlayer.isPlaying) videoPlayer.Stop();
-        }
-
-        /// <summary>
-        /// 일시정지. GameManager.Pause()에서 호출.
-        /// </summary>
-        public void Pause()
-        {
-            if (videoPlayer.isPlaying) videoPlayer.Pause();
-        }
-
-        /// <summary>
-        /// 재개. GameManager.ResumeCountdownSequence()에서 호출.
-        /// </summary>
-        public void Resume()
-        {
-            if (videoPlayer.isPaused) videoPlayer.Play();
         }
 
         private void OnPrepared(VideoPlayer vp)
@@ -179,20 +142,7 @@ namespace SCOdyssey.Game
 
         private void Update()
         {
-            if (_session != null)
-            {
-                FollowSongClock();
-                return;
-            }
-            if (!isScheduled || !isPrepared) return;
-
-            double now = _audioManager != null ? _audioManager.GetDSPTime() : AudioSettings.dspTime;
-            if (now < scheduledDspTime) return;
-
-            isScheduled = false;
-            videoPlayer.time = 0;
-            videoPlayer.Play();
-            bgaScreen.enabled = true;
+            if (_session != null) FollowSongClock();
         }
 
         private void FollowSongClock()

@@ -38,7 +38,7 @@ Each installer registers services (`CoreLogger`, `GameClock`, `ServerTimeSkew`, 
 
 `Managers` is a `DontDestroyOnLoad` singleton placed in `MainScene` that directly instantiates and registers the gameplay-side managers into the same `ServiceLocator`, in this exact order:
 
-`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → audio module (`AudioModuleInstaller.Install`, registers `IAudioEngine`/`ISongPlayer`/`IAudioMixer`/… plus the transitional `IAudioManager` adapter `LegacyAudioManagerAdapter`) → `JudgementDriver`
+`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → audio module (`AudioModuleInstaller.Install`, registers `IAudioEngine`/`IAudioOutputService`/`IAudioMixer`/`IOneShotPlayer`/`IMusicPlayers`/`ISongPlayer`; falls back to `InstallDisabled`, a silent module, if install throws) → `JudgementDriver` (+ `IJudgementTimingLog`)
 
 Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate`, resolution etc. during their init.
 
@@ -48,15 +48,15 @@ Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate
 
 ## Rhythm engine (`Assets/Scripts/Game/`)
 
-### Time model — **FMOD DSP clock is authoritative**
+### Time model — **song clock is authoritative**
 
-`GameManager` uses `IAudioManager.GetDSPTime()` (FMOD's DSP clock) as the single time source. **Never use `AudioSettings.dspTime`** — its epoch differs from FMOD's and will cause desync.
+Gameplay time comes from the song session's clock (`ISongPlayer` → `ISongSession.Clock`), built on FMOD's DSP clock and QPC. See `Assets/Scripts/Audio/Audio_architecture.md` §7–8. **Never use `AudioSettings.dspTime`, `Time.*` or raw FMOD calls for song time.**
 
-- `globalStartTime` is captured at `StartGame()` from the DSP clock.
-- Chart time = `GetDSPTime() - globalStartTime` (frozen to `_pauseDspTime - globalStartTime` during pause).
-- On resume, `globalStartTime += GetDSPTime() - _pauseDspTime` so chart position is preserved.
-- `InputManager.SetTimeSyncPoint(dspNow, realtimeNow)` records one sync sample; input timestamps (`InputAction.context.time`, OS realtime) are converted back to DSP time by linear offset in `ConvertToDspTime`.
-- Audio offset from `SettingsManager.Current.audioOffsetMs` is applied in `StartMusic()` (positive = music starts later).
+- `GameDataLoader` opens the song with `ISongPlayer.LoadAsync` (silent session via `CreateSilent` if the chart has no audio; back to the lobby if loading fails). `GameManager.StartGame()` attaches `GameplayTimingBinding` to the session, then `ChartManager.Init()` calls `StartMusic(barDuration)` → `ISongSession.Start(leadIn, audioOffsetMs)`.
+- `GameManager.GetCurrentTime()` = `ISongSession.Clock.Frame.SongTime` (0 at game start; audio starts at `leadIn + audioOffsetMs`, positive = music later). Pause/resume go through `ISongSession.Pause(PauseReason.User)` / `Resume()`, which freeze and re-anchor the clock, so no manual time correction is needed.
+- Every frame `JudgementDriver` (execution order -900, right after the audio runner at -1010) converts lane inputs (`InputManager.LaneTimestampSource`, `ctx.time` → QPC → song time) and calls, in input-time order, `ChartManager.TryJudgeInput/TryJudgeRelease(lane, judgeTime)` and then `ChartManager.SyncTime(songTime, judgeTime)` via the binding.
+- `judgeTime = songTime - judgmentOffset × 3ms` is applied in one place (`JudgementTimeline`). Bar progression uses `songTime`; hit windows, misses and hold bodies compare `judgeTime`. Synthetic releases (ESC / input-map disable / focus loss) only clear hold state.
+- BGA follows the song clock (`BGAController.Follow(session)`); the timeline follows `GetCurrentTime()`.
 
 ### Chart format and parsing
 

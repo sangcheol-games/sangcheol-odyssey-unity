@@ -41,7 +41,7 @@ namespace SCOdyssey.App
             ServiceLocator.TryRegister<IInputManager>(inputManager);
 
             // 등록만 먼저 하고 Init()(첫 UI 표시)은 모든 서비스 등록 후로 미룬다.
-            // MainUI.OnEnable이 Instantiate 시점에 동기 실행되며 IAudioManager를 참조하기 때문.
+            // MainUI.OnEnable이 Instantiate 시점에 동기 실행되며 IMusicPlayers(로비 BGM)를 참조하기 때문.
             var uiManager = new UIManager();
             ServiceLocator.TryRegister<IUIManager>(uiManager);
 
@@ -61,7 +61,7 @@ namespace SCOdyssey.App
         }
 
         // 오디오 모듈(FMOD Core 직접 소유)과 판정 타이밍을 이 GameObject에 설치한다(DontDestroyOnLoad 유지).
-        // 옛 IAudioManager 소비자는 과도기 어댑터로 이어 준다. 설치가 실패하면 FMOD를 열지 않은 무음 모듈로 부팅을 계속한다.
+        // 설치가 실패하면 FMOD를 열지 않은 무음 모듈로 부팅을 계속한다.
         private void InstallAudio(SettingsManager settings, InputManager input)
         {
             try
@@ -74,15 +74,13 @@ namespace SCOdyssey.App
                 // 게임 경로에서 FMOD for Unity의 Studio 시스템이 초기화되면 System이 두 개가 되므로 오류로 알린다(ChartEditor는 예외).
                 options.EnforceRuntimeManagerGuard = true;
 
-                AudioModule module = InstallAudioModule(options);
-                if (module != null) LegacyAudioManagerAdapter.RegisterInto(module);
-                else LegacyAudioManagerAdapter.RegisterSilent();
+                if (InstallAudioModule(options) == null)
+                    Debug.LogError("[Managers] 오디오 모듈을 등록하지 못했습니다. 곡을 시작할 수 없습니다.");
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                Debug.LogError("[Managers] 오디오 설정을 만들지 못해 소리 없이 진행합니다.");
-                LegacyAudioManagerAdapter.RegisterSilent();
+                Debug.LogError("[Managers] 오디오 설정을 만들지 못했습니다. 곡을 시작할 수 없습니다.");
             }
 
             // 입력 소스는 InputManager가 소유한다. 판정 싱크는 곡마다 한 번 읽는다.

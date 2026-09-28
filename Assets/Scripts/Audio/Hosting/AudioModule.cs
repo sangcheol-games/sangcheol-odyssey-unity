@@ -4,7 +4,6 @@ using System.Threading;
 using SCOdyssey.Audio.Clock;
 using SCOdyssey.Audio.Diagnostics;
 using SCOdyssey.Audio.Engine;
-using SCOdyssey.Audio.Legacy;
 using SCOdyssey.Audio.Mixing;
 using SCOdyssey.Audio.Output;
 using SCOdyssey.Audio.Playback;
@@ -35,7 +34,6 @@ namespace SCOdyssey.Audio.Hosting
         private readonly FocusPolicy _focus;
         private readonly DeviceCatalog _catalog;
         private readonly AudioOutputService _output;
-        private readonly LegacyTransport _legacy;
         private bool _isShutDown;
         private long _pinnedMissingSinceQpc;
 
@@ -55,7 +53,6 @@ namespace SCOdyssey.Audio.Hosting
             _focus = new FocusPolicy(_mixer, _songPlayer, options.PlayInBackground, options.PauseSongOnFocusLoss);
             _catalog = new DeviceCatalog(_engine);
             _output = new AudioOutputService(_engine, _catalog, BlockingReason, Reconfigure, _cts.Token);
-            _legacy = new LegacyTransport(_engine, _mixer, _oneShots, _catalog, _output, options.MusicFolder);
         }
 
         public IAudioEngine Engine
@@ -94,12 +91,6 @@ namespace SCOdyssey.Audio.Hosting
         }
 
         // 진단용(하네스·개발 빌드).
-        // [과도기] 옛 IAudioManager 어댑터(App)만 쓴다. C 단계에서 삭제한다.
-        public ILegacyTransport Legacy
-        {
-            get { return _legacy; }
-        }
-
         public SongMetronome Metronome
         {
             get { return _metronome; }
@@ -129,7 +120,6 @@ namespace SCOdyssey.Audio.Hosting
         {
             _engine.Boot(_options.Output, safeMode, AsioPolicy.IsAllowed);
             BuildResources();
-            _legacy.OnEngineOpened();
         }
 
         // 설치 실패 대비(AudioModuleInstaller.InstallDisabled): FMOD를 열지 않은 무음 모듈로 둔다.
@@ -137,7 +127,6 @@ namespace SCOdyssey.Audio.Hosting
         {
             _engine.Disable(reason);
             BuildResources();
-            _legacy.OnEngineOpened();
         }
 
         // 같은 구성으로 close → init 한다(진단·하네스용 강제 재구성). 설정 적용은 Output.ApplyAsync가 맡는다.
@@ -156,7 +145,6 @@ namespace SCOdyssey.Audio.Hosting
 
             _songPlayer.OnEngineClosing();
             _music.OnEngineClosing();
-            _legacy.OnEngineClosing();
             _metronome.Release();
             _oneShots.Release();
             _mixer.Release();
@@ -167,7 +155,6 @@ namespace SCOdyssey.Audio.Hosting
 
             _songPlayer.OnEngineOpened();
             _music.OnEngineOpened();
-            _legacy.OnEngineOpened();
             return index;
         }
 
@@ -199,7 +186,6 @@ namespace SCOdyssey.Audio.Hosting
             _sampler.Sample();
             DetectSilentStall();
             _songPlayer.Tick();
-            _legacy.Tick();
             _metronome.Tick(_songPlayer.CurrentInternal);
         }
 
@@ -290,7 +276,6 @@ namespace SCOdyssey.Audio.Hosting
             _metronome.Release();
             _songPlayer.Shutdown();
             _music.Shutdown();
-            _legacy.Shutdown();
             _oneShots.Release();
             _mixer.Release();
             _engine.Shutdown();
