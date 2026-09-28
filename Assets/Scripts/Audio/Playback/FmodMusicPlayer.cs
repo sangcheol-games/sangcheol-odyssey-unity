@@ -42,7 +42,7 @@ namespace SCOdyssey.Audio.Playback
         {
             get
             {
-                if (!_channel.hasHandle()) return false;
+                if (!_channel.hasHandle() || ChannelEndWatch.HasEnded(_channel)) return false;
                 if (_channel.isPlaying(out bool playing) != FMOD.RESULT.OK) return false;
                 return playing;
             }
@@ -132,6 +132,7 @@ namespace SCOdyssey.Audio.Playback
                     sound.release();
                     return new AudioLoadResult(AudioLoadStatus.DecodeError, "playSound " + result + ": " + path);
                 }
+                ChannelEndWatch.Watch(channel);
                 _sound = sound;
                 _channel = channel;
                 return new AudioLoadResult(AudioLoadStatus.Ok, path);
@@ -185,7 +186,7 @@ namespace SCOdyssey.Audio.Playback
 
         private void ReleaseCurrent()
         {
-            if (_channel.hasHandle()) _channel.stop();
+            if (_channel.hasHandle()) ChannelEndWatch.StopIfAlive(_channel);
             if (_sound.hasHandle()) _sound.release();
             _channel = default;
             _sound = default;

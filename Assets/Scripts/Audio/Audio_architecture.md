@@ -380,7 +380,7 @@ setDelay(S), setPaused(false)
 - 음악 슬롯 하나를 SCO.Music 아래에 둔다. 로드 플래그와 예약 순서는 옛 FMODAudioManager와 같다(`CREATESTREAM | NONBLOCKING`, playSound(paused) → setDelay → setLoopCount → setPriority(0) → unpause). 로드 실패는 옛 코드처럼 IsLoaded가 오지 않는 것으로만 드러난다.
 - `DspSeconds = 기준 초 + (SCO.Music 클록 − 기준 클록) / R`. 재구성 직전에 기준 초를, 직후에 기준 클록을 잡아 세대를 넘어도 단조 증가한다. 엔진을 쓸 수 없으면 QPC로 진행한다.
 - 재구성 때 슬롯 상태(파일, 반복, ms 위치, 일시정지, 아직 시작 전인 예약)를 기억해 다시 열고 이어서 재생한다. ms 단위라 샘플 단위로 맞지는 않는다.
-- 채널 END 콜백(System.update 안, 메인 스레드)으로 끝을 알아채 핸들을 버린다. 옛 코드는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽는데, 끝난 채널에 `isPlaying`을 부르면 ERR_INVALID_HANDLE 오류 콜백이 난다(S4b 릴리스 빌드에서 곡마다 1건 확인).
+- 채널 END 콜백(System.update 안, 메인 스레드)으로 끝을 알아채 핸들을 버린다(`Playback/ChannelEndWatch`). 옛 코드는 곡이 끝난 뒤에도 매 프레임 IsPlaying을 읽는데, 끝난 채널에 `isPlaying`·`stop`을 부르면 ERR_INVALID_HANDLE 오류 콜백이 난다(S4b 릴리스 빌드에서 곡마다 1건 확인). 곡 세션과 로비·프리뷰 재생기도 같은 도우미를 쓴다(I1에서 곡 세션 종료 때 같은 경고 확인).
 - 옛 FMODAudioManager·FMODAudioPreInit과 FMOD 플러그인 수정(Platform.cs의 버퍼 setter)은 S4b에서 지웠다. 게임 씬에는 FMOD Studio 컴포넌트(StudioListener 등)가 없다.
 
 ## 8. 입력과 판정 타이밍

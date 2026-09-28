@@ -26,10 +26,6 @@ namespace SCOdyssey.Audio.Legacy
         private const int MusicPriority = 0;
         private const double RestoreTimeoutSeconds = 3.0;
 
-        // 채널 END 콜백(System.update 안, 메인 스레드)이 끝난 채널 핸들을 남긴다. 델리게이트는 static으로 붙잡아 둔다.
-        private static readonly FMOD.CHANNELCONTROL_CALLBACK s_channelCallback = OnChannelCallback;
-        private static IntPtr s_endedChannel;
-
         private readonly AudioEngine _engine;
         private readonly FmodMixer _mixer;
         private readonly OneShotBank _oneShots;
@@ -320,8 +316,7 @@ namespace SCOdyssey.Audio.Legacy
 
         private void ApplyChannelDefaults()
         {
-            s_endedChannel = IntPtr.Zero;
-            _channel.setCallback(s_channelCallback);
+            ChannelEndWatch.Watch(_channel);
             if (_loop) _channel.setLoopCount(-1);
             else _channel.setLoopCount(0);
             // BGM은 타격음이 몰려도 보이스 스틸링 대상이 되면 안 된다.
@@ -361,7 +356,7 @@ namespace SCOdyssey.Audio.Legacy
         private bool ChannelAlive()
         {
             if (!_channel.hasHandle()) return false;
-            if (_channel.handle == s_endedChannel)
+            if (ChannelEndWatch.HasEnded(_channel))
             {
                 _channel = default;
                 return false;
@@ -376,13 +371,6 @@ namespace SCOdyssey.Audio.Legacy
         {
             if (ChannelAlive()) _channel.stop();
             _channel = default;
-        }
-
-        [AOT.MonoPInvokeCallback(typeof(FMOD.CHANNELCONTROL_CALLBACK))]
-        private static FMOD.RESULT OnChannelCallback(IntPtr control, FMOD.CHANNELCONTROL_TYPE controlType, FMOD.CHANNELCONTROL_CALLBACK_TYPE callbackType, IntPtr data1, IntPtr data2)
-        {
-            if (callbackType == FMOD.CHANNELCONTROL_CALLBACK_TYPE.END) s_endedChannel = control;
-            return FMOD.RESULT.OK;
         }
 
         private void ReleaseSlot()

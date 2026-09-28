@@ -366,6 +366,7 @@ namespace SCOdyssey.Audio.Playback
                 _prepare = PreparePhase.Ready;
                 return;
             }
+            ChannelEndWatch.Watch(_channel);
             _seekFrames = SongAnchor.SeekFrames(SongAnchor.AudioPosition(tau0, _audioZero), _soundRate);
             _prepare = PreparePhase.WaitRewind;
             StepPrepare();
@@ -505,7 +506,9 @@ namespace SCOdyssey.Audio.Playback
             }
             if (!_channel.hasHandle()) return;
 
-            _channel.isPlaying(out bool playing);
+            // 끝난 채널에 isPlaying을 부르면 오류 콜백이 나므로 END 콜백 기록을 먼저 본다.
+            bool playing = false;
+            if (!ChannelEndWatch.HasEnded(_channel)) _channel.isPlaying(out playing);
             if (playing) return;
 
             double endMargin = 2.0 * _sampler.BlockLength / _sampler.SampleRate;
@@ -543,7 +546,7 @@ namespace SCOdyssey.Audio.Playback
 
         private void ReleaseChannel()
         {
-            if (_channel.hasHandle()) _channel.stop();
+            if (_channel.hasHandle()) ChannelEndWatch.StopIfAlive(_channel);
             _channel = default;
         }
 
