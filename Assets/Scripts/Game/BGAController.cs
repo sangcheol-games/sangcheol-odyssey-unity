@@ -1,5 +1,7 @@
+using System;
 using System.IO;
 using SCOdyssey.App;
+using SCOdyssey.Audio;
 using SCOdyssey.Core;
 using UnityEngine;
 using UnityEngine.UI;
@@ -7,8 +9,14 @@ using UnityEngine.Video;
 
 namespace SCOdyssey.Game
 {
+    // 배경 영상(BGA). 두 가지 방식으로 움직인다.
+    //   곡 시계 모드(Follow): 매 프레임 곡 시각 - 음원 시작 곡 시각으로 영상 위치를 정한다. 곡 시계가 멈추면 영상도 멈추고,
+    //                          100ms 넘게 벌어질 때만 위치를 다시 맞춘다. 세션 이벤트는 구독하지 않는다(읽기만 한다).
+    //   레거시(SchedulePlay/Pause/Resume): 옛 DSP 시간 기준. GameManager가 곡 세션으로 옮겨 가면 C 단계에서 지운다.
     public class BGAController : MonoBehaviour
     {
+        private const double ResyncThresholdSeconds = 0.1;
+
         [Header("참조")]
         public VideoPlayer videoPlayer;
         public RawImage bgaScreen;      // BGA 영상 표시용 RawImage
@@ -20,6 +28,7 @@ namespace SCOdyssey.Game
         private bool isScheduled = false;
         private double scheduledDspTime = 0;
         private bool bgaEnabled = true;
+        private ISongSession _session;
 
         private void Start()
         {
@@ -83,6 +92,15 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
+        /// 곡 시계 모드로 전환한다. GameManager가 곡 세션을 얻은 뒤 호출. Stop()이나 null로 푼다.
+        /// </summary>
+        public void Follow(ISongSession session)
+        {
+            _session = session;
+            isScheduled = false;
+        }
+
+        /// <summary>
         /// 재생 시각 예약. GameManager.StartMusic()에서 호출.
         /// dspStartTime = AudioSettings.dspTime + barDuration (1마디 시작 타이밍)
         /// </summary>
@@ -130,6 +148,7 @@ namespace SCOdyssey.Game
         public void Stop()
         {
             isScheduled = false;
+            _session = null;
             if (videoPlayer.isPlaying) videoPlayer.Stop();
         }
 
@@ -160,6 +179,11 @@ namespace SCOdyssey.Game
 
         private void Update()
         {
+            if (_session != null)
+            {
+                FollowSongClock();
+                return;
+            }
             if (!isScheduled || !isPrepared) return;
 
             double now = _audioManager != null ? _audioManager.GetDSPTime() : AudioSettings.dspTime;
@@ -169,6 +193,34 @@ namespace SCOdyssey.Game
             videoPlayer.time = 0;
             videoPlayer.Play();
             bgaScreen.enabled = true;
+        }
+
+        private void FollowSongClock()
+        {
+            if (!isPrepared || !bgaEnabled) return;
+            if (_session.State == SongSessionState.Disposed || _session.State == SongSessionState.Stopped)
+            {
+                Stop();
+                return;
+            }
+
+            SongFrame frame = _session.Clock.Frame;
+            double videoTime = frame.SongTime - _session.AudioStartSongTime;
+            bool inRange = videoTime >= 0 && (videoPlayer.length <= 0 || videoTime < videoPlayer.length);
+            if (!frame.IsRunning || !inRange)
+            {
+                if (videoPlayer.isPlaying) videoPlayer.Pause();
+                return;
+            }
+
+            if (!videoPlayer.isPlaying)
+            {
+                videoPlayer.time = videoTime;
+                videoPlayer.Play();
+                bgaScreen.enabled = true;
+                return;
+            }
+            if (Math.Abs(videoPlayer.time - videoTime) > ResyncThresholdSeconds) videoPlayer.time = videoTime;
         }
     }
 }

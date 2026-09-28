@@ -26,5 +26,8 @@ namespace SCOdyssey.Audio
     {
         ISongSession Current { get; }
         UniTask<SongLoadResult> LoadAsync(string fileName, CancellationToken ct);   // 이전 세션은 Dispose된다
+
+        // 음원이 없는 곡용 무음 세션(곡 시계만 흐르고 음원은 처음부터 끝난 것으로 본다). 이전 세션은 Dispose된다.
+        ISongSession CreateSilent();
     }
 }

@@ -38,6 +38,7 @@ namespace SCOdyssey.Game.Timing.Tests
         public SongSessionState State { get; set; }
         public PauseReason PauseReason { get; set; }
         public bool IsAudioFinished { get; set; }
+        public double AudioStartSongTime { get; set; }
 
         public ISongClock Clock
         {

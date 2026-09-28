@@ -87,6 +87,15 @@ namespace SCOdyssey.Audio.Playback
             return new SongLoadResult(AudioLoadStatus.Ok, session, path);
         }
 
+        public ISongSession CreateSilent()
+        {
+            AudioThread.AssertMain("ISongPlayer.CreateSilent");
+            DisposeCurrent();
+            var session = new FmodSongSession(_engine, _mixer, _sampler, "", SceneManager.GetActiveScene().handle);
+            _current = session;
+            return session;
+        }
+
         internal void Tick()
         {
             if (_current == null) return;

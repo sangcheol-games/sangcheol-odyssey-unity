@@ -43,6 +43,7 @@ namespace SCOdyssey.Audio
         PauseReason PauseReason { get; }
         bool IsAudioFinished { get; }
         ISongClock Clock { get; }
+        double AudioStartSongTime { get; }      // 음원이 시작하는 곡 시각(리드인 + 노트 싱크). Start 전에는 0. BGA 영상 위치 계산용
 
         void Start(double leadInSeconds, int audioOffsetMs);   // 노트 싱크는 여기서만 래치한다
         void Pause(PauseReason reason);

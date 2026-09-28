@@ -138,6 +138,11 @@ namespace SCOdyssey.Audio.Playback
             get { return _audioZero; }
         }
 
+        public double AudioStartSongTime
+        {
+            get { return _audioZero; }
+        }
+
         internal double AudioLengthSeconds
         {
             get { return _audioLength; }
@@ -285,7 +290,8 @@ namespace SCOdyssey.Audio.Playback
         private void BeginOpen()
         {
             ReleaseSound();
-            if (!_engine.IsUsable)
+            // 엔진을 쓸 수 없거나 음원 경로가 없으면(CreateSilent) 무음 세션이다.
+            if (!_engine.IsUsable || string.IsNullOrEmpty(_path))
             {
                 _open = OpenPhase.Silent;
                 OnOpened();

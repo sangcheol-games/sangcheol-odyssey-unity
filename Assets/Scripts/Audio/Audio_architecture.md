@@ -125,6 +125,7 @@ namespace SCOdyssey.Audio
     public interface ISongPlayer
     {
         UniTask<SongLoadResult> LoadAsync(string fileName, CancellationToken ct);  // 성공, 실패(사유), 취소
+        ISongSession CreateSilent();   // 음원 없는 곡용 무음 세션(곡 시계만 흐름, 음원은 처음부터 끝남)
         ISongSession Current { get; }
     }
 
@@ -134,6 +135,7 @@ namespace SCOdyssey.Audio
         PauseReason PauseReason { get; }
         bool IsAudioFinished { get; }
         ISongClock Clock { get; }
+        double AudioStartSongTime { get; }   // 음원이 시작하는 곡 시각 Z(리드인 + 노트 싱크). BGA 영상 위치 계산용
         void Start(double leadInSeconds, int audioOffsetMs);   // 노트 싱크는 여기서만 래치
         void Pause(PauseReason reason);
         void Resume();
@@ -328,7 +330,7 @@ setDelay(S), setPaused(false)
 - 곡 시각: 세그먼트 시작 전이면 τ0, 시작 뒤면 `τ0 + (DspAt(q) - Cf) / R`
 - 불연속(시작, 일시정지, 재개, Generation 변경, DEVICEREINITIALIZE)에서 리셋한다.
 - 드리프트 항과 평활 렌더 시계는 두지 않는다(SP3). 오프셋을 창에서 계속 다시 잡으므로 드리프트가 20ppm이어도 창 안 오차는 0.2ms이고, 이 모델만으로 프레임 사이 오차 p99가 1ms 이하였다.
-- 곡 시계는 세션이 커밋·일시정지 때 넣는 세그먼트(멈춤 또는 흐름)를 최근 8개 보관한다. 프레임보다 조금 이른 입력이 이전 세그먼트(예: 일시정지 직전)에 속할 수 있기 때문이다. 모델이 리셋되기 전에 만든 흐르는 세그먼트는 DSP 도메인이 달라 계산하지 않는다. Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다.
+- 곡 시계는 세션이 커밋·일시정지 때 넣는 세그먼트(멈춤 또는 흐름)를 최근 8개 보관한다. 프레임보다 조금 이른 입력이 이전 세그먼트(예: 일시정지 직전)에 속할 수 있기 때문이다. 모델이 리셋되기 전에 만든 흐르는 세그먼트는 DSP 도메인이 달라 계산하지 않는다. Timeline과 BGA는 `Frame.SongTime`을 쓰고, BGA는 100ms 이상 벌어질 때만 영상을 다시 맞춘다. BGA(`Game/BGAController.Follow(session)`)의 영상 위치는 `Frame.SongTime - AudioStartSongTime`이고, 곡 시계가 멈추면(`IsRunning = false`) 영상도 멈춘다. 세션 이벤트는 구독하지 않는다.
 - `Channel.getPosition`은 믹스 블록 단위로만 맞으므로(±2블록) 싱크 판단에 쓰지 않는다.
 - 콜백 없는 정지 감지: Starting, LeadIn, Playing 중에 포커스가 있는데 원시 DSP 값이 0.5초 넘게 그대로면 장치 사유(`DeviceChanged`)로 일시정지한다(재초기화는 하지 않음). 다시 열 음원이 없으므로 Recovering을 거치지 않고, 클록이 다시 흐르면 사용자가 재개한다.
 
