@@ -2,7 +2,10 @@
 
 기존 `FMODAudioManager`에서 새 오디오·타이밍 레이어(`Audio_architecture.md`)로 옮기는 과정의 단계, 스파이크, 통합 절차를 적은 문서다. **C 단계가 끝나면 이 문서는 삭제한다.**
 
-- 기준 브랜치: `refactor-FMOD`. Illustar 브랜치(GameManager, ChartManager, IGameManager, Constants, CharacterAnimator 변경)는 아직 머지되지 않았다. I1/I2를 시작하기 전에 다시 확인한다.
+- **브랜치**(2026-09-28 결정). FMOD 작업은 develop과 Illustar 둘 다에 들어가야 하고, GameManager·ChartManager 리팩터는 develop에서 분기한 브랜치에서 진행 중이며 Illustar에는 들어가지 않는다.
+  - `refactor-FMOD`: 공통 부분(S-1~S6, develop 3e859a0 기준). develop의 GameManager·ChartManager 리팩터가 끝나 develop에 들어가면 develop을 병합하고, 그 코드 기준으로 I1 → I2 → C를 진행한다.
+  - `refactor-FMOD-Illustar`: `refactor-FMOD`(S6, b336dcc)에서 분기해 `Illustar`를 병합한 브랜치. Illustar의 GameManager·ChartManager 기준으로 I1 → I2 → C를 진행한다.
+  - 두 브랜치에서 같은 파일(BGAController, GameDataLoader, 모듈 쪽 수정 등)은 한쪽에서 커밋한 뒤 cherry-pick한다. 6장 통합 지점 표는 develop 3e859a0 기준이므로 각 브랜치에서 시작할 때 다시 대조한다.
 - 각 단계가 끝나면 게임을 처음부터 끝까지 플레이할 수 있어야 한다.
 
 ---
@@ -91,7 +94,7 @@
 - 입력은 1단계만 한다(추상화, 연속 곡 시계, 시각 기반 판정 타이밍). Raw Input은 후속이다.
 - 오프셋: 노트 싱크(`audioOffsetMs`)와 판정 싱크(`judgmentOffset`, 판정 입력 윈도우 이동)를 유지하고, 각각 한 곳에서만 적용한다. 버퍼 지연 자동 보정, 안내, 장치별 프로필, 자동 제안은 없다. 캘리브레이션 씬은 후속이다.
 - 백그라운드: `playInBackground`를 살린다. 게임 중에는 항상 자동 일시정지한다.
-- GameManager/ChartManager는 팀이 병행 리팩터 중이다. 모듈은 두 Manager를 모르고, 심볼 기준 통합 지점만 편집한다. 기준 브랜치는 `refactor-FMOD`이며, Illustar는 아직 머지되지 않았다.
+- GameManager/ChartManager는 팀이 병행 리팩터 중이다. 모듈은 두 Manager를 모르고, 심볼 기준 통합 지점만 편집한다. 브랜치 전략은 이 문서 맨 위를 따른다.
 - asmdef를 둔다: Core, Audio, Game/Timing, 테스트. 설계는 단순화 방향이다.
 - 음원 파일명은 그대로 둔다. 새 노트 싱크 체감 변화(데스크탑 WASAPI 256x4에서 약 +5.9ms)도 저장값을 바꾸지 않는다.
 
@@ -106,11 +109,12 @@
   - define은 에디터(`SCO_AUDIO_HARNESS;UNITY_EDITOR`), 플레이어(`SCO_AUDIO_HARNESS`), 없음의 세 조건으로 빌드한다.
 
 **다음 할 일**
-1. (Claude) S7(타임라인과 BGA): TimelineController와 BGAController가 곡 시계(`ISongClock.Frame.SongTime`)를 쓰게 한다. 세션이 없으면(I1 전) 레거시 경로를 그대로 쓴다. TimelineController는 `timeProvider`가 null일 때만 늦게 TryGet(ChartEditorScene과 프리팹 공유), BGAController는 OnDestroy에서 구독 해제.
-2. (사용자) S7 확인: 게임 동작이 이전과 같은지(아직 레거시 경로), ChartEditorScene 동등.
+1. (Claude, `refactor-FMOD-Illustar`) I1(GameManager 통합, S7 포함): Illustar의 GameManager·GameDataLoader·BGAController 기준으로 6장 통합 지점을 다시 대조한 뒤 진행한다.
+2. (`refactor-FMOD`) develop의 GameManager·ChartManager 리팩터가 끝날 때까지 대기. 끝나면 develop을 병합하고 같은 순서로 진행한다.
 - 남은 선택 확인: SP8(FlexASIO·실제 ASIO 장비), SP10(USB 분리·절전 복귀·블루투스).
 - C 단계 정리 후보: 빌드 `StreamingAssets`에 FMOD Studio 뱅크(`Master.bank`, `Master.strings.bank`)가 들어간다. 게임은 Studio를 쓰지 않지만 ChartEditor가 FMOD for Unity를 쓰므로 C에서 함께 정리할지 정한다.
 - 후속: 공용 알림 UI가 생기면 MainUI의 부팅 폴백 경고와 AdventureUI의 음원 없음 안내를 화면에 띄운다.
+- 선택: 공통 부분(`refactor-FMOD`, S6까지)은 옛 경로(과도기 어댑터)로 게임이 정상 동작하므로 develop에 먼저 넣을 수 있다. 시점은 팀이 정한다.
 
 ---
 
@@ -310,21 +314,16 @@
 - **통과 기준**: 위 확인 정상
 - **롤백**: revert
 
-### S7. 타임라인과 BGA
-- **내용**: TimelineController와 BGAController가 곡 시계를 쓰게 한다.
-  - TimelineController는 `timeProvider`가 null일 때만 늦게 `TryGet`한다(Timeline.prefab을 ChartEditorScene과 공유).
-  - 세션이 없으면 레거시 경로를 쓴다(I1 전까지).
-  - BGAController는 OnDestroy에서 구독을 해제한다.
-- **에디터 작업**: 없음
-- **확인**: 게임 동작이 이전과 같은지(아직 레거시 경로), **ChartEditorScene 동등**
-- **통과 기준**: 위 확인 정상. 새 경로 검증은 I1에서 한다.
-- **롤백**: revert
+### S7. 타임라인과 BGA → I1에 합침(2026-09-28)
+- TimelineController는 `IGameManager.GetCurrentTime()`으로 움직이므로, I1(G5)에서 GameManager가 곡 시각을 돌려주면 코드를 바꾸지 않아도 곡 시계를 따른다(ChartEditor는 `timeProvider`를 그대로 쓴다).
+- BGAController는 GameManager가 `Init/SchedulePlay/Pause/Resume/Stop`으로 조종하고 옛 DSP 시간으로 맞추므로, 새 경로 전환은 GameManager 수정(G4, G7, G8)과 함께 해야 한다. 그래서 따로 두지 않고 I1에서 한다.
 
 ### I1. GameManager 통합
 - **내용**: 6장의 G1~G12와 GameDataLoader(`ISongPlayer.LoadAsync`, 실패하면 로비로 돌아가 안내). 곡 시각만 넘긴다.
-- **선행 확인**: Illustar 머지 여부. 머지되었으면 그 코드 기준으로 통합 지점을 다시 대조한다.
+  - (S7에서 옮김) BGAController가 세션을 따라가게 한다(곡 시계 `Frame.SongTime`, 세션 이벤트로 재생·일시정지·재개·정지, 100ms 이상 벌어질 때만 다시 맞춤, OnDestroy에서 구독 해제). GameManager의 `bgaController?.SchedulePlay/Pause/Resume` 호출은 뺀다. TimelineController는 G5로 따라온다.
+- **선행 확인**: 진행하는 브랜치의 GameManager·ChartManager 코드로 6장 통합 지점을 다시 대조한다(맨 위 브랜치 항목).
 - **에디터 작업**: 없음
-- **확인**
+- **확인**(ChartEditorScene 동등도 확인한다. Timeline 프리팹을 같이 쓴다)
   - 곡 한 판: 시작 싱크, 리드인 중 일시정지·재개, 카운트다운 중 alt-tab, 로딩 중 alt-tab, ESC와 같은 프레임 입력
   - 곡 도중 USB 분리 → 자동 일시정지 → Pause UI에서 재개
   - 음원이 끝난 뒤 ESC, 무음 곡 일시정지
