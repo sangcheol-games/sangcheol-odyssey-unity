@@ -120,6 +120,17 @@ namespace SCOdyssey.Audio.Engine
             SetStatus(EngineStatus.Failed);
         }
 
+        // 설치 실패 대비: FMOD를 열지 않고 Failed로 둔다. 재생 API는 no-op, 곡 시계는 QPC로 흐른다.
+        // 설정 화면에서 출력을 다시 적용하면 Reinitialize가 System을 새로 만든다.
+        public void Disable(string reason)
+        {
+            AudioThread.AssertMain("AudioEngine.Disable");
+            if (_status != EngineStatus.Uninitialized) return;
+            BootSummary = "사용 안 함 | " + reason;
+            Debug.LogWarning("[Audio] 엔진을 열지 않고 소리 없이 동작합니다: " + reason);
+            SetStatus(EngineStatus.Failed);
+        }
+
         public BootAttempt CurrentAttempt
         {
             get { return _currentAttempt; }

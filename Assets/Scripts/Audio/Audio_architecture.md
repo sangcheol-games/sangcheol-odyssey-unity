@@ -203,7 +203,7 @@ namespace SCOdyssey.Game.Timing
 2. 메인 스레드와 COM 아파트먼트(STA 여부)를 기록한다.
 3. 부팅 시도를 순서대로 실행한다(아래). 성공하면 믹서, 원샷, 음악 재생기를 만든다.
 4. 계약을 ServiceLocator에 등록한다. JudgementDriver와 판정 로그는 Managers가 같은 GameObject에 붙이고 등록한다.
-5. Install이 예외를 던지면 Installer가 만든 것을 모두 해제하고 다시 던지고, Managers가 잡는다. 이때는 소리 없는 과도기 어댑터(IsLoaded 즉시 true, GetDSPTime은 QPC)를 등록하고 부팅을 계속한다. 새 계약(ISongPlayer 등)은 등록되지 않는다(게임이 새 계약을 쓰기 시작하는 I1 전에 no-op 모듈로 바꾼다).
+5. Install이 예외를 던지면 Installer가 만든 것을 모두 해제하고 다시 던지고, Managers가 잡아 `AudioModuleInstaller.InstallDisabled`로 무음 모듈을 등록한다. 무음 모듈은 FMOD를 열지 않고 엔진을 Failed로 둔 같은 계약이다(재생 API는 no-op, 곡 세션은 QPC 시계로 진행). 설정 화면에서 출력을 다시 적용하면 System을 새로 만든다. 무음 모듈마저 실패하면(과도기에는) 소리 없는 어댑터만 등록한다.
 6. 판정 타이밍: Managers가 `JudgementDriver.Install(gameObject, inputManager.LaneTimestampSource, 판정 싱크 Func)`로 붙이고, JudgementDriver와 `IJudgementTimingLog`를 등록한다.
 
 **시도 한 번의 순서**(메인 스레드)

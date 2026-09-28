@@ -26,6 +26,7 @@ namespace SCOdyssey.Testing.AudioHarness
         private int _lengthIndex;
         private int _countIndex = 1;
         private bool _safeMode;
+        private bool _installDisabled;   // 설치 실패 대비 경로(InstallDisabled) 확인용
         private bool _playInBackground = true;
         private bool _pauseSongOnFocusLoss = true;
 
@@ -120,7 +121,8 @@ namespace SCOdyssey.Testing.AudioHarness
             options.PauseSongOnFocusLoss = _pauseSongOnFocusLoss;
             options.EnforceRuntimeManagerGuard = true;
 
-            _module = AudioModuleInstaller.Install(gameObject, options);
+            if (_installDisabled) _module = AudioModuleInstaller.InstallDisabled(gameObject, options, "하네스: 무음 모듈 확인");
+            else _module = AudioModuleInstaller.Install(gameObject, options);
             _click = _module.OneShots.Register(ClickFile);
         }
 
@@ -284,6 +286,7 @@ namespace SCOdyssey.Testing.AudioHarness
 
             GUILayout.BeginHorizontal();
             _safeMode = GUILayout.Toggle(_safeMode, "안전 모드(요청 구성 건너뜀)", GUILayout.Width(240));
+            _installDisabled = GUILayout.Toggle(_installDisabled, "무음 모듈(설치 실패 대비)", GUILayout.Width(200));
 #if UNITY_EDITOR
             AsioPolicy.AllowInEditor = GUILayout.Toggle(AsioPolicy.AllowInEditor, "에디터에서 ASIO 허용", GUILayout.Width(200));
 #endif

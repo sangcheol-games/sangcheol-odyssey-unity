@@ -132,6 +132,14 @@ namespace SCOdyssey.Audio.Hosting
             _legacy.OnEngineOpened();
         }
 
+        // 설치 실패 대비(AudioModuleInstaller.InstallDisabled): FMOD를 열지 않은 무음 모듈로 둔다.
+        internal void BootDisabled(string reason)
+        {
+            _engine.Disable(reason);
+            BuildResources();
+            _legacy.OnEngineOpened();
+        }
+
         // 같은 구성으로 close → init 한다(진단·하네스용 강제 재구성). 설정 적용은 Output.ApplyAsync가 맡는다.
         public void Reinitialize()
         {

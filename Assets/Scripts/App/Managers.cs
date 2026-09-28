@@ -61,7 +61,7 @@ namespace SCOdyssey.App
         }
 
         // 오디오 모듈(FMOD Core 직접 소유)과 판정 타이밍을 이 GameObject에 설치한다(DontDestroyOnLoad 유지).
-        // 옛 IAudioManager 소비자는 과도기 어댑터로 이어 준다. 설치가 실패하면 소리 없는 어댑터로 부팅을 계속한다.
+        // 옛 IAudioManager 소비자는 과도기 어댑터로 이어 준다. 설치가 실패하면 FMOD를 열지 않은 무음 모듈로 부팅을 계속한다.
         private void InstallAudio(SettingsManager settings, InputManager input)
         {
             try
@@ -74,13 +74,14 @@ namespace SCOdyssey.App
                 // 게임 경로에서 FMOD for Unity의 Studio 시스템이 초기화되면 System이 두 개가 되므로 오류로 알린다(ChartEditor는 예외).
                 options.EnforceRuntimeManagerGuard = true;
 
-                AudioModule module = AudioModuleInstaller.Install(gameObject, options);
-                LegacyAudioManagerAdapter.RegisterInto(module);
+                AudioModule module = InstallAudioModule(options);
+                if (module != null) LegacyAudioManagerAdapter.RegisterInto(module);
+                else LegacyAudioManagerAdapter.RegisterSilent();
             }
             catch (Exception e)
             {
                 Debug.LogException(e);
-                Debug.LogError("[Managers] 오디오 모듈 설치에 실패해 소리 없이 진행합니다.");
+                Debug.LogError("[Managers] 오디오 설정을 만들지 못해 소리 없이 진행합니다.");
                 LegacyAudioManagerAdapter.RegisterSilent();
             }
 
@@ -89,6 +90,30 @@ namespace SCOdyssey.App
                 () => AudioSettingsMapper.ToJudgmentOffsetSteps(settings.Current));
             ServiceLocator.TryRegister(driver);
             ServiceLocator.TryRegister<IJudgementTimingLog>(driver.TimingLog);
+        }
+
+        // 정상 설치 → 실패하면 무음 모듈(InstallDisabled) → 그것도 실패하면 null.
+        private AudioModule InstallAudioModule(AudioModuleOptions options)
+        {
+            try
+            {
+                return AudioModuleInstaller.Install(gameObject, options);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                Debug.LogError("[Managers] 오디오 모듈 설치에 실패해 소리 없이 진행합니다.");
+            }
+
+            try
+            {
+                return AudioModuleInstaller.InstallDisabled(gameObject, options, "오디오 모듈 설치 실패");
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+                return null;
+            }
         }
 
 
