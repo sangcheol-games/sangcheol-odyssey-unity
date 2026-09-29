@@ -15,6 +15,7 @@ Scenes (in `Assets/Scenes/`):
 - `GameScene` — gameplay
 - `ChartEditorScene` — in-game chart editor
 - `APITestScene` — isolated scene for testing the `IApiClient` backend
+- `JudgeSandboxScene` — judge engine sandbox, no `Managers` needed (`Game/Sandbox/`). UI Toolkit widget UI (`SandboxPanel`, styles in `Assets/Scenes/JudgeSandbox/`), FMOD sound of its own (`SandboxAudio`: song from `MusicSO`, hitsound, metronome — Unity audio is disabled in this project). Runs the shared `JudgeScenarios` catalog or any `MusicSO` chart with autoplay/script/keyboard input; the timeline (`JudgeTimelineElement`) reads only `IJudgeStateReader`. The engine steps at a fixed 60 Hz regardless of render fps; `SUMMARY` lines go to the console.
 
 ## Architecture: two parallel boot paths
 

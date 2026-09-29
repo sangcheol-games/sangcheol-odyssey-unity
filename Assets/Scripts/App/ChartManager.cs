@@ -136,7 +136,7 @@ namespace SCOdyssey.Game
             var trackReport = new ChartParseReport();
             JudgeNote[] judgeNotes = chartData.BuildJudgeTrack(trackReport);
             foreach (string error in trackReport.Errors) Debug.LogError(error);
-            JudgeSettings judgeSettingsInUse = ResolveJudgeSettings().WithOffset(judgementOffsetSec);
+            JudgeSettings judgeSettingsInUse = JudgeSettingsSO.Resolve(judgeSettings).WithOffset(judgementOffsetSec);
             _judge = new JudgeEngine(judgeSettingsInUse);
             _judge.Load(judgeNotes);
             Debug.Log($"[Judge] 윈도우 {judgeSettingsInUse.Windows}, 선택 {judgeSettingsInUse.Select}, 오프셋 {judgeSettingsInUse.OffsetSec * 1000:0.#}ms");
@@ -160,23 +160,6 @@ namespace SCOdyssey.Game
 
             // barDuration만큼 음원 재생을 지연 → 0번 빈 마디가 흐르는 동안 1번 마디를 준비할 시간을 확보
             gameManager.StartMusic(barDuration);
-        }
-
-        // Inspector -> ServiceLocator -> Resources 순으로 찾는다. 없거나 값이 잘못됐으면 코드 기본값
-        private JudgeSettings ResolveJudgeSettings()
-        {
-            JudgeSettingsSO so = ConfigLocator.Resolve(judgeSettings, JudgeSettingsSO.ResourcePath);
-            if (so == null) return JudgeSettings.Default;
-
-            try
-            {
-                return so.ToSettings();
-            }
-            catch (ArgumentException e)
-            {
-                Debug.LogError($"[ChartManager] {so.name} 값이 잘못돼 기본값을 쓴다: {e.Message}");
-                return JudgeSettings.Default;
-            }
         }
 
         // flat 트랙 대조용 임시 메서드

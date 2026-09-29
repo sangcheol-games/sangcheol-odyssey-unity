@@ -1,3 +1,4 @@
+using System;
 using SCOdyssey.Rhythm;
 using UnityEngine;
 
@@ -18,6 +19,23 @@ namespace SCOdyssey.Config
 
         [Header("노트 선택")]
         public NoteSelectPolicy selectPolicy = NoteSelectPolicy.Earliest;
+
+        // Inspector -> ServiceLocator -> Resources 순으로 찾는다. 없거나 값이 잘못됐으면 코드 기본값
+        public static JudgeSettings Resolve(JudgeSettingsSO serialized)
+        {
+            JudgeSettingsSO so = ConfigLocator.Resolve(serialized, ResourcePath);
+            if (so == null) return JudgeSettings.Default;
+
+            try
+            {
+                return so.ToSettings();
+            }
+            catch (ArgumentException e)
+            {
+                Debug.LogError($"[JudgeSettings] {so.name} 값이 잘못돼 기본값을 쓴다: {e.Message}");
+                return JudgeSettings.Default;
+            }
+        }
 
         public JudgeSettings ToSettings()
             => new(JudgeWindows.FromMilliseconds(perfectMs, masterMs, idealMs, kindMs, ummMs), selectPolicy);

@@ -1,27 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
 namespace SCOdyssey.Rhythm.Tests
 {
-    public readonly struct ScriptedInput
-    {
-        public readonly double Time;
-        public readonly Lane Lane;
-        public readonly bool IsPress;
-
-        public ScriptedInput(double time, Lane lane, bool isPress)
-        {
-            Time = time;
-            Lane = lane;
-            IsPress = isPress;
-        }
-
-        public static ScriptedInput Press(double time, Lane lane) => new(time, lane, true);
-        public static ScriptedInput Release(double time, Lane lane) => new(time, lane, false);
-    }
-
     // JudgeEngine을 게임과 같은 순서(그 프레임까지의 입력 먼저, 그 다음 Advance)로 몰고 판정 이벤트를 모은다.
     public sealed class JudgeHarness
     {
@@ -45,23 +27,9 @@ namespace SCOdyssey.Rhythm.Tests
 
         public void Run(IEnumerable<ScriptedInput> inputs, double stepSec, double endSec)
         {
-            List<ScriptedInput> ordered = inputs.OrderBy(i => i.Time).ToList();
-            int next = 0;
-
-            for (int frame = 0; ; frame++)
-            {
-                double now = Math.Min(frame * stepSec, endSec);
-
-                while (next < ordered.Count && ordered[next].Time <= now)
-                {
-                    ScriptedInput input = ordered[next++];
-                    if (input.IsPress) Press(input.Lane, input.Time);
-                    else Release(input.Lane, input.Time);
-                }
-
-                Advance(now);
-                if (now >= endSec) break;
-            }
+            var script = new InputScript();
+            foreach (ScriptedInput input in inputs) script.Add(input);
+            ScriptedRun.Run(Engine, script, FrameSchedule.Uniform(stepSec, endSec), Events);
         }
 
         public JudgeEvent Single(int noteId)
@@ -71,11 +39,8 @@ namespace SCOdyssey.Rhythm.Tests
             return matches[0];
         }
 
-        // noteId 순. 틱 간격과 무관하게 같아야 하는 결과를 비교할 때 쓴다
-        public string[] Outcomes()
-            => Events.OrderBy(e => e.NoteId).Select(Describe).ToArray();
+        public string[] Outcomes() => JudgeOutcome.Summarize(Events);
 
-        public static string Describe(JudgeEvent e)
-            => $"#{e.NoteId} {e.Kind} {(e.IsMiss ? "Miss" : e.Judge.ToString())}";
+        public static string Describe(JudgeEvent e) => JudgeOutcome.Describe(e);
     }
 }
