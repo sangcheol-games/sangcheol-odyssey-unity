@@ -8,14 +8,6 @@ namespace SCOdyssey.Domain.Service
         public const int COUNTDOWN_SLOT_COUNT = LANE_GROUP_COUNT * 2;   // 그룹 x 진행방향(LTR/RTL). countdownTexts 배열 크기
 
 
-        // 판정 윈도우(초, 판정타이밍 기준 ±오차). ChartManager.GetJudgeType/CheckMissedNotes 등이 사용
-        public const float JUDGE_PERFECT = 0.021f;
-        public const float JUDGE_MASTER = 0.042f;
-        public const float JUDGE_IDEAL = 0.084f;
-        public const float JUDGE_KIND = 0.105f;
-        public const float JUDGE_UMM = 0.126f;   // 판정 범위 최대치. 이 값을 넘어가면 miss(Umm)
-
-
         public enum Difficulty
         {
             Easy,

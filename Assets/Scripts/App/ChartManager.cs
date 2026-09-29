@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
+using SCOdyssey.Config;
 using SCOdyssey.Core;
 using SCOdyssey.Rhythm;
 using TMPro;
@@ -17,14 +18,14 @@ namespace SCOdyssey.Game
     //  이후 매 프레임 GameManager.Update()가 SyncTime(time)을 호출하고,
     //  SyncTime()은 아래를 순서대로 수행한다.
     //    1) 현재 시간이 마디 종료 시각을 넘었으면  StartCurrentBar() -> CheckGameClear()
-    //    2) JudgeTrack.Tick() -> 나온 JudgeEvent를 DispatchJudge()로 흘림 (miss 확정 + 홀드 자동판정)
+    //    2) JudgeEngine.Advance() -> 나온 JudgeEvent를 DispatchJudge()로 흘림 (miss 확정 + 홀드 자동판정)
     //    3) UpdateCountdowns()
     //
     //  키 입력은 프레임 루프와 별개로 들어온다.
     //    누르면 TryJudgeInput(), 떼면 TryJudgeRelease() 가 호출되고,
     //    판정이 잡히면 DispatchJudge() -> ApplyJudgement() 로 마무리한다.
     //
-    //  판정 권한은 JudgeTrack(순수 데이터)에 있고, 여기는 그 결과를 뷰/점수/연출로 옮기는 역할만 한다.
+    //  판정 권한은 JudgeEngine(순수 데이터)에 있고, 여기는 그 결과를 뷰/점수/연출로 옮기는 역할만 한다.
     //  뷰 연결은 noteId(= NoteData.id = 판정 트랙 인덱스) -> _noteViews 로 되찾는다.
     //
     //  마디 전환은 StartCurrentBar() 내부에서 일어난다.
@@ -90,8 +91,12 @@ namespace SCOdyssey.Game
 
         private ChartState _chartState;
 
-        private readonly JudgeTrack _judgeTrack = new();
-        private readonly List<JudgeEvent> _judgeEvents = new();   // Tick 결과 수신용. 매 프레임 재사용
+        [Header("판정 설정 (비우면 Resources/Config/JudgeSettings)")]
+        [SerializeField] private JudgeSettingsSO judgeSettings;
+
+        private JudgeEngine _judge = new(JudgeSettings.Default);   // Init에서 설정을 읽어 새로 만든다
+        private readonly List<JudgeEvent> _judgeEvents = new();   // Advance 결과 수신용. 매 프레임 재사용
+        private readonly List<JudgeEvent> _inputEvents = new();   // 입력 판정 결과 수신용
 
         // noteId -> 뷰. 판정 결과로 어떤 NoteController를 건드릴지 되찾는 통로.
         // 스폰 때 등록하고, 판정/miss로 꺼낼 때 해제한다.
@@ -131,7 +136,10 @@ namespace SCOdyssey.Game
             var trackReport = new ChartParseReport();
             JudgeNote[] judgeNotes = chartData.BuildJudgeTrack(trackReport);
             foreach (string error in trackReport.Errors) Debug.LogError(error);
-            _judgeTrack.Init(judgeNotes, judgementOffsetSec);
+            JudgeSettings judgeSettingsInUse = ResolveJudgeSettings().WithOffset(judgementOffsetSec);
+            _judge = new JudgeEngine(judgeSettingsInUse);
+            _judge.Load(judgeNotes);
+            Debug.Log($"[Judge] 윈도우 {judgeSettingsInUse.Windows}, 선택 {judgeSettingsInUse.Select}, 오프셋 {judgeSettingsInUse.OffsetSec * 1000:0.#}ms");
             _noteViews = new NoteController[judgeNotes.Length];
             LogJudgeTrackSummary(chartData, judgeNotes);
 
@@ -152,6 +160,23 @@ namespace SCOdyssey.Game
 
             // barDuration만큼 음원 재생을 지연 → 0번 빈 마디가 흐르는 동안 1번 마디를 준비할 시간을 확보
             gameManager.StartMusic(barDuration);
+        }
+
+        // Inspector -> ServiceLocator -> Resources 순으로 찾는다. 없거나 값이 잘못됐으면 코드 기본값
+        private JudgeSettings ResolveJudgeSettings()
+        {
+            JudgeSettingsSO so = ConfigLocator.Resolve(judgeSettings, JudgeSettingsSO.ResourcePath);
+            if (so == null) return JudgeSettings.Default;
+
+            try
+            {
+                return so.ToSettings();
+            }
+            catch (ArgumentException e)
+            {
+                Debug.LogError($"[ChartManager] {so.name} 값이 잘못돼 기본값을 쓴다: {e.Message}");
+                return JudgeSettings.Default;
+            }
         }
 
         // flat 트랙 대조용 임시 메서드
@@ -199,7 +224,7 @@ namespace SCOdyssey.Game
             }
 
             _judgeEvents.Clear();
-            _judgeTrack.Tick(time, _judgeEvents);
+            _judge.Advance(time, _judgeEvents);
             foreach (JudgeEvent judged in _judgeEvents) DispatchJudge(judged);
 
             /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1로 표시.
@@ -242,7 +267,7 @@ namespace SCOdyssey.Game
             if (remainingChart.Count > 0) return;
             if (nextBarLanes.Count > 0) return;
 
-            if (!_judgeTrack.IsFinished) return;
+            if (!_judge.IsFinished) return;
 
             // 음악이 아직 재생 중이면 대기
             if (gameManager.IsAudioPlaying) return;
@@ -569,12 +594,13 @@ namespace SCOdyssey.Game
         #region Judgement
         /// <summary>
         /// 키를 눌렀을 때 호출(GameManager가 라우팅). Normal/HoldStart만 눌러서 판정한다.
-        /// (홀드 본체는 Tick의 자동 판정, 릴리즈는 TryJudgeRelease 담당)
+        /// (홀드 본체는 Advance의 자동 판정, 릴리즈는 TryJudgeRelease 담당)
         /// </summary>
         public void TryJudgeInput(Lane lane, double inputGameTime)
         {
-            if (_judgeTrack.TryPress(lane, inputGameTime, out JudgeEvent judged))
-                DispatchJudge(judged);
+            _inputEvents.Clear();
+            _judge.Press(lane, inputGameTime, _inputEvents);
+            foreach (JudgeEvent judged in _inputEvents) DispatchJudge(judged);
         }
 
         /// <summary>
@@ -582,8 +608,9 @@ namespace SCOdyssey.Game
         /// </summary>
         public void TryJudgeRelease(Lane lane, double inputGameTime)
         {
-            if (_judgeTrack.TryRelease(lane, inputGameTime, out JudgeEvent judged))
-                DispatchJudge(judged);
+            _inputEvents.Clear();
+            _judge.Release(lane, inputGameTime, _inputEvents);
+            foreach (JudgeEvent judged in _inputEvents) DispatchJudge(judged);
         }
 
         // 판정된 노트의 뷰를 꺼내면서 등록 해제. 같은 노트를 두 번 건드리지 않게 한다.
@@ -596,7 +623,7 @@ namespace SCOdyssey.Game
             return view;
         }
 
-        // JudgeTrack이 확정한 판정 1건을 뷰/점수/연출로 흘려보낸다.
+        // JudgeEngine이 확정한 판정 1건을 뷰/점수/연출로 흘려보낸다.
         private void DispatchJudge(JudgeEvent judged)
         {
             NoteController view = TakeNoteView(judged.NoteId);

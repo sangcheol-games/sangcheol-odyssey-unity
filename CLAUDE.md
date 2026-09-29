@@ -69,7 +69,7 @@ Charts live in `Assets/Charts/` as text files. Format (see `ChartParser.cs`):
 
 ### Judgement & character animation
 
-Judge windows (seconds) are in `Assets/Scripts/Domain/Service/Constants.cs`: `Perfect=0.021 / Master=0.042 / Ideal=0.084 / Kind=0.105 / Umm=0.126`.
+Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`JudgeSettingsSO`, milliseconds: `Perfect=21 / Master=42 / Ideal=84 / Kind=105 / Umm=126`). `ChartManager` resolves it through `ConfigLocator` (Inspector → ServiceLocator → Resources) and falls back to `JudgeWindows.Default`. Grade edges are inclusive (`<=`); the outer Umm edge is exclusive.
 
 **Lane numbering is 1-based at the edges, 0-based internally.** Both the Input System (`InputManager` hardcodes `1`–`4`) and the chart file (`#001:`**`02`**`:...`) use lanes 1–4, but the `Lane` enum is 0-based (`L1=0 … L4=3`, in the `SCOdyssey.Rhythm` assembly) — call sites convert with `- 1`. Two *different* mappings derive from a lane; do not conflate them:
 
@@ -89,7 +89,7 @@ Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudged
 ## Conventions
 
 - **Namespaces mirror folders**: `SCOdyssey.Boot`, `SCOdyssey.Core`, `SCOdyssey.App`, `SCOdyssey.App.Interfaces`, `SCOdyssey.Game`, `SCOdyssey.Rhythm`, `SCOdyssey.Domain.Dto`, `SCOdyssey.Domain.Service`, `SCOdyssey.Net`, `SCOdyssey.UI`, `SCOdyssey.Testing.*`.
-- **Assemblies**: `SCOdyssey.Domain.Service` (`Constants.cs`) and `SCOdyssey.Rhythm` (`Assets/Scripts/Rhythm/`: judge track, chart parser, judgement bus) are `noEngineReferences` asmdefs — no `UnityEngine` may be used there (`Debug.Log` goes through `ChartParseReport` to the caller). Everything else is Assembly-CSharp, which references both.
+- **Assemblies**: `SCOdyssey.Domain.Service` (`Constants.cs`) and `SCOdyssey.Rhythm` (`Assets/Scripts/Rhythm/`: judge engine, chart parser, judgement bus) are `noEngineReferences` asmdefs — no `UnityEngine` may be used there (`Debug.Log` goes through `ChartParseReport` to the caller). Everything else is Assembly-CSharp, which references both.
 - **Interfaces for managers live separately** in `Assets/Scripts/App/Interfaces/` — consumers always depend on `I*Manager`, not the concrete class, so the API/mock can be swapped via `TestingConfig.useMockApi`.
 - **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `FMODAudioManager.cs`).
 - **Logging**: call `CoreLogger` from `ServiceLocator` (tag strings like `"boot"`, `"unity"`). `LoggerDriver` forwards `Application.logMessageReceivedThreaded` to `CoreLogger` so Debug.Log reaches the file/ring/console sinks, but has a reentrancy guard — don't call Debug.Log while draining.

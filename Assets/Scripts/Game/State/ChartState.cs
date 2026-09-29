@@ -5,7 +5,7 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
-    // 판정에 딸리지 않는 뷰 상태만 들고 있다. 판정 권한은 JudgeTrack에 있다.
+    // 판정에 딸리지 않는 뷰 상태만 들고 있다. 판정 권한은 JudgeEngine에 있다.
     //  - ghostNotes: 다음 마디용으로 미리 스폰해 둔 노트. 마디 시작 때 Active로 승격(표시 전환)
     //  - countdownTargets: 3/2/1 텍스트의 목표 시각. 레인이 아니라 슬롯(그룹 × 진행방향) 단위
     public class ChartState

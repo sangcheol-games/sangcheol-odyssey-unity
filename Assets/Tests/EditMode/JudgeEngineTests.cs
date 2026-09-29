@@ -6,8 +6,8 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Rhythm.Tests
 {
-    // 지금 JudgeTrack이 하는 일을 그대로 고정한다. 판정 규칙이 바뀌면 여기서 먼저 깨진다.
-    public class JudgeTrackTests
+    // 기본 설정의 JudgeEngine이 하는 일을 그대로 고정한다. 판정 규칙이 바뀌면 여기서 먼저 깨진다.
+    public class JudgeEngineTests
     {
         private const double Eps = 1e-9;
         private const double Frame60 = 1.0 / 60;
@@ -21,11 +21,11 @@ namespace SCOdyssey.Rhythm.Tests
 
         private static double WindowOf(JudgeType grade) => grade switch
         {
-            JudgeType.Perfect => JUDGE_PERFECT,
-            JudgeType.Master => JUDGE_MASTER,
-            JudgeType.Ideal => JUDGE_IDEAL,
-            JudgeType.Kind => JUDGE_KIND,
-            _ => JUDGE_UMM,
+            JudgeType.Perfect => JudgeWindows.Default.Perfect,
+            JudgeType.Master => JudgeWindows.Default.Master,
+            JudgeType.Ideal => JudgeWindows.Default.Ideal,
+            JudgeType.Kind => JudgeWindows.Default.Kind,
+            _ => JudgeWindows.Default.Umm,
         };
 
         private static JudgeType? PressGrade(double noteTime, double pressTime)
@@ -51,7 +51,7 @@ namespace SCOdyssey.Rhythm.Tests
         [Test]
         public void Umm_WindowEdgeIsExclusive()
         {
-            double u = JUDGE_UMM;
+            double u = JudgeWindows.Default.Umm;
 
             Assert.That(PressGrade(0, u), Is.Null, "late by exactly Umm");
             Assert.That(PressGrade(u, 0), Is.Null, "early by exactly Umm");
@@ -68,7 +68,7 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(h.Press(Lane.L1, 1.2), Is.False);
             Assert.That(h.Events, Is.Empty);
 
-            h.Tick(1.5);
+            h.Advance(1.5);
             Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
         }
 
@@ -118,17 +118,17 @@ namespace SCOdyssey.Rhythm.Tests
         {
             JudgeHarness h = Harness(N(0.00, Lane.L1), N(0.05, Lane.L2), N(0.10, Lane.L3), N(0.30, Lane.L4));
 
-            h.Tick(JUDGE_UMM);   // T + Umm 딱 그 시각은 아직 miss가 아니다
+            h.Advance(JudgeWindows.Default.Umm);   // T + Umm 딱 그 시각은 아직 miss가 아니다
             Assert.That(h.Events, Is.Empty);
 
-            h.Tick(0.2);
+            h.Advance(0.2);
             Assert.That(h.Events.Select(JudgeHarness.Describe), Is.EqualTo(new[] { "#0 Normal Miss", "#1 Normal Miss" }));
             Assert.That(h.Events.All(e => e.IsMiss && e.Judge == JudgeType.Umm), Is.True);
-            Assert.That(h.Track.IsFinished, Is.False);
+            Assert.That(h.Engine.IsFinished, Is.False);
 
-            h.Tick(1.0);
+            h.Advance(1.0);
             Assert.That(h.Events.Select(e => e.NoteId), Is.EqualTo(new[] { 0, 1, 2, 3 }));
-            Assert.That(h.Track.IsFinished, Is.True);
+            Assert.That(h.Engine.IsFinished, Is.True);
         }
 
         [Test]
@@ -137,10 +137,10 @@ namespace SCOdyssey.Rhythm.Tests
             JudgeHarness h = Harness(N(0.00, Lane.L1), N(0.05, Lane.L2));
 
             h.Press(Lane.L2, 0.05);
-            h.Tick(1.0);
+            h.Advance(1.0);
 
             Assert.That(h.Events.Select(JudgeHarness.Describe), Is.EqualTo(new[] { "#1 Normal Perfect", "#0 Normal Miss" }));
-            Assert.That(h.Track.IsFinished, Is.True);
+            Assert.That(h.Engine.IsFinished, Is.True);
         }
 
         [Test]
@@ -148,7 +148,7 @@ namespace SCOdyssey.Rhythm.Tests
         {
             JudgeHarness h = Harness(N(0.0, Lane.L1));
 
-            h.Tick(0.2);
+            h.Advance(0.2);
 
             Assert.That(h.Press(Lane.L1, 0.05), Is.False);
             Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
@@ -169,9 +169,9 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(unshifted.Outcomes(), Is.EqualTo(new[] { "#0 Normal Ideal" }));
 
             var sweep = new JudgeHarness(notes, offset);
-            sweep.Tick(1.0 + offset + JUDGE_UMM - 0.01);
+            sweep.Advance(1.0 + offset + JudgeWindows.Default.Umm - 0.01);
             Assert.That(sweep.Events, Is.Empty);
-            sweep.Tick(1.0 + offset + JUDGE_UMM + 0.01);
+            sweep.Advance(1.0 + offset + JudgeWindows.Default.Umm + 0.01);
             Assert.That(sweep.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
         }
 
@@ -207,7 +207,7 @@ namespace SCOdyssey.Rhythm.Tests
 
             Assert.That(coarse.Outcomes(), Is.EqualTo(fine.Outcomes()));
             Assert.That(fine.Events, Has.Count.EqualTo(notes.Count));
-            Assert.That(fine.Track.IsFinished, Is.True);
+            Assert.That(fine.Engine.IsFinished, Is.True);
         }
 
         // 홀드 본체(Holding/HoldEnd)는 키를 누르고 있는 동안, Tick이 ±Perfect 창 안에 떨어진 프레임에서만 Perfect가 된다.
@@ -228,9 +228,9 @@ namespace SCOdyssey.Rhythm.Tests
             JudgeHarness h = Harness(N(0.0, Lane.L1, NoteType.HoldStart), N(0.2, Lane.L1, NoteType.Holding), N(0.4, Lane.L1, NoteType.HoldEnd));
 
             h.Press(Lane.L1, 0.0);
-            h.Tick(0.17);
-            h.Tick(0.23);   // 0.2 ± 0.021을 건너뛴 프레임
-            h.Tick(0.4);
+            h.Advance(0.17);
+            h.Advance(0.23);   // 0.2 ± 0.021을 건너뛴 프레임
+            h.Advance(0.4);
 
             Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldStart Perfect", "#1 Holding Miss", "#2 HoldEnd Perfect" }));
         }

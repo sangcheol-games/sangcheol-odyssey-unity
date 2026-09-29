@@ -1,0 +1,162 @@
+using System;
+using NUnit.Framework;
+using static SCOdyssey.Domain.Service.Constants;
+
+namespace SCOdyssey.Rhythm.Tests
+{
+    // 설정으로 바꿀 수 있는 부분과 상태 조회 API
+    public class JudgeEngineApiTests
+    {
+        private static JudgeNote N(double time, Lane lane, NoteType kind = NoteType.Normal) => new(time, lane, kind);
+
+        [Test]
+        public void Windows_Default_IsShippedMilliseconds()
+        {
+            JudgeWindows w = JudgeWindows.Default;
+
+            Assert.That(new[] { w.Perfect, w.Master, w.Ideal, w.Kind, w.Umm },
+                Is.EqualTo(new[] { 0.021, 0.042, 0.084, 0.105, 0.126 }));
+        }
+
+        [TestCase(0, 42, 84, 105, 126)]
+        [TestCase(21, 20, 84, 105, 126)]
+        [TestCase(21, 42, 84, 130, 126)]
+        public void Windows_MustBePositiveAndAscending(double p, double m, double i, double k, double u)
+        {
+            Assert.Throws<ArgumentException>(() => JudgeWindows.FromMilliseconds(p, m, i, k, u));
+        }
+
+        [Test]
+        public void Windows_EqualValuesAreAllowed()
+        {
+            Assert.DoesNotThrow(() => JudgeWindows.FromMilliseconds(30, 30, 30, 30, 30));
+        }
+
+        [Test]
+        public void CustomWindows_NarrowUmm_RejectsAndSweepsEarlier()
+        {
+            var settings = new JudgeSettings(JudgeWindows.FromMilliseconds(10, 15, 20, 25, 30));
+
+            var pressed = new JudgeHarness(new[] { N(1.0, Lane.L1) }, settings);
+            Assert.That(pressed.Press(Lane.L1, 1.05), Is.False, "기본 윈도우라면 Ideal");
+
+            var graded = new JudgeHarness(new[] { N(1.0, Lane.L1) }, settings);
+            graded.Press(Lane.L1, 1.022);
+            Assert.That(graded.Outcomes(), Is.EqualTo(new[] { "#0 Normal Kind" }));
+
+            var swept = new JudgeHarness(new[] { N(1.0, Lane.L1) }, settings);
+            swept.Advance(1.035);
+            Assert.That(swept.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
+        }
+
+        [Test]
+        public void Nearest_PicksClosestNoteInWindow()
+        {
+            var settings = new JudgeSettings(JudgeWindows.Default, NoteSelectPolicy.Nearest);
+            var h = new JudgeHarness(new[] { N(0.0, Lane.L1), N(0.1, Lane.L1) }, settings);
+
+            h.Press(Lane.L1, 0.09);
+
+            Assert.That(h.Events.ConvertAll(JudgeHarness.Describe), Is.EqualTo(new[] { "#1 Normal Perfect" }));
+        }
+
+        [Test]
+        public void Nearest_TieGoesToEarlierNote()
+        {
+            var settings = new JudgeSettings(JudgeWindows.Default, NoteSelectPolicy.Nearest);
+            var h = new JudgeHarness(new[] { N(0.0, Lane.L1), N(0.25, Lane.L1) }, settings);
+
+            h.Press(Lane.L1, 0.125);
+
+            Assert.That(h.Single(0).Judge, Is.EqualTo(JudgeType.Umm));
+        }
+
+        [Test]
+        public void Reader_ReportsStatusGradeAndHeldKeys()
+        {
+            var h = new JudgeHarness(new[] { N(0.0, Lane.L1), N(0.0, Lane.L2), N(1.0, Lane.L3) });
+            IJudgeStateReader reader = h.Engine;
+
+            Assert.That(reader.Count, Is.EqualTo(3));
+            Assert.That(reader.NoteAt(2).Lane, Is.EqualTo(Lane.L3));
+            Assert.That(reader.StatusOf(0), Is.EqualTo(NoteStatus.Pending));
+            Assert.That(reader.GradeOf(0), Is.Null);
+
+            h.Press(Lane.L1, 0.03);
+            Assert.That(reader.IsHeld(Lane.L1), Is.True);
+            Assert.That(reader.IsHeld(Lane.L2), Is.False);
+            Assert.That(reader.StatusOf(0), Is.EqualTo(NoteStatus.Judged));
+            Assert.That(reader.GradeOf(0), Is.EqualTo(JudgeType.Master));
+
+            h.Release(Lane.L1, 0.1);
+            h.Advance(0.5);
+            Assert.That(reader.IsHeld(Lane.L1), Is.False);
+            Assert.That(reader.StatusOf(1), Is.EqualTo(NoteStatus.Missed));
+            Assert.That(reader.GradeOf(1), Is.Null, "miss에는 등급이 없다");
+            Assert.That(reader.StatusOf(2), Is.EqualTo(NoteStatus.Pending));
+            Assert.That(reader.IsFinished, Is.False);
+        }
+
+        [Test]
+        public void Advance_NowNeverMovesBackward()
+        {
+            var h = new JudgeHarness(new[] { N(0.5, Lane.L1) });
+            Assert.That(h.Engine.Now, Is.EqualTo(double.NegativeInfinity));
+
+            h.Advance(1.0);
+            h.Advance(0.2);
+
+            Assert.That(h.Engine.Now, Is.EqualTo(1.0));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
+        }
+
+        [Test]
+        public void Events_CarrySignedDeltaAndDecisionTime()
+        {
+            const double offset = 0.01;
+            var h = new JudgeHarness(new[]
+            {
+                N(1.0, Lane.L1),
+                N(2.0, Lane.L1),
+                N(3.0, Lane.L1),
+                N(4.0, Lane.L2, NoteType.HoldStart),
+                N(4.5, Lane.L2, NoteType.HoldEnd),
+            }, offset);
+            double umm = JudgeWindows.Default.Umm;
+
+            h.Press(Lane.L1, 1.04);   // 판정 시각 1.01, 30ms 늦음
+            h.Press(Lane.L1, 1.99);   // 판정 시각 2.01, 20ms 이름
+            h.Advance(3.5);           // 3.01은 3.01 + Umm에 miss
+            h.Press(Lane.L2, 4.01);
+            h.Advance(4.52);          // 홀드 끝 4.51을 10ms 지난 프레임
+
+            JudgeEvent late = h.Single(0), early = h.Single(1), miss = h.Single(2), body = h.Single(4);
+            Assert.That(late.DeltaSec, Is.EqualTo(0.03).Within(1e-12));
+            Assert.That(late.Time, Is.EqualTo(1.04));
+            Assert.That(early.DeltaSec, Is.EqualTo(-0.02).Within(1e-12));
+            Assert.That(early.Time, Is.EqualTo(1.99));
+            Assert.That(miss.IsMiss, Is.True);
+            Assert.That(miss.DeltaSec, Is.EqualTo(umm));
+            Assert.That(miss.Time, Is.EqualTo(3.0 + offset + umm).Within(1e-12));
+            Assert.That(body.DeltaSec, Is.EqualTo(0.01).Within(1e-12));
+            Assert.That(body.Time, Is.EqualTo(4.52));
+        }
+
+        [Test]
+        public void Reset_RestoresInitialState()
+        {
+            var h = new JudgeHarness(new[] { N(0.0, Lane.L1), N(1.0, Lane.L2) });
+            h.Press(Lane.L1, 0.0);
+            h.Advance(2.0);
+            Assert.That(h.Engine.IsFinished, Is.True);
+
+            h.Engine.Reset();
+
+            Assert.That(h.Engine.IsFinished, Is.False);
+            Assert.That(h.Engine.Now, Is.EqualTo(double.NegativeInfinity));
+            Assert.That(h.Engine.IsHeld(Lane.L1), Is.False);
+            Assert.That(h.Engine.StatusOf(0), Is.EqualTo(NoteStatus.Pending));
+            Assert.That(h.Engine.StatusOf(1), Is.EqualTo(NoteStatus.Pending));
+        }
+    }
+}

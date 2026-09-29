@@ -22,32 +22,26 @@ namespace SCOdyssey.Rhythm.Tests
         public static ScriptedInput Release(double time, Lane lane) => new(time, lane, false);
     }
 
-    // JudgeTrack을 게임과 같은 순서(그 프레임까지의 입력 먼저, 그 다음 Tick)로 몰고 판정 이벤트를 모은다.
+    // JudgeEngine을 게임과 같은 순서(그 프레임까지의 입력 먼저, 그 다음 Advance)로 몰고 판정 이벤트를 모은다.
     public sealed class JudgeHarness
     {
-        public readonly JudgeTrack Track = new();
+        public readonly JudgeEngine Engine;
         public readonly List<JudgeEvent> Events = new();
 
         public JudgeHarness(JudgeNote[] notes, double offsetSec = 0)
+            : this(notes, JudgeSettings.Default.WithOffset(offsetSec)) {}
+
+        public JudgeHarness(JudgeNote[] notes, JudgeSettings settings)
         {
-            Track.Init(notes, offsetSec);
+            Engine = new JudgeEngine(settings);
+            Engine.Load(notes);
         }
 
-        public void Tick(double time) => Track.Tick(time, Events);
+        public void Advance(double time) => Engine.Advance(time, Events);
 
-        public bool Press(Lane lane, double time)
-        {
-            if (!Track.TryPress(lane, time, out JudgeEvent judged)) return false;
-            Events.Add(judged);
-            return true;
-        }
+        public bool Press(Lane lane, double time) => Engine.Press(lane, time, Events);
 
-        public bool Release(Lane lane, double time)
-        {
-            if (!Track.TryRelease(lane, time, out JudgeEvent judged)) return false;
-            Events.Add(judged);
-            return true;
-        }
+        public bool Release(Lane lane, double time) => Engine.Release(lane, time, Events);
 
         public void Run(IEnumerable<ScriptedInput> inputs, double stepSec, double endSec)
         {
@@ -65,7 +59,7 @@ namespace SCOdyssey.Rhythm.Tests
                     else Release(input.Lane, input.Time);
                 }
 
-                Tick(now);
+                Advance(now);
                 if (now >= endSec) break;
             }
         }
