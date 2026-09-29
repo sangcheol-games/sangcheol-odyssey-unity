@@ -8,7 +8,7 @@ Rhythm game client for Sangcheol Odyssey. Unity **6000.3.13f1** (URP, Input Syst
 
 ## Build / Run
 
-The `.csproj` and `.sln` files at the repo root are Unity-generated and gitignored — open the project through Unity Hub (Unity 6000.3.13f1). There is no command-line build, lint, or test pipeline; iteration happens inside the editor. EditMode tests live in `Assets/Tests/EditMode/` (assembly `SCOdyssey.Rhythm.Tests`). A test assembly cannot reference Assembly-CSharp, so anything worth testing must live in `SCOdyssey.Rhythm` / `SCOdyssey.Domain.Service`. Run them from Window → General → Test Runner → EditMode (or MCP `run_tests`).
+The `.csproj` and `.sln` files at the repo root are Unity-generated and gitignored — open the project through Unity Hub (Unity 6000.3.13f1). There is no CI or scripted build/test pipeline in the repo; iteration happens inside the editor. EditMode tests live in `Assets/Tests/EditMode/` (assembly `SCOdyssey.Rhythm.Tests`). A test assembly cannot reference Assembly-CSharp, so anything worth testing must live in `SCOdyssey.Rhythm` / `SCOdyssey.Domain.Service`. Run them from Window → General → Test Runner → EditMode (or MCP `run_tests`).
 
 Scenes (in `Assets/Scenes/`):
 - `MainScene` — lobby / menus (UI flow entry point)
