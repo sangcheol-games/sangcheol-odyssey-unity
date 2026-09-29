@@ -18,3 +18,4 @@ MonoBehaviour:
   kindMs: 105
   ummMs: 126
   selectPolicy: 0
+  tailWindowScale: 1

@@ -66,11 +66,13 @@ Charts live in `Assets/Charts/` as text files. Format (see `ChartParser.cs`):
 #001:02:01020020;            # data: bar=001, channel=0 (LTR), lane=2, sequence=01020020
 ```
 
-`channel` = 0 (left-to-right) or 1 (right-to-left). `NoteType` values in the sequence: `0=None, 1=Normal, 2=HoldStart, 3=Holding, 4=HoldEnd (invisible, release-judged), 5=HoldRelease (visible head, release-judged)`. 4/4 time is hardcoded — `barDuration = 60/bpm * 4`. `ChartManager` streams `LaneData` into `currentBarLanes` / `nextBarLanes` queues as the song progresses and owns all note / timeline / effect object pools.
+`channel` = 0 (left-to-right) or 1 (right-to-left). `NoteType` values in the sequence: `0=None, 1=Normal, 2=HoldStart, 3=Holding (hold continues; not judged, not spawned in game), 4=HoldEnd (tail, no head drawn), 5=HoldRelease (tail, head drawn)`. The parser keeps every character as `NoteData` (the chart editor preview shares `LaneData`); `ChartData.BuildJudgeTrack` maps them to `NoteKind` (`1→Tap, 2→HoldHead, 4/5→HoldTail`, `3` dropped) and pairs each head with the next tail on its lane (`PairId`). `ChartData.totalNotes` is the number of judgeable notes, not the `#NOTES` header. 4/4 time is hardcoded — `barDuration = 60/bpm * 4`. `ChartManager` streams `LaneData` into `currentBarLanes` / `nextBarLanes` queues as the song progresses and owns all note / timeline / effect object pools.
 
 ### Judgement & character animation
 
 Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`JudgeSettingsSO`, milliseconds: `Perfect=21 / Master=42 / Ideal=84 / Kind=105 / Umm=126`). `ChartManager` resolves it through `ConfigLocator` (Inspector → ServiceLocator → Resources) and falls back to `JudgeWindows.Default`. Grade edges are inclusive (`<=`); the outer Umm edge is exclusive.
+
+**Hold model**: a hold is two judgements — head (press timing) and tail (release timing, window `Umm × tailWindowScale`). Releasing before the tail window → tail Miss at that moment (hold broken, `HoldStartNote.OnHoldBroken()` fades the bar), no recovery; missing the head kills the tail; holding past the tail window → tail Miss. `JudgeEngine` advances to each input's timestamp before handling it, so results do not depend on frame rate.
 
 **Lane numbering is 1-based at the edges, 0-based internally.** Both the Input System (`InputManager` hardcodes `1`–`4`) and the chart file (`#001:`**`02`**`:...`) use lanes 1–4, but the `Lane` enum is 0-based (`L1=0 … L4=3`, in the `SCOdyssey.Rhythm` assembly) — call sites convert with `- 1`. Two *different* mappings derive from a lane; do not conflate them:
 

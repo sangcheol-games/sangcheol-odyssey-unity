@@ -7,19 +7,18 @@ namespace SCOdyssey.Rhythm
     {
         public double OffsetSec;         // 모든 입력을 이만큼 늦춘다(음수면 이르게)
         public double TapHoldSec;        // 탭을 누르고 있는 시간
-        public double HoldEndSlackSec;   // 끝점(4)을 지나 이만큼 더 누르고 뗀다. 4는 누르고만 있으면 되는 끝점이다
         public double BreakHoldChance;   // 홀드를 중간(30~70% 지점)에 뗄 확률
         public double DropTapChance;     // 탭을 아예 안 칠 확률
         public int Seed;
 
-        public static AutoplayOptions Perfect => new() { TapHoldSec = 0.03, HoldEndSlackSec = 0.05 };
+        public static AutoplayOptions Perfect => new() { TapHoldSec = 0.03 };
     }
 
-    // 판정 트랙에서 입력 스크립트를 만든다. 같은 레인의 다음 누름보다 늦게 떼지 않는다.
+    // 판정 트랙에서 입력 스크립트를 만든다. 머리는 머리 시각에 누르고 꼬리 시각에 뗀다.
+    // 탭은 같은 레인의 다음 누름보다 늦게 떼지 않는다.
     public static class Autoplay
     {
         private const double MinGapSec = 0.001;
-        private const double TrailingReleaseSec = 0.5;
 
         public static InputScript Perfect(JudgeNote[] track) => Build(track, AutoplayOptions.Perfect);
 
@@ -28,52 +27,33 @@ namespace SCOdyssey.Rhythm
             var rng = new Random(options.Seed);
             var script = new InputScript();
             double[] nextPress = NextPressTimes(track);
-            var openHead = new int[LANE_COUNT];
-            var broken = new bool[LANE_COUNT];
-            Array.Fill(openHead, -1);
 
             for (int i = 0; i < track.Length; i++)
             {
                 JudgeNote note = track[i];
-                int lane = (int)note.Lane;
-                double releaseLimit = Math.Max(note.Time, nextPress[i] - MinGapSec);
+                double tapRelease = Math.Min(note.Time + options.TapHoldSec, Math.Max(note.Time, nextPress[i] - MinGapSec));
 
                 switch (note.Kind)
                 {
-                    case NoteType.Normal:
+                    case NoteKind.Tap:
                         if (rng.NextDouble() < options.DropTapChance) break;
                         script.Press(note.Lane, note.Time);
-                        script.Release(note.Lane, Math.Min(note.Time + options.TapHoldSec, releaseLimit));
+                        script.Release(note.Lane, tapRelease);
                         break;
 
-                    case NoteType.HoldStart:
+                    case NoteKind.HoldHead:
                         script.Press(note.Lane, note.Time);
-                        openHead[lane] = i;
-                        broken[lane] = rng.NextDouble() < options.BreakHoldChance;
-                        if (broken[lane])
+                        bool breakHold = rng.NextDouble() < options.BreakHoldChance;
+                        if (note.PairId < 0)
                         {
-                            double end = EndOfHold(track, i);
-                            script.Release(note.Lane, note.Time + (end - note.Time) * (0.3 + 0.4 * rng.NextDouble()));
+                            script.Release(note.Lane, tapRelease);   // 꼬리 없는 머리는 탭처럼 판정된다
+                            break;
                         }
-                        break;
 
-                    case NoteType.HoldEnd:
-                    case NoteType.HoldRelease:
-                        if (openHead[lane] < 0) break;
-                        openHead[lane] = -1;
-                        if (broken[lane]) break;
-                        double release = note.Kind == NoteType.HoldRelease
-                            ? note.Time
-                            : Math.Min(note.Time + options.HoldEndSlackSec, releaseLimit);
-                        script.Release(note.Lane, release);
+                        double end = track[note.PairId].Time;
+                        script.Release(note.Lane, breakHold ? note.Time + (end - note.Time) * (0.3 + 0.4 * rng.NextDouble()) : end);
                         break;
                 }
-            }
-
-            double last = track.Length > 0 ? track[^1].Time : 0;
-            for (int lane = 0; lane < LANE_COUNT; lane++)
-            {
-                if (openHead[lane] >= 0 && !broken[lane]) script.Release((Lane)lane, last + TrailingReleaseSec);
             }
 
             return options.OffsetSec == 0 ? script : script.Shifted(options.OffsetSec);
@@ -90,19 +70,9 @@ namespace SCOdyssey.Rhythm
             {
                 int lane = (int)track[i].Lane;
                 result[i] = next[lane];
-                if (track[i].Kind == NoteType.Normal || track[i].Kind == NoteType.HoldStart) next[lane] = track[i].Time;
+                if (track[i].Kind != NoteKind.HoldTail) next[lane] = track[i].Time;
             }
             return result;
-        }
-
-        private static double EndOfHold(JudgeNote[] track, int head)
-        {
-            for (int j = head + 1; j < track.Length; j++)
-            {
-                if (track[j].Lane != track[head].Lane) continue;
-                if (track[j].Kind == NoteType.HoldEnd || track[j].Kind == NoteType.HoldRelease) return track[j].Time;
-            }
-            return track[^1].Time + TrailingReleaseSec;
         }
     }
 }

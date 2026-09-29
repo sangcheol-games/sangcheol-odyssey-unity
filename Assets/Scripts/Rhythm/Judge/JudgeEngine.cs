@@ -6,31 +6,33 @@ namespace SCOdyssey.Rhythm
 {
     // 판정의 단일 권한. 시간 오름차순 배열 + 상태 배열 + 커서만으로 판정한다. Unity 참조 없음.
     //
-    // 커서는 "Umm 윈도우가 닫힌 지점"만 따라가고, 지나갈 때 Pending인 노트를 Missed로 뱉는다.
-    // 판정 순서와 커서 진행 순서가 다르므로(인덱스 5가 hit인데 3이 Pending일 수 있음)
-    // 커서 하나로는 표현이 안 되고 상태 배열이 따로 필요하다.
+    // 탭·홀드 머리는 누르는 타이밍, 홀드 꼬리는 떼는 타이밍으로 판정한다.
+    // 머리가 판정되면 꼬리는 InProgress(누르는 중)가 되고, 꼬리 윈도우 안에서 떼면 판정, 그 전에 떼면 즉시 Miss(홀드 끊김),
+    // 윈도우가 지나도록 누르고 있으면 Miss. 머리를 놓치면 꼬리도 같이 Miss.
+    //
+    // 모든 입력은 먼저 그 시각까지 Advance한 뒤 처리하므로 결과가 프레임 간격과 무관하다.
+    // 커서는 "윈도우가 닫힌 지점"만 따라가며 Pending 노트를 Missed로 뱉는다.
     public sealed class JudgeEngine : IJudgeStateReader
     {
-        private static readonly int PRESS_KINDS = Mask(NoteType.Normal, NoteType.HoldStart);
-        private static readonly int RELEASE_KINDS = Mask(NoteType.HoldRelease);
-        private static readonly int HOLD_BODY_KINDS = Mask(NoteType.Holding, NoteType.HoldEnd);
-
         private readonly JudgeSettings _settings;
         private JudgeNote[] _notes = Array.Empty<JudgeNote>();
         private NoteStatus[] _status = Array.Empty<NoteStatus>();
         private JudgeType[] _grade = Array.Empty<JudgeType>();
-        private int _missCursor;
-        private readonly bool[] _isHolding = new bool[LANE_COUNT];
+        private readonly int[] _holding = new int[LANE_COUNT];     // 레인별 InProgress 꼬리. 없으면 -1
+        private readonly bool[] _keyDown = new bool[LANE_COUNT];
+        private int _cursor;
+        private int _decided;
 
         public JudgeEngine(JudgeSettings settings)
         {
             _settings = settings;
+            Array.Fill(_holding, -1);
         }
 
         public JudgeSettings Settings => _settings;
         public double Now { get; private set; } = double.NegativeInfinity;
         public int Count => _notes.Length;
-        public bool IsFinished => _missCursor >= _notes.Length;
+        public bool IsFinished => _decided >= _notes.Length;
 
         private JudgeWindows Windows => _settings.Windows;
 
@@ -44,77 +46,132 @@ namespace SCOdyssey.Rhythm
         {
             _status = new NoteStatus[_notes.Length];
             _grade = new JudgeType[_notes.Length];
-            _missCursor = 0;
-            Array.Clear(_isHolding, 0, _isHolding.Length);
+            Array.Fill(_holding, -1);
+            Array.Clear(_keyDown, 0, _keyDown.Length);
+            _cursor = 0;
+            _decided = 0;
             Now = double.NegativeInfinity;
         }
 
         public NoteStatus StatusOf(int noteId) => _status[noteId];
         public JudgeType? GradeOf(int noteId) => _status[noteId] == NoteStatus.Judged ? _grade[noteId] : null;
         public JudgeNote NoteAt(int noteId) => _notes[noteId];
-        public bool IsHeld(Lane lane) => _isHolding[(int)lane];
+        public bool IsHeld(Lane lane) => _keyDown[(int)lane];
+        public int HoldInProgressOf(Lane lane) => _holding[(int)lane];
 
         private double TimeOf(int index) => _notes[index].Time + _settings.OffsetSec;
+        private double WindowOf(int index) => _notes[index].Kind == NoteKind.HoldTail ? _settings.TailWindow : Windows.Umm;
 
         /// <summary>
-        /// 매 프레임 호출. 시각은 되돌아가지 않는다(Now보다 이른 time은 Now로 본다).
-        /// 윈도우를 지나친 노트를 miss로 확정하고, 누르고 있는 레인의 홀드 본체(Holding/HoldEnd)를 Perfect로 자동 판정한다.
+        /// 시각을 time까지 진행한다. 되돌아가지 않는다(Now보다 이른 time은 Now로 본다).
+        /// 누르고 있는 홀드의 꼬리 윈도우가 지났으면 Miss, 윈도우가 닫힌 Pending 노트도 Miss로 확정한다.
         /// </summary>
         public void Advance(double time, List<JudgeEvent> outEvents)
         {
             if (time > Now) Now = time;
             double now = Now;
 
-            // 1) 커서 전진. Umm 윈도우가 닫혔는데 아직 Pending이면 miss
-            while (_missCursor < _notes.Length && TimeOf(_missCursor) - now < -Windows.Umm)
+            for (int lane = 0; lane < LANE_COUNT; lane++)
             {
-                if (_status[_missCursor] == NoteStatus.Pending)
-                {
-                    _status[_missCursor] = NoteStatus.Missed;
-                    double closedAt = TimeOf(_missCursor) + Windows.Umm;
-                    outEvents.Add(JudgeEvent.Miss(_missCursor, _notes[_missCursor], Windows.Umm, closedAt));
-                }
-                _missCursor++;
+                int tail = _holding[lane];
+                if (tail < 0) continue;
+
+                double closedAt = TimeOf(tail) + _settings.TailWindow;
+                if (now <= closedAt) continue;
+
+                _holding[lane] = -1;
+                Decide(tail, NoteStatus.Missed, JudgeType.Umm);
+                outEvents.Add(JudgeEvent.Miss(tail, _notes[tail], _settings.TailWindow, closedAt));
             }
 
-            // 2) 홀드 본체는 누르고 있기만 하면 Perfect
-            for (int i = _missCursor; i < _notes.Length; i++)
+            while (_cursor < _notes.Length && TimeOf(_cursor) - now < -WindowOf(_cursor))
             {
-                double diff = TimeOf(i) - now;
-                if (diff >= Windows.Perfect) break;   // 시간 오름차순이라 뒤는 더 멀다
-
-                if (_status[i] != NoteStatus.Pending) continue;
-
-                JudgeNote note = _notes[i];
-                if (!_isHolding[(int)note.Lane]) continue;
-                if (!Accepts(HOLD_BODY_KINDS, note.Kind)) continue;
-                if (-diff >= Windows.Perfect) continue;   // 이미 지나침. miss 커서가 처리한다
-
-                MarkJudged(i, JudgeType.Perfect);
-                outEvents.Add(new JudgeEvent(i, note.Lane, note.Kind, JudgeType.Perfect, false, -diff, now));
+                if (_status[_cursor] == NoteStatus.Pending) SweepMiss(_cursor, outEvents);
+                _cursor++;
             }
         }
 
         public bool Press(Lane lane, double time, List<JudgeEvent> outEvents)
         {
-            _isHolding[(int)lane] = true;
-            return TryClaim(lane, time, PRESS_KINDS, outEvents);
+            Advance(Math.Max(time, Now), outEvents);
+            _keyDown[(int)lane] = true;
+
+            int picked = FindPressTarget(lane, time);
+            if (picked < 0) return false;
+
+            JudgeNote note = _notes[picked];
+            double delta = time - TimeOf(picked);
+            JudgeType grade = Windows.Grade(Math.Abs(delta));
+            Decide(picked, NoteStatus.Judged, grade);
+            outEvents.Add(JudgeEvent.Hit(picked, note, grade, delta, time));
+
+            if (note.Kind == NoteKind.HoldHead && note.PairId >= 0 && _status[note.PairId] == NoteStatus.Pending)
+            {
+                BreakHold(lane, time, outEvents);   // 떼지 않은 채 다음 머리를 눌렀다면 앞 홀드는 끊긴 것
+                _status[note.PairId] = NoteStatus.InProgress;
+                _holding[(int)lane] = note.PairId;
+            }
+            return true;
         }
 
         public bool Release(Lane lane, double time, List<JudgeEvent> outEvents)
         {
-            _isHolding[(int)lane] = false;
-            return TryClaim(lane, time, RELEASE_KINDS, outEvents);
+            Advance(Math.Max(time, Now), outEvents);
+            _keyDown[(int)lane] = false;
+
+            int tail = _holding[(int)lane];
+            if (tail < 0) return false;
+            _holding[(int)lane] = -1;
+
+            JudgeNote note = _notes[tail];
+            double delta = time - TimeOf(tail);
+            if (Math.Abs(delta) < _settings.TailWindow)
+            {
+                JudgeType grade = Windows.Grade(Math.Abs(delta));
+                Decide(tail, NoteStatus.Judged, grade);
+                outEvents.Add(JudgeEvent.Hit(tail, note, grade, delta, time));
+            }
+            else
+            {
+                // 꼬리 윈도우 전에 뗐다. 다시 눌러도 복구되지 않는다
+                Decide(tail, NoteStatus.Missed, JudgeType.Umm);
+                outEvents.Add(JudgeEvent.Miss(tail, note, delta, time));
+            }
+            return true;
         }
 
-        // 커서부터 앞으로 훑어 윈도우 안의 Pending 노트 하나를 집는다(어느 것인지는 Select 정책).
+        private void BreakHold(Lane lane, double time, List<JudgeEvent> outEvents)
+        {
+            int tail = _holding[(int)lane];
+            if (tail < 0) return;
+
+            _holding[(int)lane] = -1;
+            Decide(tail, NoteStatus.Missed, JudgeType.Umm);
+            outEvents.Add(JudgeEvent.Miss(tail, _notes[tail], time - TimeOf(tail), time));
+        }
+
+        // 윈도우가 닫힌 Pending 노트. 머리면 짝 꼬리도 같은 시각에 죽는다
+        private void SweepMiss(int index, List<JudgeEvent> outEvents)
+        {
+            JudgeNote note = _notes[index];
+            double closedAt = TimeOf(index) + WindowOf(index);
+            Decide(index, NoteStatus.Missed, JudgeType.Umm);
+            outEvents.Add(JudgeEvent.Miss(index, note, WindowOf(index), closedAt));
+
+            if (note.Kind != NoteKind.HoldHead || note.PairId < 0 || _status[note.PairId] != NoteStatus.Pending) return;
+
+            Decide(note.PairId, NoteStatus.Missed, JudgeType.Umm);
+            outEvents.Add(JudgeEvent.Miss(note.PairId, _notes[note.PairId], _settings.TailWindow, closedAt));
+        }
+
+        // 커서부터 앞으로 훑어 윈도우 안의 Pending 탭·머리 하나를 고른다(어느 것인지는 Select 정책).
         // 마디 경계와 무관하게 윈도우만 보므로 선입력 버퍼가 필요 없다.
-        private bool TryClaim(Lane lane, double time, int kindMask, List<JudgeEvent> outEvents)
+        private int FindPressTarget(Lane lane, double time)
         {
             int picked = -1;
             double pickedDiff = 0;
 
-            for (int i = _missCursor; i < _notes.Length; i++)
+            for (int i = _cursor; i < _notes.Length; i++)
             {
                 double diff = TimeOf(i) - time;
                 if (diff >= Windows.Umm) break;      // 아직 윈도우에 안 들어온 미래
@@ -122,9 +179,8 @@ namespace SCOdyssey.Rhythm
                 if (_status[i] != NoteStatus.Pending) continue;
 
                 JudgeNote note = _notes[i];
-                if (note.Lane != lane) continue;
+                if (note.Lane != lane || note.Kind == NoteKind.HoldTail) continue;
                 if (-diff >= Windows.Umm) continue;  // 윈도우를 이미 지남
-                if (!Accepts(kindMask, note.Kind)) continue;
 
                 if (picked < 0 || Math.Abs(diff) < Math.Abs(pickedDiff))
                 {
@@ -135,18 +191,14 @@ namespace SCOdyssey.Rhythm
                 if (_settings.Select == NoteSelectPolicy.Earliest) break;
             }
 
-            if (picked < 0) return false;
-
-            JudgeType grade = Windows.Grade(Math.Abs(pickedDiff));
-            MarkJudged(picked, grade);
-            outEvents.Add(new JudgeEvent(picked, lane, _notes[picked].Kind, grade, false, -pickedDiff, time));
-            return true;
+            return picked;
         }
 
-        private void MarkJudged(int index, JudgeType grade)
+        private void Decide(int index, NoteStatus status, JudgeType grade)
         {
-            _status[index] = NoteStatus.Judged;
+            _status[index] = status;
             _grade[index] = grade;
+            _decided++;
         }
     }
 }

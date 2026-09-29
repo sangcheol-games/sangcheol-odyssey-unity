@@ -12,6 +12,7 @@ namespace SCOdyssey.Rhythm
         NoteStatus StatusOf(int noteId);
         JudgeType? GradeOf(int noteId);   // Judged일 때만 값이 있다
         JudgeNote NoteAt(int noteId);
-        bool IsHeld(Lane lane);
+        bool IsHeld(Lane lane);           // 키가 눌려 있는가
+        int HoldInProgressOf(Lane lane);  // 그 레인에서 누르는 중인 홀드의 꼬리 NoteId. 없으면 -1
     }
 }

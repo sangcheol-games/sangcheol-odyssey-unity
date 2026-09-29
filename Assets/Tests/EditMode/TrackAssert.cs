@@ -27,12 +27,16 @@ namespace SCOdyssey.Rhythm.Tests
 
             Assert.That(notes.Select(n => n.id).OrderBy(id => id), Is.EqualTo(Enumerable.Range(0, track.Length)));
 
+            bool bodyHasId = chart.GetFullChartList().SelectMany(l => l.Notes)
+                .Any(n => n.noteType == SCOdyssey.Domain.Service.Constants.NoteType.Holding && n.id >= 0);
+            Assert.That(bodyHasId, Is.False, "본체(3)는 트랙에 들어가지 않는다");
+
             foreach (NoteData note in notes)
             {
                 JudgeNote judge = track[note.id];
                 bool same = judge.Time == note.time
                     && judge.Lane == LaneMap.FromChartLine(note.laneIndex)
-                    && judge.Kind == note.noteType;
+                    && NoteKinds.TryFrom(note.noteType, out NoteKind kind) && judge.Kind == kind;
                 if (!same) Assert.Fail($"note id {note.id} ({note.time} line {note.laneIndex} {note.noteType}) != track {judge}");
             }
         }

@@ -14,6 +14,7 @@ namespace SCOdyssey.Game
         public static readonly Color MissColor = new(1f, 0.3f, 0.3f);
         public static readonly Color InputBandColor = new(0.35f, 1f, 0.45f, 0.85f);
         public static readonly Color HoldActiveColor = new(0.4f, 0.9f, 1f, 0.7f);
+        public static readonly Color BrokenHoldColor = new(1f, 0.3f, 0.3f, 0.22f);
 
         private static readonly string[] LaneKeys = { "Q", "A", "'", "/" };
         private const float NoteWidth = 10f;
@@ -59,22 +60,10 @@ namespace SCOdyssey.Game
             _inputs = inputs;
             _holdSpans.Clear();
 
-            var open = new int[LANE_COUNT];
-            for (int lane = 0; lane < LANE_COUNT; lane++) open[lane] = -1;
-
             for (int i = 0; i < reader.Count; i++)
             {
                 JudgeNote note = reader.NoteAt(i);
-                int lane = (int)note.Lane;
-                if (note.Kind == NoteType.HoldStart)
-                {
-                    open[lane] = i;
-                }
-                else if (note.Kind == NoteType.HoldEnd || note.Kind == NoteType.HoldRelease)
-                {
-                    if (open[lane] >= 0) _holdSpans.Add((open[lane], i));
-                    open[lane] = -1;
-                }
+                if (note.Kind == NoteKind.HoldHead && note.PairId >= 0) _holdSpans.Add((i, note.PairId));
             }
             MarkDirtyRepaint();
         }
@@ -170,11 +159,10 @@ namespace SCOdyssey.Game
             Rect row = Row(area, (int)h.Lane, rowHeight);
             Color color = _reader.StatusOf(tail) switch
             {
-                NoteStatus.Missed => new Color(MissColor.r, MissColor.g, MissColor.b, 0.3f),
+                NoteStatus.InProgress => HoldActiveColor,
+                NoteStatus.Missed => BrokenHoldColor,
                 NoteStatus.Judged => WithAlpha(GradeColor(_reader.GradeOf(tail) ?? JudgeType.Umm), 0.35f),
-                _ => _reader.StatusOf(head) == NoteStatus.Judged && _reader.IsHeld(h.Lane)
-                    ? HoldActiveColor
-                    : new Color(0.72f, 0.72f, 0.76f, 0.3f),
+                _ => new Color(0.72f, 0.72f, 0.76f, 0.3f),
             };
             Quad(new Rect(x0, row.center.y - row.height * 0.14f, x1 - x0, row.height * 0.28f), color);
         }
@@ -186,12 +174,7 @@ namespace SCOdyssey.Game
             if (x - NoteWidth / 2 < area.xMin || x + NoteWidth / 2 > area.xMax) return;
 
             Rect row = Row(area, (int)note.Lane, rowHeight);
-            float scale = note.Kind switch
-            {
-                NoteType.Holding => 0.3f,
-                NoteType.HoldEnd => 0.45f,
-                _ => 0.7f,
-            };
+            float scale = note.Kind == NoteKind.HoldTail ? 0.45f : 0.7f;
             Color color = _reader.StatusOf(id) switch
             {
                 NoteStatus.Judged => GradeColor(_reader.GradeOf(id) ?? JudgeType.Umm),

@@ -6,17 +6,27 @@ namespace SCOdyssey.Game
 {
     // 홀드 시작 노트(채보 2): 일반 노트처럼 눌러 홀드에 진입. 헤드 + 홀드바(Bar)를 소유하며,
     // 판정선 위치에 맞춰 홀드바 fill을 줄인다. 판정/miss 후에도 홀드바가 다 소모될 때까지 시각적으로 링거링.
+    // 홀드가 끊기면(꼬리 miss) 남은 홀드바를 흐리게 표시한다.
     public class HoldStartNote : NoteController
     {
+        [SerializeField] private float brokenHoldAlpha = 0.3f;
+
         private Image holdImage;
         private RectTransform holdBarTransform;
+        private bool isBroken;
 
         protected override void ApplyAlpha(float alpha)
         {
             if (holdImage == null) return;
             Color c = holdImage.color;
-            c.a = alpha;
+            c.a = isBroken ? Mathf.Min(alpha, brokenHoldAlpha) : alpha;
             holdImage.color = c;
+        }
+
+        public void OnHoldBroken()
+        {
+            isBroken = true;
+            ApplyAlpha(holdImage != null ? holdImage.color.a : brokenHoldAlpha);
         }
 
         /// <summary>
@@ -30,6 +40,7 @@ namespace SCOdyssey.Game
 
         protected override void SetVisual()
         {
+            isBroken = false;
             holdBarTransform.gameObject.SetActive(true);
             noteImage.enabled = true;
             holdImage.enabled = true;

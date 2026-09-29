@@ -318,7 +318,12 @@ namespace SCOdyssey.Game
             page.Add(Desc(
                 "게임 화면에서는 레인 1·2가 위 판정선, 3·4가 아래 판정선에 붙고 판정선이 마디마다 좌우로 움직이지만, " +
                 "판정 엔진은 '시각과 레인'만 보므로 여기서는 모든 레인을 같은 직선으로 그린다. 시나리오는 대부분 레인 1(맨 위 줄)만 쓴다."));
-            page.Add(Desc("노트 크기: 큰 칸 = 탭·홀드 머리·릴리즈(5), 중간 칸 = 끝점(4), 작은 칸 = 본체(3). 머리와 끝 사이 막대가 홀드다."));
+            page.Add(Desc("노트 크기: 큰 칸 = 탭·홀드 머리, 중간 칸 = 홀드 꼬리(채보의 4와 5). 머리와 꼬리 사이 막대가 홀드다."));
+            page.Add(SectionTitle("홀드 판정"));
+            page.Add(Desc(
+                "홀드 1개는 판정 2개다. 머리는 누르는 타이밍, 꼬리는 떼는 타이밍으로 판정한다(채보의 4와 5 모두). " +
+                "꼬리 윈도우(±126ms)보다 먼저 떼면 그 순간 꼬리가 Miss가 되고 홀드바가 빨갛게 흐려진다. 다시 눌러도 복구되지 않는다. " +
+                "머리를 놓치면 꼬리도 같이 Miss이고, 꼬리 윈도우가 지나도록 계속 누르고 있어도 Miss다. 본체(3)는 판정하지 않는다."));
 
             page.Add(SectionTitle("단축키"));
             page.Add(Desc(
@@ -343,7 +348,7 @@ namespace SCOdyssey.Game
             page.Add(SectionTitle("판정 프레임"));
             page.Add(Desc(
                 "판정 엔진은 화면 프레임과 상관없이 1/60초 간격으로 돈다. 그래서 배속을 올리거나 에디터가 버벅여도 결과가 같다. " +
-                "히치는 이 판정 프레임 하나를 늦추는 것이라, 그 사이 홀드 본체(±21ms)를 건너뛰면 Miss가 난다."));
+                "히치는 이 판정 프레임 하나를 늦추는 것이다. 판정은 입력 시각으로 정해지므로 히치가 있어도 결과는 같다."));
         }
 
         private void RefreshExpected(List<JudgeEvent> events)
@@ -405,6 +410,7 @@ namespace SCOdyssey.Game
             legend.Add(LegendItem(JudgeTimelineElement.PendingColor, "대기"));
             legend.Add(LegendItem(JudgeTimelineElement.InputBandColor, "키를 누르고 있던 구간(아래쪽 띠: 시작 = 누름, 끝 = 뗌)"));
             legend.Add(LegendItem(JudgeTimelineElement.HoldActiveColor, "누르는 중인 홀드"));
+            legend.Add(LegendItem(JudgeTimelineElement.BrokenHoldColor, "끊긴 홀드"));
             return legend;
         }
 

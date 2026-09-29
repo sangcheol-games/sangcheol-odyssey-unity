@@ -23,6 +23,7 @@ namespace SCOdyssey.Rhythm.Tests
             // 판정감을 일부러 바꿨다면 여기 기대값도 같이 바꾼다
             Assert.That(windows, Is.EqualTo(JudgeWindows.Default));
             Assert.That((NoteSelectPolicy)so.FindProperty("selectPolicy").enumValueIndex, Is.EqualTo(NoteSelectPolicy.Earliest));
+            Assert.That(so.FindProperty("tailWindowScale").floatValue, Is.EqualTo(1f));
         }
     }
 }

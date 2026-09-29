@@ -41,9 +41,11 @@ namespace SCOdyssey.Rhythm.Tests
         [Test]
         public void Digits_MapToNoteTypes_OthersIgnored()
         {
-            LaneData lane = LaneAt(Parse("#000:01:0123456789;"), 0, 1);
+            ChartData chart = Parse("#000:01:0123456789;");
+            LaneData lane = LaneAt(chart, 0, 1);
 
             Assert.That(lane.beat, Is.EqualTo(10));
+            Assert.That(chart.totalNotes, Is.EqualTo(4), "본체(3)는 세지 않는다");
             Assert.That(lane.Notes.Select(n => n.noteType), Is.EqualTo(new[]
             {
                 NoteType.Normal, NoteType.HoldStart, NoteType.Holding, NoteType.HoldEnd, NoteType.HoldRelease,
@@ -71,7 +73,7 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(Describe(LaneAt(chart, 0, 1)), Is.EqualTo("2:HoldStart@1 4:HoldEnd@2"));
             Assert.That(report.Synthesized, Is.EqualTo(1));
             Assert.That(report.HeaderNotes, Is.EqualTo(2));
-            Assert.That(chart.totalNotes, Is.EqualTo(3));
+            Assert.That(chart.totalNotes, Is.EqualTo(2), "머리 + 합성 꼬리");
         }
 
         [TestCase("3000")]
@@ -114,14 +116,14 @@ namespace SCOdyssey.Rhythm.Tests
         }
 
         [Test]
-        public void Header_OnlyNotesIsRead_AndTrustedOverActualCount()
+        public void Header_NotesIsOnlyReported_TotalCountsJudgeableNotes()
         {
             ChartData chart = Parse(out ChartParseReport report,
                 "#TITLE Some Song", "#BPM 999", "#NOTES 42", "#NOTES", "not a chart line", "#001:01:1000;");
 
             Assert.That(chart.bpm, Is.EqualTo(Bpm));
             Assert.That(report.HeaderNotes, Is.EqualTo(42));
-            Assert.That(chart.totalNotes, Is.EqualTo(42));
+            Assert.That(chart.totalNotes, Is.EqualTo(1));
             Assert.That(chart.BuildJudgeTrack(), Has.Length.EqualTo(1));
             Assert.That(report.Errors, Is.Empty);
         }

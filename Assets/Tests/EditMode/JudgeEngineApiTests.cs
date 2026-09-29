@@ -7,7 +7,7 @@ namespace SCOdyssey.Rhythm.Tests
     // 설정으로 바꿀 수 있는 부분과 상태 조회 API
     public class JudgeEngineApiTests
     {
-        private static JudgeNote N(double time, Lane lane, NoteType kind = NoteType.Normal) => new(time, lane, kind);
+        private static JudgeNote N(double time, Lane lane, NoteKind kind = NoteKind.Tap, int pair = -1) => new(time, lane, kind, pair);
 
         [Test]
         public void Windows_Default_IsShippedMilliseconds()
@@ -42,11 +42,11 @@ namespace SCOdyssey.Rhythm.Tests
 
             var graded = new JudgeHarness(new[] { N(1.0, Lane.L1) }, settings);
             graded.Press(Lane.L1, 1.022);
-            Assert.That(graded.Outcomes(), Is.EqualTo(new[] { "#0 Normal Kind" }));
+            Assert.That(graded.Outcomes(), Is.EqualTo(new[] { "#0 Tap Kind" }));
 
             var swept = new JudgeHarness(new[] { N(1.0, Lane.L1) }, settings);
             swept.Advance(1.035);
-            Assert.That(swept.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
+            Assert.That(swept.Outcomes(), Is.EqualTo(new[] { "#0 Tap Miss" }));
         }
 
         [Test]
@@ -57,7 +57,7 @@ namespace SCOdyssey.Rhythm.Tests
 
             h.Press(Lane.L1, 0.09);
 
-            Assert.That(h.Events.ConvertAll(JudgeHarness.Describe), Is.EqualTo(new[] { "#1 Normal Perfect" }));
+            Assert.That(h.Events.ConvertAll(JudgeHarness.Describe), Is.EqualTo(new[] { "#1 Tap Perfect" }));
         }
 
         [Test]
@@ -107,7 +107,7 @@ namespace SCOdyssey.Rhythm.Tests
             h.Advance(0.2);
 
             Assert.That(h.Engine.Now, Is.EqualTo(1.0));
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 Normal Miss" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 Tap Miss" }));
         }
 
         [Test]
@@ -119,8 +119,8 @@ namespace SCOdyssey.Rhythm.Tests
                 N(1.0, Lane.L1),
                 N(2.0, Lane.L1),
                 N(3.0, Lane.L1),
-                N(4.0, Lane.L2, NoteType.HoldStart),
-                N(4.5, Lane.L2, NoteType.HoldEnd),
+                N(4.0, Lane.L2, NoteKind.HoldHead, 4),
+                N(4.5, Lane.L2, NoteKind.HoldTail, 3),
             }, offset);
             double umm = JudgeWindows.Default.Umm;
 
@@ -128,9 +128,9 @@ namespace SCOdyssey.Rhythm.Tests
             h.Press(Lane.L1, 1.99);   // 판정 시각 2.01, 20ms 이름
             h.Advance(3.5);           // 3.01은 3.01 + Umm에 miss
             h.Press(Lane.L2, 4.01);
-            h.Advance(4.52);          // 홀드 끝 4.51을 10ms 지난 프레임
+            h.Release(Lane.L2, 4.52); // 꼬리 판정 시각 4.51, 10ms 늦게 뗌
 
-            JudgeEvent late = h.Single(0), early = h.Single(1), miss = h.Single(2), body = h.Single(4);
+            JudgeEvent late = h.Single(0), early = h.Single(1), miss = h.Single(2), tail = h.Single(4);
             Assert.That(late.DeltaSec, Is.EqualTo(0.03).Within(1e-12));
             Assert.That(late.Time, Is.EqualTo(1.04));
             Assert.That(early.DeltaSec, Is.EqualTo(-0.02).Within(1e-12));
@@ -138,8 +138,9 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(miss.IsMiss, Is.True);
             Assert.That(miss.DeltaSec, Is.EqualTo(umm));
             Assert.That(miss.Time, Is.EqualTo(3.0 + offset + umm).Within(1e-12));
-            Assert.That(body.DeltaSec, Is.EqualTo(0.01).Within(1e-12));
-            Assert.That(body.Time, Is.EqualTo(4.52));
+            Assert.That(tail.DeltaSec, Is.EqualTo(0.01).Within(1e-12));
+            Assert.That(tail.Time, Is.EqualTo(4.52));
+            Assert.That(tail.PairId, Is.EqualTo(3));
         }
 
         [Test]

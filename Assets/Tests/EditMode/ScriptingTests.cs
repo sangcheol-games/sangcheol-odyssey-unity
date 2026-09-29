@@ -194,8 +194,8 @@ namespace SCOdyssey.Rhythm.Tests
 
             string[] outcomes = Play(track, Autoplay.Build(track, options));
 
-            Assert.That(outcomes.Where(o => o.Contains("HoldStart")), Has.All.EndsWith("Perfect"));
-            Assert.That(outcomes.Where(o => !o.Contains("HoldStart")), Has.All.EndsWith("Miss"));
+            Assert.That(outcomes.Where(o => o.Contains("HoldHead")), Has.All.EndsWith("Perfect"));
+            Assert.That(outcomes.Where(o => o.Contains("HoldTail")), Has.All.EndsWith("Miss"));
         }
 
         [Test]
@@ -210,17 +210,21 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(Autoplay.Build(track, options).ToString(), Is.EqualTo(Autoplay.Build(track, options).ToString()));
         }
 
-        [TestCase("Chart_0001_Normal", 195)]
-        [TestCase("Chart_0001_Hard", 195)]
-        [TestCase("Chart_0002_Easy", 155)]
-        [TestCase("Chart_0002_Normal", 155)]
-        [TestCase("Chart_0002_Hard", 155)]
-        public void Autoplay_Perfect_RealCharts_AllPerfectAt60Hz(string name, int bpm)
+        [TestCase("Chart_0001_Normal", 195, 1.0 / 60)]
+        [TestCase("Chart_0001_Hard", 195, 1.0 / 60)]
+        [TestCase("Chart_0002_Easy", 155, 1.0 / 60)]
+        [TestCase("Chart_0002_Normal", 155, 1.0 / 60)]
+        [TestCase("Chart_0002_Hard", 155, 1.0 / 60)]
+        [TestCase("Chart_0001_Hard", 195, 0.1)]      // 판정이 프레임과 무관하므로 10fps여도 전부 Perfect
+        [TestCase("Chart_0002_Hard", 155, 0.1)]
+        public void Autoplay_Perfect_RealCharts_AllPerfect(string name, int bpm, double frameSec)
         {
             string text = File.ReadAllText(Path.Combine(Application.dataPath, "Charts", name + ".txt"));
             JudgeNote[] track = ChartParser.Parse(text, bpm).BuildJudgeTrack();
+            InputScript script = Autoplay.Perfect(track);
+            double end = System.Math.Max(track[^1].Time, script.LastTime) + 1.0;
 
-            string[] outcomes = Play(track, Autoplay.Perfect(track));
+            string[] outcomes = JudgeOutcome.Summarize(ScriptedRun.Run(track, JudgeSettings.Default, script, FrameSchedule.Uniform(frameSec, end)));
 
             Assert.That(outcomes, Has.Length.EqualTo(track.Length));
             Assert.That(outcomes.Where(o => !o.EndsWith("Perfect")), Is.Empty);

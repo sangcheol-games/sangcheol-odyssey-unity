@@ -10,7 +10,7 @@ namespace SCOdyssey.Rhythm
     public class ChartData
     {
         public int bpm;                    // 곡 BPM. barDuration 계산 근거
-        public int totalNotes;             // 총 노트 수(헤더 #NOTES). ScoreManager 기본점수 계산에 사용
+        public int totalNotes;             // 판정 대상 노트 수(탭·머리·꼬리, 합성 꼬리 포함). ScoreManager 기본점수 계산에 사용
         private List<LaneData> chart;      // 마디×레인 단위 LaneData 목록(파싱 순서 = 마디 순서)
 
         public ChartData()
@@ -29,8 +29,8 @@ namespace SCOdyssey.Rhythm
             return chart;
         }
 
-        // flat 트랙, 원본에서 시간 오름차순으로 (정렬된 인덱스 = noteId)
-        // Holding/HoldEnd/HoldRelease도 전부 일반 원소로 담는다.
+        // flat 트랙, 원본에서 시간 오름차순으로 (정렬된 인덱스 = noteId).
+        // 본체(3)는 판정 대상이 아니라 빠지고(id -1 그대로), 레인별 시간순으로 머리와 다음 꼬리를 짝짓는다.
         public JudgeNote[] BuildJudgeTrack(ChartParseReport report = null)
         {
             var pairs = new List<(NoteData data, JudgeNote judge)>(totalNotes > 0 ? totalNotes : 256);
@@ -47,7 +47,9 @@ namespace SCOdyssey.Rhythm
 
                 foreach (NoteData note in laneData.Notes)
                 {
-                    pairs.Add((note, new JudgeNote(note.time, lane, note.noteType)));
+                    note.id = -1;
+                    if (NoteKinds.TryFrom(note.noteType, out NoteKind kind))
+                        pairs.Add((note, new JudgeNote(note.time, lane, kind)));
                 }
             }
 
@@ -64,8 +66,42 @@ namespace SCOdyssey.Rhythm
                 track[i] = sorted[i].judge;
             }
 
+            PairHolds(track, report);
+
             if (report != null) report.TrackNotes = track.Length;
             return track;
+        }
+
+        private static void PairHolds(JudgeNote[] track, ChartParseReport report)
+        {
+            var open = new int[LANE_COUNT];
+            for (int lane = 0; lane < LANE_COUNT; lane++) open[lane] = -1;
+
+            for (int i = 0; i < track.Length; i++)
+            {
+                int lane = (int)track[i].Lane;
+                switch (track[i].Kind)
+                {
+                    case NoteKind.HoldHead:
+                        if (open[lane] >= 0) report?.Warnings.Add($"꼬리 없는 홀드 머리: {track[open[lane]]} (탭처럼 판정)");
+                        open[lane] = i;
+                        break;
+
+                    case NoteKind.HoldTail:
+                        if (open[lane] < 0)
+                        {
+                            report?.Warnings.Add($"머리 없는 홀드 꼬리: {track[i]} (누를 방법이 없어 Miss가 된다)");
+                            break;
+                        }
+                        track[open[lane]] = track[open[lane]].WithPair(i);
+                        track[i] = track[i].WithPair(open[lane]);
+                        open[lane] = -1;
+                        break;
+                }
+            }
+
+            for (int lane = 0; lane < LANE_COUNT; lane++)
+                if (open[lane] >= 0) report?.Warnings.Add($"꼬리 없는 홀드 머리: {track[open[lane]]} (탭처럼 판정)");
         }
     }
 }

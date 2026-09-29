@@ -1,6 +1,6 @@
 namespace SCOdyssey.Game
 {
-    // 홀드 중간점 노트(채보 3): 비주얼 없음. 판정 시점에 홀드를 유지 중인지만 판정(CheckHoldingBody)
+    // 홀드 본체 노트(채보 3): 판정 대상이 아니라 게임에서는 스폰하지 않는다(NoteAdapter 호환용으로 남아 있음)
     public class HoldingNote : NoteController
     {
         protected override void SetVisual()

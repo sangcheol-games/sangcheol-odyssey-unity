@@ -18,7 +18,7 @@ namespace SCOdyssey.Game
     //  이후 매 프레임 GameManager.Update()가 SyncTime(time)을 호출하고,
     //  SyncTime()은 아래를 순서대로 수행한다.
     //    1) 현재 시간이 마디 종료 시각을 넘었으면  StartCurrentBar() -> CheckGameClear()
-    //    2) JudgeEngine.Advance() -> 나온 JudgeEvent를 DispatchJudge()로 흘림 (miss 확정 + 홀드 자동판정)
+    //    2) JudgeEngine.Advance() -> 나온 JudgeEvent를 DispatchJudge()로 흘림 (윈도우가 지난 노트·홀드 꼬리의 miss 확정)
     //    3) UpdateCountdowns()
     //
     //  키 입력은 프레임 루프와 별개로 들어온다.
@@ -102,6 +102,12 @@ namespace SCOdyssey.Game
         // 스폰 때 등록하고, 판정/miss로 꺼낼 때 해제한다.
         private NoteController[] _noteViews = Array.Empty<NoteController>();
 
+        // 판정된 홀드 머리 뷰(홀드바가 남아 있는 동안). 꼬리 noteId -> (머리 noteId, 뷰). 꼬리가 miss면 홀드바를 흐리게 한다
+        private (int headId, HoldStartNote view)[] _holdHeads = Array.Empty<(int, HoldStartNote)>();
+
+        // noteId -> 채보 문자. 판정 층은 4와 5를 모두 꼬리로 보지만 캐릭터 피드백은 둘을 구분한다
+        private NoteType[] _noteTypes = Array.Empty<NoteType>();
+
         // 다음 마디 준비 시 재사용하는 임시 버퍼(판정선 생성/재활용/제거 판단용 스크래치)
         // private readonly HashSet<int> _nextGroupsBuffer = new HashSet<int>();        // 다음 마디에 등장할 그룹 ID 집합
         private readonly Dictionary<LaneGroup, bool> _nextGroupDirBuffer = new(); // 그룹별 진행 방향(isLTR)
@@ -136,11 +142,14 @@ namespace SCOdyssey.Game
             var trackReport = new ChartParseReport();
             JudgeNote[] judgeNotes = chartData.BuildJudgeTrack(trackReport);
             foreach (string error in trackReport.Errors) Debug.LogError(error);
+            foreach (string warning in trackReport.Warnings) Debug.LogWarning(warning);
             JudgeSettings judgeSettingsInUse = JudgeSettingsSO.Resolve(judgeSettings).WithOffset(judgementOffsetSec);
             _judge = new JudgeEngine(judgeSettingsInUse);
             _judge.Load(judgeNotes);
             Debug.Log($"[Judge] 윈도우 {judgeSettingsInUse.Windows}, 선택 {judgeSettingsInUse.Select}, 오프셋 {judgeSettingsInUse.OffsetSec * 1000:0.#}ms");
             _noteViews = new NoteController[judgeNotes.Length];
+            _holdHeads = new (int, HoldStartNote)[judgeNotes.Length];
+            _noteTypes = NoteTypesById(chartData, judgeNotes.Length);
             LogJudgeTrackSummary(chartData, judgeNotes);
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
@@ -166,8 +175,13 @@ namespace SCOdyssey.Game
         private void LogJudgeTrackSummary(ChartData chartData, JudgeNote[] judgeNotes)
         {
             int viewNoteCount = 0;
+            int bodyCount = 0;
             foreach (LaneData lane in chartData.GetFullChartList())
+            {
                 viewNoteCount += lane.Notes.Count;
+                foreach (NoteData note in lane.Notes)
+                    if (note.noteType == NoteType.Holding) bodyCount++;
+            }
 
             // 시간 오름차순인지 확인
             int unsortedAt = -1;
@@ -180,17 +194,24 @@ namespace SCOdyssey.Game
                 }
             }
 
-            var kindCount = new int[(int)NoteType.HoldRelease + 1];
+            var kindCount = new int[3];
             foreach (JudgeNote note in judgeNotes) kindCount[(int)note.Kind]++;
 
             Debug.Log(
-                $"[JudgeTrack] {judgeNotes.Length}개 (뷰 경로 {viewNoteCount}개 / 헤더 #NOTES {chartData.totalNotes})\n" +
+                $"[JudgeTrack] {judgeNotes.Length}개 (채보 노트 {viewNoteCount}개 중 본체(3) {bodyCount}개 제외 / 총 노트 {chartData.totalNotes})\n" +
                 $"  정렬: {(unsortedAt < 0 ? "OK" : $"깨짐! index {unsortedAt}")}\n" +
-                $"  타입: Normal={kindCount[(int)NoteType.Normal]}, " +
-                $"HoldStart={kindCount[(int)NoteType.HoldStart]}, " +
-                $"Holding={kindCount[(int)NoteType.Holding]}, " +
-                $"HoldEnd={kindCount[(int)NoteType.HoldEnd]}, " +
-                $"HoldRelease={kindCount[(int)NoteType.HoldRelease]}");
+                $"  종류: Tap={kindCount[(int)NoteKind.Tap]}, " +
+                $"HoldHead={kindCount[(int)NoteKind.HoldHead]}, " +
+                $"HoldTail={kindCount[(int)NoteKind.HoldTail]}");
+        }
+
+        private static NoteType[] NoteTypesById(ChartData chartData, int count)
+        {
+            var types = new NoteType[count];
+            foreach (LaneData lane in chartData.GetFullChartList())
+                foreach (NoteData note in lane.Notes)
+                    if (note.id >= 0 && note.id < count) types[note.id] = note.noteType;
+            return types;
         }
 
         /// <summary>
@@ -489,6 +510,8 @@ namespace SCOdyssey.Game
 
                 foreach (var noteData in lane.Notes)
                 {
+                    if (noteData.noteType == NoteType.Holding) continue;   // 본체(3)는 판정 대상이 아니라 띄우지 않는다
+
                     GameObject note = GetNoteFromPool();
                     note.transform.SetParent(headLayer, false);   // 노트 헤드는 headLayer(홀드바보다 위 레이어)에 배치
 
@@ -610,17 +633,34 @@ namespace SCOdyssey.Game
         private void DispatchJudge(JudgeEvent judged)
         {
             NoteController view = TakeNoteView(judged.NoteId);
+            if (judged.Kind == NoteKind.HoldHead && judged.PairId >= 0 && view is HoldStartNote head)
+                _holdHeads[judged.PairId] = (judged.NoteId, head);
 
             if (judged.IsMiss)
             {
                 view?.OnMiss();
                 _judgementBus.PublishNoteMissed();
-                if (view != null) EffectJudgement(JudgeType.Umm, view);
+                if (judged.Kind == NoteKind.HoldTail) BreakHoldBar(judged.NoteId);
+
+                // 제 시각 전에 끊긴 꼬리는 앞쪽 꼬리 자리에 이펙트를 띄우지 않는다. 끊김은 흐려진 홀드바로 보인다
+                bool brokenBeforeTail = judged.Kind == NoteKind.HoldTail && judged.Time < _judge.NoteAt(judged.NoteId).Time;
+                if (view != null && !brokenBeforeTail) EffectJudgement(JudgeType.Umm, view);
                 return;
             }
 
             view?.OnHit();
+            if (judged.Kind == NoteKind.HoldTail) _holdHeads[judged.NoteId] = default;
             ApplyJudgement(judged, view);
+        }
+
+        // 꼬리가 miss면(중간에 뗌, 머리 놓침, 너무 오래 누름) 머리의 홀드바를 흐리게 한다.
+        // 머리 뷰가 이미 풀로 돌아가 다른 노트로 쓰이고 있으면 건드리지 않는다
+        private void BreakHoldBar(int tailId)
+        {
+            (int headId, HoldStartNote view) = _holdHeads[tailId];
+            _holdHeads[tailId] = default;
+            if (view != null && view.gameObject.activeSelf && view.noteData != null && view.noteData.id == headId)
+                view.OnHoldBroken();
         }
 
 
@@ -636,14 +676,13 @@ namespace SCOdyssey.Game
             _judgementBus.PublishNoteJudged(judged.Judge, pos, group);
 
             // 홀드 관련 이벤트 발화
-            // - HoldStart(2) / Holding(3): 홀드 진입/유지 (중간 진입도 허용)
-            // - HoldEnd(4): 홀드 본체 완주 (성공 피드백)
-            // - HoldRelease(5): 릴리즈 판정 (홀드 상태 해제)
-            if (judged.Kind == NoteType.HoldStart || judged.Kind == NoteType.Holding)
+            // - 머리: 홀드 진입
+            // - 꼬리(채보 4): 끝점 완주 피드백 / 꼬리(채보 5): 릴리즈 판정(홀드 상태 해제)
+            if (judged.Kind == NoteKind.HoldHead)
                 _judgementBus.PublishHoldStarted(pos, group);
-            else if (judged.Kind == NoteType.HoldEnd)
+            else if (judged.Kind == NoteKind.HoldTail && _noteTypes[judged.NoteId] == NoteType.HoldEnd)
                 _judgementBus.PublishHoldEnded(pos, group);
-            else if (judged.Kind == NoteType.HoldRelease)
+            else if (judged.Kind == NoteKind.HoldTail)
                 _judgementBus.PublishHoldReleased(pos, group);
 
             if (view == null) return;   // 스폰 전이거나 이미 회수된 노트. 점수/이벤트는 위에서 이미 나갔다

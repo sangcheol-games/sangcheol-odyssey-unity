@@ -20,6 +20,10 @@ namespace SCOdyssey.Config
         [Header("노트 선택")]
         public NoteSelectPolicy selectPolicy = NoteSelectPolicy.Earliest;
 
+        [Header("홀드 꼬리")]
+        [Tooltip("떼기를 받아주는 폭 = Umm x 이 값. 1이면 머리와 같다. 등급 경계는 그대로")]
+        public float tailWindowScale = 1f;
+
         // Inspector -> ServiceLocator -> Resources 순으로 찾는다. 없거나 값이 잘못됐으면 코드 기본값
         public static JudgeSettings Resolve(JudgeSettingsSO serialized)
         {
@@ -38,7 +42,7 @@ namespace SCOdyssey.Config
         }
 
         public JudgeSettings ToSettings()
-            => new(JudgeWindows.FromMilliseconds(perfectMs, masterMs, idealMs, kindMs, ummMs), selectPolicy);
+            => new(JudgeWindows.FromMilliseconds(perfectMs, masterMs, idealMs, kindMs, ummMs), selectPolicy, 0, tailWindowScale);
 
         private void OnValidate()
         {
@@ -47,6 +51,7 @@ namespace SCOdyssey.Config
             idealMs = Mathf.Max(masterMs, idealMs);
             kindMs = Mathf.Max(idealMs, kindMs);
             ummMs = Mathf.Max(kindMs, ummMs);
+            tailWindowScale = Mathf.Max(0.1f, tailWindowScale);
         }
     }
 }

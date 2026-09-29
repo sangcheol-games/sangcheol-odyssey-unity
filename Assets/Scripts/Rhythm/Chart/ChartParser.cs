@@ -79,7 +79,7 @@ namespace SCOdyssey.Rhythm
 
             int headerNotes = chartData.totalNotes;
             int synthesized = AppendBarEndHoldEnds(chartData, duration);
-            chartData.totalNotes += synthesized;   // 판정 대상이 늘었으므로 노트당 배점 기준도 같이 옮긴다
+            chartData.totalNotes = CountJudgeable(chartData);   // 헤더 #NOTES는 본체(3)까지 세므로 쓰지 않는다
 
             if (report != null)
             {
@@ -133,6 +133,15 @@ namespace SCOdyssey.Rhythm
             return first.noteType == NoteType.Holding
                 || first.noteType == NoteType.HoldEnd
                 || first.noteType == NoteType.HoldRelease;
+        }
+
+        private static int CountJudgeable(ChartData chartData)
+        {
+            int count = 0;
+            foreach (LaneData lane in chartData.GetFullChartList())
+                foreach (NoteData note in lane.Notes)
+                    if (NoteKinds.TryFrom(note.noteType, out _)) count++;
+            return count;
         }
 
         private static void ParseHeaderField(string line, ChartData chartData)
