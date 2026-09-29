@@ -69,6 +69,7 @@ namespace SCOdyssey.UI
         public void Init(
             int finalScore,
             ClearType result,
+            ScoreRank scoreRank,
             int maxCombo,
             int totalNotes,
             Dictionary<JudgeType, int> judgeCounts,
@@ -83,7 +84,6 @@ namespace SCOdyssey.UI
             GetText((int)Texts.ScoreText).text = finalScore.ToString("N0");
 
             // 등급 표시 (색상 포함)
-            ScoreRank scoreRank = GetScoreRank(finalScore);
             TMP_Text rankText = GetText((int)Texts.RankText);
             rankText.text = scoreRank.ToString().ToUpper();
             rankText.color = GetRankColor(scoreRank);
@@ -110,21 +110,6 @@ namespace SCOdyssey.UI
             GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();
             GetText((int)Texts.KindCountText).text = judgeCounts[JudgeType.Kind].ToString();
             GetText((int)Texts.UmmCountText).text = judgeCounts[JudgeType.Umm].ToString();
-        }
-
-        // finalScore → ScoreRank 계산
-        private ScoreRank GetScoreRank(int finalScore)
-        {
-            return finalScore switch
-            {
-                >= 1_150_000 => ScoreRank.SSS,
-                >= 1_000_000 => ScoreRank.SS,
-                >= 970_000   => ScoreRank.S,
-                >= 900_000   => ScoreRank.A,
-                >= 800_000   => ScoreRank.B,
-                >= 700_000   => ScoreRank.C,
-                _            => ScoreRank.F
-            };
         }
 
         // 등급별 색상 반환

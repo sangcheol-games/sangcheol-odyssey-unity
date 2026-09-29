@@ -309,6 +309,7 @@ namespace SCOdyssey.App
                 uiManager.ShowUI<ResultUI>().Init(
                     scoreManager.GetFinalScore(),
                     scoreManager.GetClearRank(),
+                    scoreManager.GetScoreRank(),
                     scoreManager.GetMaxCombo(),
                     scoreManager.GetTotalNoteCount(),
                     scoreManager.GetJudgeCounts(),

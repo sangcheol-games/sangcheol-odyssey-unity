@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef490d0a34c80f14ba57a19d465b2716, type: 3}
+  m_Name: ScoreSettings
+  m_EditorClassIdentifier: Assembly-CSharp::SCOdyssey.Config.ScoreSettingsSO
+  maxScore: 1000000
+  perfectMultiplier: 1
+  masterMultiplier: 1
+  idealMultiplier: 0.7
+  kindMultiplier: 0.5
+  ummMultiplier: 0
+  kindBreaksCombo: 1
+  ummBreaksCombo: 1
+  perfectExBonus: 0.2
+  failBelowScore: 700000
+  rankSSS: 1150000
+  rankSS: 1000000
+  rankS: 970000
+  rankA: 900000
+  rankB: 800000
+  rankC: 700000

@@ -74,6 +74,8 @@ Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`Judge
 
 **Hold model**: a hold is two judgements — head (press timing) and tail (release timing, window `Umm × tailWindowScale`). Releasing before the tail window → tail Miss at that moment (hold broken, `HoldStartNote.OnHoldBroken()` fades the bar), no recovery; missing the head kills the tail; holding past the tail window → tail Miss. `JudgeEngine` advances to each input's timestamp before handling it, so results do not depend on frame rate.
 
+**Score**: rules live in `Assets/Resources/Config/ScoreSettings.asset` (`ScoreSettingsSO` → `ScoreRules`: max 1,000,000, multipliers Perfect/Master 1, Ideal 0.7, Kind 0.5, Umm 0, Kind/Umm break combo, Perfect Ex bonus 0.2, Fail below 700,000, rank thresholds). `ScoreModel` (`SCOdyssey.Rhythm`) computes score from per-grade counts as `max × Σmultiplier / totalNotes` (no integer division); all Master-or-better → max + Ex, so all Perfect = 1,200,000. `ScoreManager` is the MonoBehaviour adapter that `HudView` / `ResultUI` read.
+
 **Lane numbering is 1-based at the edges, 0-based internally.** Both the Input System (`InputManager` hardcodes `1`–`4`) and the chart file (`#001:`**`02`**`:...`) use lanes 1–4, but the `Lane` enum is 0-based (`L1=0 … L4=3`, in the `SCOdyssey.Rhythm` assembly) — call sites convert with `- 1`. Two *different* mappings derive from a lane; do not conflate them:
 
 - **`LaneGroup`** — which judgement line / character the lane belongs to. Lanes 1–2 = `Top`, lanes 3–4 = `Bottom` (`LaneLayout.GroupOf`, 0-based `(int)lane < 2`). Passed around as a raw `int groupID` in most signatures.
@@ -92,7 +94,7 @@ Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudged
 ## Conventions
 
 - **Namespaces mirror folders**: `SCOdyssey.Boot`, `SCOdyssey.Core`, `SCOdyssey.App`, `SCOdyssey.App.Interfaces`, `SCOdyssey.Game`, `SCOdyssey.Rhythm`, `SCOdyssey.Domain.Dto`, `SCOdyssey.Domain.Service`, `SCOdyssey.Net`, `SCOdyssey.UI`, `SCOdyssey.Testing.*`.
-- **Assemblies**: `SCOdyssey.Domain.Service` (`Constants.cs`) and `SCOdyssey.Rhythm` (`Assets/Scripts/Rhythm/`: judge engine, chart parser, judgement bus) are `noEngineReferences` asmdefs — no `UnityEngine` may be used there (`Debug.Log` goes through `ChartParseReport` to the caller). Everything else is Assembly-CSharp, which references both.
+- **Assemblies**: `SCOdyssey.Domain.Service` (`Constants.cs`) and `SCOdyssey.Rhythm` (`Assets/Scripts/Rhythm/`: judge engine, chart parser, judgement bus, score model) are `noEngineReferences` asmdefs — no `UnityEngine` may be used there (`Debug.Log` goes through `ChartParseReport` to the caller). Everything else is Assembly-CSharp, which references both.
 - **Interfaces for managers live separately** in `Assets/Scripts/App/Interfaces/` — consumers always depend on `I*Manager`, not the concrete class, so the API/mock can be swapped via `TestingConfig.useMockApi`.
 - **Do not use `using FMOD;`** — `FMOD.System` collides with `System`. Always fully qualify: `FMOD.Sound`, `FMOD.Channel`, `FMOD.ChannelGroup` (see `FMODAudioManager.cs`).
 - **Logging**: call `CoreLogger` from `ServiceLocator` (tag strings like `"boot"`, `"unity"`). `LoggerDriver` forwards `Application.logMessageReceivedThreaded` to `CoreLogger` so Debug.Log reaches the file/ring/console sinks, but has a reentrancy guard — don't call Debug.Log while draining.
