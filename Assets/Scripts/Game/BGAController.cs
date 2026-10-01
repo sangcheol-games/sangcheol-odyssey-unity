@@ -22,11 +22,23 @@ namespace SCOdyssey.Game
         // 외부 시간 기준으로도 따라잡지 못할 만큼 벌어졌을 때(로딩 히치 등)만 seek한다.
         private const double ResyncThresholdSeconds = 1.0;
 
+        // 곡 시작 직후(이 시간 안)의 첫 재생은 seek 없이 시작한다. Prepare 직후 영상은 이미 0초에 있으므로,
+        // seek하면 seek + 첫 프레임 디코드를 기다리는 만큼 출발만 늦어진다.
+        private const double StartWithoutSeekSeconds = 0.1;
+
         [Header("참조")]
         public VideoPlayer videoPlayer;
         public RawImage bgaScreen;      // BGA 영상 표시용 RawImage
         public Image backgroundArt;     // 배경아트 스프라이트 표시용 Image (BGA 꺼진 경우에만 표시)
         public Image alphaOverlay;      // BGA 위에 올린 검정 Image (투명도 조절용)
+
+        [Header("디버그")]
+        [Tooltip("켜면 1초마다 영상과 곡 시각의 어긋남(초, 음수 = 영상이 늦음)을 출력한다")]
+        [SerializeField] private bool logDrift;
+        private float _nextDriftLogAt;
+
+        // 이번 곡에서 한 번이라도 재생했는지. 처음 재생만 seek를 건너뛸 수 있다(일시정지 재개는 위치를 맞춰야 한다).
+        private bool _hasStarted;
 
         private bool isPrepared = false;
         private bool bgaEnabled = true;
@@ -60,6 +72,7 @@ namespace SCOdyssey.Game
             _prepareStarted = false;
             _abandoned = false;
             _seeking = false;
+            _hasStarted = false;
             isPrepared = false;
 
             // backgroundArt 스프라이트 설정 (BGA 꺼진 경우를 위해 스프라이트는 항상 세팅)
@@ -236,10 +249,13 @@ namespace SCOdyssey.Game
 
             videoPlayer.externalReferenceTime = videoTime;
 
-            // 시작·일시정지 재개: 위치를 한 번 맞추고 재생한다.
+            // 시작·일시정지 재개: 위치를 한 번 맞추고 재생한다. 곡 시작 직후의 첫 재생은 seek 없이 0초에서 바로 출발한다.
             if (!videoPlayer.isPlaying)
             {
-                SeekTo(videoTime);
+                bool startFromBeginning = !_hasStarted && videoTime < StartWithoutSeekSeconds;
+                if (!startFromBeginning) SeekTo(videoTime);
+
+                _hasStarted = true;
                 videoPlayer.Play();
                 bgaScreen.enabled = true;
                 return;
@@ -247,7 +263,9 @@ namespace SCOdyssey.Game
 
             if (_seeking) return;
 
-            double drift = videoPlayer.time - videoTime;
+            double drift = videoPlayer.time - videoTime;   // 음수 = 영상이 늦음
+            LogDrift(drift);
+
             if (Math.Abs(drift) > ResyncThresholdSeconds)
             {
                 Debug.LogWarning($"[BGAController] 영상이 곡 시각과 {drift:F2}초 어긋나 위치를 다시 맞춥니다.");
@@ -264,6 +282,13 @@ namespace SCOdyssey.Game
         private void OnSeekCompleted(VideoPlayer vp)
         {
             _seeking = false;
+        }
+
+        private void LogDrift(double drift)
+        {
+            if (!logDrift || Time.unscaledTime < _nextDriftLogAt) return;
+            _nextDriftLogAt = Time.unscaledTime + 1f;
+            Debug.Log($"[BGAController] drift {drift:+0.000;-0.000}s");
         }
     }
 }
