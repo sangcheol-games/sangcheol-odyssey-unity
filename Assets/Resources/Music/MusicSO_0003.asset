@@ -10,15 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6d5cb096c24637a46818cc126d5706fc, type: 3}
-  m_Name: MusicSO_0002
+  m_Name: MusicSO_0003
   m_EditorClassIdentifier: 
   serializationData:
     SerializedFormat: 2
     SerializedBytes: 
     ReferencedUnityObjects:
-    - {fileID: 4900000, guid: 3d96cf42b1411fa4d80ba6159a02c3e3, type: 3}
-    - {fileID: 4900000, guid: b5a6c7bf3eea67949930670e0ff6e6ef, type: 3}
-    - {fileID: 4900000, guid: a908aa2d1ecb91e4085d6736b0406edf, type: 3}
+    - {fileID: 4900000, guid: bc19a8bd72099094284bdc87e564b830, type: 3}
+    - {fileID: 4900000, guid: 2c25d91448d14c04d99b347d34d96c4a, type: 3}
     SerializedBytesString: 
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
@@ -52,7 +51,7 @@ MonoBehaviour:
       Data: 0
     - Name: $v
       Entry: 3
-      Data: 3
+      Data: 2
     - Name: 
       Entry: 8
       Data: 
@@ -64,7 +63,7 @@ MonoBehaviour:
       Data: 1
     - Name: $v
       Entry: 3
-      Data: 5
+      Data: 4
     - Name: 
       Entry: 8
       Data: 
@@ -76,7 +75,7 @@ MonoBehaviour:
       Data: 2
     - Name: $v
       Entry: 3
-      Data: 10
+      Data: -1
     - Name: 
       Entry: 8
       Data: 
@@ -117,7 +116,7 @@ MonoBehaviour:
       Data: 
     - Name: 
       Entry: 12
-      Data: 3
+      Data: 2
     - Name: 
       Entry: 7
       Data: 
@@ -139,18 +138,6 @@ MonoBehaviour:
     - Name: $v
       Entry: 10
       Data: 1
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 
-    - Name: $k
-      Entry: 3
-      Data: 2
-    - Name: $v
-      Entry: 10
-      Data: 2
     - Name: 
       Entry: 8
       Data: 
@@ -160,12 +147,12 @@ MonoBehaviour:
     - Name: 
       Entry: 8
       Data: 
-  id: 2
+  id: 3
   title:
     m_TableReference:
       m_TableCollectionName: GUID:f4d7877f300fa34448bbaf75dfb1b389
     m_TableEntryReference:
-      m_KeyId: 177274052038656
+      m_KeyId: 81219185859272704
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
@@ -190,12 +177,12 @@ MonoBehaviour:
     m_LocalVariables: []
   illustrator: Vaco
   animator: Seowol
-  bpm: 155
-  audioFilePath: Una Alarm.ogg
-  previewAudioFilePath: Una Alarm_preview.wav
-  videoFileName: BGA_0002.mp4
-  backgroundArt: {fileID: -3368966193787546213, guid: f759dd26a7284014a86f48e835797d0d, type: 3}
-  albumArt: {fileID: 1693527514909790199, guid: 8efa9a02e4a648141b9fa9a3422af7ec, type: 3}
+  bpm: 160
+  audioFilePath: Lazy Dance.ogg
+  previewAudioFilePath: Lazy Dance.mp4
+  videoFileName: Lazy Dance.mp4
+  backgroundArt: {fileID: 2633286254177539184, guid: 9cd66c49c5bf7934d8399590515c3d7f, type: 3}
+  albumArt: {fileID: 2633286254177539184, guid: 9cd66c49c5bf7934d8399590515c3d7f, type: 3}
   references:
     version: 2
     RefIds: []
