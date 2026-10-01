@@ -11,12 +11,16 @@ using UnityEngine.Video;
 
 namespace SCOdyssey.Game
 {
-    // 배경 영상(BGA). GameManager가 Follow(session)로 곡 세션을 넘기면 매 프레임 곡 시각 - 음원 시작 곡 시각으로
-    // 영상 위치를 정한다. 곡 시계가 멈추면(일시정지) 영상도 멈추고, 100ms 넘게 벌어질 때만 위치를 다시 맞춘다.
-    // 세션 이벤트는 구독하지 않는다(읽기만 한다).
+    // 배경 영상(BGA). GameManager가 Follow(session)로 곡 세션을 넘기면 매 프레임 곡 시각 - 음원 시작 곡 시각을
+    // VideoPlayer의 외부 시간 기준(externalReferenceTime)으로 넣는다. 플레이어가 프레임을 건너뛰거나 반복해 스스로 맞추므로
+    // 평소에는 seek하지 않는다. 곡 시계가 멈추면(일시정지) 영상도 멈춘다. 세션 이벤트는 구독하지 않는다(읽기만 한다).
+    //
+    // 예전에는 100ms 넘게 벌어질 때마다 time을 다시 맞췄는데, 영상 시계가 조금씩 늦어지는 데다 1080p 고비트레이트 영상의
+    // 비키프레임 seek가 느려서 seek가 끝나기 전에 또 seek가 걸렸다. 그 결과 영상이 멈추거나 끊겼다.
     public class BGAController : MonoBehaviour
     {
-        private const double ResyncThresholdSeconds = 0.1;
+        // 외부 시간 기준으로도 따라잡지 못할 만큼 벌어졌을 때(로딩 히치 등)만 seek한다.
+        private const double ResyncThresholdSeconds = 1.0;
 
         [Header("참조")]
         public VideoPlayer videoPlayer;
@@ -35,6 +39,19 @@ namespace SCOdyssey.Game
         // 준비를 기다리다 타임아웃해 이번 곡은 포기했는지. 늦게 도착한 prepareCompleted를 무시하는 데 쓴다.
         private bool _abandoned;
 
+        // seek 진행 중. 끝나기 전에 다시 seek하면 영상이 계속 멈춰 있으므로 seekCompleted가 올 때까지 막는다.
+        private bool _seeking;
+
+        private void Awake()
+        {
+            if (videoPlayer != null) videoPlayer.seekCompleted += OnSeekCompleted;
+        }
+
+        private void OnDestroy()
+        {
+            if (videoPlayer != null) videoPlayer.seekCompleted -= OnSeekCompleted;
+        }
+
         /// <summary>
         /// 배경 초기화. GameDataLoader에서 호출.
         /// </summary>
@@ -42,6 +59,7 @@ namespace SCOdyssey.Game
         {
             _prepareStarted = false;
             _abandoned = false;
+            _seeking = false;
             isPrepared = false;
 
             // backgroundArt 스프라이트 설정 (BGA 꺼진 경우를 위해 스프라이트는 항상 세팅)
@@ -79,7 +97,10 @@ namespace SCOdyssey.Game
                 videoPlayer.source = VideoSource.Url;
                 videoPlayer.url = path;
                 videoPlayer.audioOutputMode = VideoAudioOutputMode.None;
-                videoPlayer.skipOnDrop = false;
+                // 곡 시각을 외부 시간 기준으로 따라가게 한다. skipOnDrop은 그 기준에 맞춰 프레임을 건너뛰어 따라잡는 데 필요하다.
+                // (예전 false는 영상이 자기 내부 시계로 재생되던 레거시 방식에서 필요했던 값이다)
+                videoPlayer.timeReference = VideoTimeReference.ExternalTime;
+                videoPlayer.skipOnDrop = true;
                 videoPlayer.renderMode = VideoRenderMode.RenderTexture;
                 videoPlayer.playOnAwake = false;
 
@@ -142,6 +163,7 @@ namespace SCOdyssey.Game
         public void Stop()
         {
             _session = null;
+            _seeking = false;
             if (videoPlayer.isPlaying) videoPlayer.Stop();
         }
 
@@ -212,14 +234,36 @@ namespace SCOdyssey.Game
                 return;
             }
 
+            videoPlayer.externalReferenceTime = videoTime;
+
+            // 시작·일시정지 재개: 위치를 한 번 맞추고 재생한다.
             if (!videoPlayer.isPlaying)
             {
-                videoPlayer.time = videoTime;
+                SeekTo(videoTime);
                 videoPlayer.Play();
                 bgaScreen.enabled = true;
                 return;
             }
-            if (Math.Abs(videoPlayer.time - videoTime) > ResyncThresholdSeconds) videoPlayer.time = videoTime;
+
+            if (_seeking) return;
+
+            double drift = videoPlayer.time - videoTime;
+            if (Math.Abs(drift) > ResyncThresholdSeconds)
+            {
+                Debug.LogWarning($"[BGAController] 영상이 곡 시각과 {drift:F2}초 어긋나 위치를 다시 맞춥니다.");
+                SeekTo(videoTime);
+            }
+        }
+
+        private void SeekTo(double videoTime)
+        {
+            _seeking = true;
+            videoPlayer.time = videoTime;
+        }
+
+        private void OnSeekCompleted(VideoPlayer vp)
+        {
+            _seeking = false;
         }
     }
 }
