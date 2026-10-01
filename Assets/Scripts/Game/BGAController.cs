@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using SCOdyssey.App;
 using SCOdyssey.Audio;
 using SCOdyssey.Core;
@@ -26,11 +28,22 @@ namespace SCOdyssey.Game
         private bool bgaEnabled = true;
         private ISongSession _session;
 
+        // Init이 Prepare()까지 도달했는지. BGA 설정이 꺼져 있거나 파일명이 비었거나 파일이 없으면
+        // Prepare 자체를 안 하므로, 이 플래그가 false면 WaitPreparedAsync는 기다릴 것이 없다.
+        private bool _prepareStarted;
+
+        // 준비를 기다리다 타임아웃해 이번 곡은 포기했는지. 늦게 도착한 prepareCompleted를 무시하는 데 쓴다.
+        private bool _abandoned;
+
         /// <summary>
         /// 배경 초기화. GameDataLoader에서 호출.
         /// </summary>
         public void Init(string videoFileName, Sprite backgroundArtSprite)
         {
+            _prepareStarted = false;
+            _abandoned = false;
+            isPrepared = false;
+
             // backgroundArt 스프라이트 설정 (BGA 꺼진 경우를 위해 스프라이트는 항상 세팅)
             if (backgroundArt != null)
             {
@@ -70,6 +83,7 @@ namespace SCOdyssey.Game
                 videoPlayer.renderMode = VideoRenderMode.RenderTexture;
                 videoPlayer.playOnAwake = false;
 
+                _prepareStarted = true;
                 videoPlayer.prepareCompleted += OnPrepared;
                 videoPlayer.Prepare();
             }
@@ -131,9 +145,44 @@ namespace SCOdyssey.Game
             if (videoPlayer.isPlaying) videoPlayer.Stop();
         }
 
+        /// <summary>
+        /// 영상 준비가 끝날 때까지 기다린다. 로딩 화면이 이 대기를 가린다.
+        /// 기다리지 않으면 295MB짜리 영상이 플레이 도중 갑자기 켜지면서 비키프레임 seek 히치가 난다.
+        ///
+        /// Prepare가 시작되지도 않았으면(BGA 설정 off / 파일명 없음 / 파일 없음) 즉시 반환한다.
+        /// 그러지 않으면 BGA가 없는 곡마다 타임아웃만큼 헛되이 기다리게 된다.
+        /// </summary>
+        /// <returns>영상을 쓸 수 있으면 true. 타임아웃해 배경아트로 진행하면 false.</returns>
+        public async UniTask<bool> WaitPreparedAsync(float timeoutSeconds, CancellationToken ct)
+        {
+            if (!_prepareStarted || isPrepared) return true;
+
+            float startedAt = Time.realtimeSinceStartup;
+            while (!isPrepared)
+            {
+                if (Time.realtimeSinceStartup - startedAt > timeoutSeconds)
+                {
+                    // 포기. 늦게 도착할 prepareCompleted는 OnPrepared에서 무시된다.
+                    _abandoned = true;
+                    bgaScreen.enabled = false;
+                    if (backgroundArt != null)
+                        backgroundArt.gameObject.SetActive(backgroundArt.sprite != null);
+
+                    Debug.LogWarning($"[BGAController] 영상 준비가 {timeoutSeconds}초를 넘겨 이번 곡은 배경아트로 진행합니다.");
+                    return false;
+                }
+                await UniTask.Yield(PlayerLoopTiming.Update, ct);
+            }
+            return true;
+        }
+
         private void OnPrepared(VideoPlayer vp)
         {
             vp.prepareCompleted -= OnPrepared;
+
+            // 타임아웃으로 포기한 뒤 늦게 도착한 준비 완료. 여기서 켜면 플레이 도중 영상이 갑툭튀한다.
+            if (_abandoned) return;
+
             isPrepared = true;
 
             // RenderTexture를 RawImage에 연결

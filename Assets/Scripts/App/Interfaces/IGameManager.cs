@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using SCOdyssey.Game;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,6 +12,12 @@ namespace SCOdyssey.App
     public interface IGameManager
     {
         void SetBGAData(string videoFileName, Sprite backgroundArt);
+
+        /// <summary>
+        /// SetBGAData가 시작한 영상 준비가 끝날 때까지 기다린다. 로딩 화면이 이 대기를 가린다.
+        /// 기다릴 것이 없으면(BGA 없는 곡) 즉시 반환하고, 타임아웃하면 배경아트로 진행한다(false).
+        /// </summary>
+        UniTask<bool> WaitBGAReadyAsync(float timeoutSeconds, CancellationToken ct);
 
         void StartGame();
         double GetCurrentTime();

@@ -1,5 +1,7 @@
 using System;
 using System.Collections;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using SCOdyssey.Audio;
 using SCOdyssey.Core;
 using SCOdyssey.Game;
@@ -160,6 +162,13 @@ namespace SCOdyssey.App
         public void SetBGAData(string videoFileName, Sprite backgroundArt)
         {
             bgaController?.Init(videoFileName, backgroundArt);
+        }
+
+        // 영상 준비 대기는 BGAController가 안다. 기다릴 것이 없으면 즉시 true.
+        public UniTask<bool> WaitBGAReadyAsync(float timeoutSeconds, CancellationToken ct)
+        {
+            if (bgaController == null) return UniTask.FromResult(true);
+            return bgaController.WaitPreparedAsync(timeoutSeconds, ct);
         }
 
         public void StartMusic(double delayTime)

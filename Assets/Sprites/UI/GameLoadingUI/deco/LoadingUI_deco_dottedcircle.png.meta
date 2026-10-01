@@ -1,0 +1,806 @@
+fileFormatVersion: 2
+guid: 087c5e4bc8631db43b1c3949683c0780
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -344090287720753423
+    second: LoadingUI_deco_dottedcircle_0
+  - first:
+      213: 3243535035174178044
+    second: LoadingUI_deco_dottedcircle_1
+  - first:
+      213: 1411806321750673074
+    second: LoadingUI_deco_dottedcircle_2
+  - first:
+      213: 4447059556967526505
+    second: LoadingUI_deco_dottedcircle_3
+  - first:
+      213: -6453166481718286997
+    second: LoadingUI_deco_dottedcircle_4
+  - first:
+      213: 6629762686350407574
+    second: LoadingUI_deco_dottedcircle_5
+  - first:
+      213: 1535087563855530037
+    second: LoadingUI_deco_dottedcircle_6
+  - first:
+      213: -4580277242826386442
+    second: LoadingUI_deco_dottedcircle_7
+  - first:
+      213: -2330532400518516677
+    second: LoadingUI_deco_dottedcircle_8
+  - first:
+      213: 6731947718786360860
+    second: LoadingUI_deco_dottedcircle_9
+  - first:
+      213: -8659433504157823665
+    second: LoadingUI_deco_dottedcircle_10
+  - first:
+      213: -651926020132115539
+    second: LoadingUI_deco_dottedcircle_11
+  - first:
+      213: 1183891936641633262
+    second: LoadingUI_deco_dottedcircle_12
+  - first:
+      213: 8371459203827419603
+    second: LoadingUI_deco_dottedcircle_13
+  - first:
+      213: 4573469016281178475
+    second: LoadingUI_deco_dottedcircle_14
+  - first:
+      213: -1439023930765644991
+    second: LoadingUI_deco_dottedcircle_15
+  - first:
+      213: 9015519502598299020
+    second: LoadingUI_deco_dottedcircle_16
+  - first:
+      213: 5831572574886558347
+    second: LoadingUI_deco_dottedcircle_17
+  - first:
+      213: -3582026215291356042
+    second: LoadingUI_deco_dottedcircle_18
+  - first:
+      213: -4020604918140005349
+    second: LoadingUI_deco_dottedcircle_19
+  - first:
+      213: 5120210946911109065
+    second: LoadingUI_deco_dottedcircle_20
+  - first:
+      213: 3505973398680581356
+    second: LoadingUI_deco_dottedcircle_21
+  - first:
+      213: 2158231104212888670
+    second: LoadingUI_deco_dottedcircle_22
+  - first:
+      213: 3596382718963513870
+    second: LoadingUI_deco_dottedcircle_23
+  - first:
+      213: 7443003168608547577
+    second: LoadingUI_deco_dottedcircle_24
+  - first:
+      213: 2145202748366383990
+    second: LoadingUI_deco_dottedcircle_25
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 200
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_0
+      rect:
+        serializedVersion: 2
+        x: 124
+        y: 363
+        width: 30
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f61eb5d4bb893bf0800000000000000
+      internalID: -344090287720753423
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_1
+      rect:
+        serializedVersion: 2
+        x: 170
+        y: 374
+        width: 28
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cfc4714fde9530d20800000000000000
+      internalID: 3243535035174178044
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_2
+      rect:
+        serializedVersion: 2
+        x: 214
+        y: 370
+        width: 30
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2b6899b9e5eb79310800000000000000
+      internalID: 1411806321750673074
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_3
+      rect:
+        serializedVersion: 2
+        x: 258
+        y: 355
+        width: 30
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9603e040b1127bd30800000000000000
+      internalID: 4447059556967526505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_4
+      rect:
+        serializedVersion: 2
+        x: 46
+        y: 315
+        width: 30
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b6569b4764fb176a0800000000000000
+      internalID: -6453166481718286997
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_5
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 344
+        width: 31
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6973e098906a10c50800000000000000
+      internalID: 6629762686350407574
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_6
+      rect:
+        serializedVersion: 2
+        x: 296
+        y: 330
+        width: 31
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5388abe810abd4510800000000000000
+      internalID: 1535087563855530037
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_7
+      rect:
+        serializedVersion: 2
+        x: 20
+        y: 278
+        width: 28
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6f317807d169f60c0800000000000000
+      internalID: -4580277242826386442
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_8
+      rect:
+        serializedVersion: 2
+        x: 330
+        y: 297
+        width: 28
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b303e81212948afd0800000000000000
+      internalID: -2330532400518516677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_9
+      rect:
+        serializedVersion: 2
+        x: 4
+        y: 236
+        width: 24
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c1623c868ceac6d50800000000000000
+      internalID: 6731947718786360860
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_10
+      rect:
+        serializedVersion: 2
+        x: 354
+        y: 258
+        width: 26
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f4d8e8c8b1383d780800000000000000
+      internalID: -8659433504157823665
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_11
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 192
+        width: 19
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dabe03e1db4e3f6f0800000000000000
+      internalID: -651926020132115539
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_12
+      rect:
+        serializedVersion: 2
+        x: 370
+        y: 215
+        width: 22
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: eeb49ff91770e6010800000000000000
+      internalID: 1183891936641633262
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_13
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 146
+        width: 22
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d9cecfbac56d2470800000000000000
+      internalID: 8371459203827419603
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_14
+      rect:
+        serializedVersion: 2
+        x: 374
+        y: 170
+        width: 18
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b61e1bac6d9387f30800000000000000
+      internalID: 4573469016281178475
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_15
+      rect:
+        serializedVersion: 2
+        x: 12
+        y: 102
+        width: 24
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14b6d67fb5f870ce0800000000000000
+      internalID: -1439023930765644991
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_16
+      rect:
+        serializedVersion: 2
+        x: 364
+        y: 124
+        width: 23
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c8d5af9a83f8d1d70800000000000000
+      internalID: 9015519502598299020
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_17
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 64
+        width: 29
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b8af5002c58ede050800000000000000
+      internalID: 5831572574886558347
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_18
+      rect:
+        serializedVersion: 2
+        x: 343
+        y: 83
+        width: 27
+        height: 31
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67cfb65b2261a4ec0800000000000000
+      internalID: -3582026215291356042
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_19
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 32
+        width: 30
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1493180121f338c0800000000000000
+      internalID: -4020604918140005349
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_20
+      rect:
+        serializedVersion: 2
+        x: 278
+        y: 21
+        width: 30
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9cff3b96ab4ae0740800000000000000
+      internalID: 5120210946911109065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_21
+      rect:
+        serializedVersion: 2
+        x: 314
+        y: 48
+        width: 30
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ce4335c0b38b7a030800000000000000
+      internalID: 3505973398680581356
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_22
+      rect:
+        serializedVersion: 2
+        x: 103
+        y: 12
+        width: 31
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5ceec521c393fd10800000000000000
+      internalID: 2158231104212888670
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_23
+      rect:
+        serializedVersion: 2
+        x: 146
+        y: 0
+        width: 31
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e0a7c28470be8e130800000000000000
+      internalID: 3596382718963513870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_24
+      rect:
+        serializedVersion: 2
+        x: 193
+        y: 0
+        width: 29
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9f2f40772fbda4760800000000000000
+      internalID: 7443003168608547577
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LoadingUI_deco_dottedcircle_25
+      rect:
+        serializedVersion: 2
+        x: 236
+        y: 4
+        width: 32
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67be19ba88a45cd10800000000000000
+      internalID: 2145202748366383990
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      LoadingUI_deco_dottedcircle_0: -344090287720753423
+      LoadingUI_deco_dottedcircle_1: 3243535035174178044
+      LoadingUI_deco_dottedcircle_10: -8659433504157823665
+      LoadingUI_deco_dottedcircle_11: -651926020132115539
+      LoadingUI_deco_dottedcircle_12: 1183891936641633262
+      LoadingUI_deco_dottedcircle_13: 8371459203827419603
+      LoadingUI_deco_dottedcircle_14: 4573469016281178475
+      LoadingUI_deco_dottedcircle_15: -1439023930765644991
+      LoadingUI_deco_dottedcircle_16: 9015519502598299020
+      LoadingUI_deco_dottedcircle_17: 5831572574886558347
+      LoadingUI_deco_dottedcircle_18: -3582026215291356042
+      LoadingUI_deco_dottedcircle_19: -4020604918140005349
+      LoadingUI_deco_dottedcircle_2: 1411806321750673074
+      LoadingUI_deco_dottedcircle_20: 5120210946911109065
+      LoadingUI_deco_dottedcircle_21: 3505973398680581356
+      LoadingUI_deco_dottedcircle_22: 2158231104212888670
+      LoadingUI_deco_dottedcircle_23: 3596382718963513870
+      LoadingUI_deco_dottedcircle_24: 7443003168608547577
+      LoadingUI_deco_dottedcircle_25: 2145202748366383990
+      LoadingUI_deco_dottedcircle_3: 4447059556967526505
+      LoadingUI_deco_dottedcircle_4: -6453166481718286997
+      LoadingUI_deco_dottedcircle_5: 6629762686350407574
+      LoadingUI_deco_dottedcircle_6: 1535087563855530037
+      LoadingUI_deco_dottedcircle_7: -4580277242826386442
+      LoadingUI_deco_dottedcircle_8: -2330532400518516677
+      LoadingUI_deco_dottedcircle_9: 6731947718786360860
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
