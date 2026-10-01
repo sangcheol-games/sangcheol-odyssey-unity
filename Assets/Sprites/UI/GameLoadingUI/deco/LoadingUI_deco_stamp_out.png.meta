@@ -116,10 +116,10 @@ TextureImporter:
       name: LoadingUI_deco_stamp_out_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 432
-        height: 456
+        x: 14
+        y: 14
+        width: 452
+        height: 466
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}

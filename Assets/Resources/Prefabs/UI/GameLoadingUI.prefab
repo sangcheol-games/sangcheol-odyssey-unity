@@ -435,10 +435,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SCOdyssey.UI.GameLoadingUI
   difficultyBadgeSprites:
-  - {fileID: -3103742127184064489, guid: a69c823431ee65743993b9604950b703, type: 3}
-  - {fileID: 2579405189506178727, guid: 5b0ccd018804c294c8e53798233f7989, type: 3}
-  - {fileID: -2710646020894054022, guid: 215d8d5ce96c55c40846374d044bbf0a, type: 3}
-  - {fileID: 6459183635855131994, guid: c503d975d3ee9d440908c2f8c0e48691, type: 3}
+  - {fileID: 21300000, guid: a69c823431ee65743993b9604950b703, type: 3}
+  - {fileID: 21300000, guid: 5b0ccd018804c294c8e53798233f7989, type: 3}
+  - {fileID: 21300000, guid: 215d8d5ce96c55c40846374d044bbf0a, type: 3}
+  - {fileID: 21300000, guid: c503d975d3ee9d440908c2f8c0e48691, type: 3}
   difficultyCircularSprites:
   - {fileID: 21300000, guid: 0c2af76bb2e04474b84b5fbe09628f8a, type: 3}
   - {fileID: 21300000, guid: 3e5d7102ca232964fbfd69f06ec8f40b, type: 3}
@@ -458,11 +458,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SCOdyssey.UI.GameLoadingAnimator
   spinners:
   - target: {fileID: 6867333792279128210}
-    degreesPerSecond: 90
+    degreesPerSecond: -90
   - target: {fileID: 2230033223164015928}
-    degreesPerSecond: 45
-  - target: {fileID: 8104219116012045169}
     degreesPerSecond: 90
+  - target: {fileID: 8104219116012045169}
+    degreesPerSecond: 60
   blinkers:
   - target: {fileID: 7249090320493049286}
     minAlpha: 0
@@ -501,7 +501,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 2}
-  m_SizeDelta: {x: 360, y: 360}
+  m_SizeDelta: {x: 260, y: 340}
   m_Pivot: {x: 0, y: 0}
 --- !u!1 &919137212451906072
 GameObject:
@@ -538,9 +538,9 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 7.211975}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.479}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4591171717965623958
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -628,7 +628,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 12}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &911984369610727852
@@ -3845,7 +3845,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 12}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7100086468809690893
