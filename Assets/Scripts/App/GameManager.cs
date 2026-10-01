@@ -121,6 +121,10 @@ namespace SCOdyssey.App
             scoreManager.OnScoreChanged += UpdateScore;
             scoreManager.OnComboChanged += UpdateCombo;
             scoreManager.OnGaugeChanged += UpdateGauge;
+
+            // StartGame(→ scoreManager.Init)은 로딩 화면이 걷히고 시작 전 대기가 끝난 뒤에야 불린다.
+            // 그 사이 게임 화면이 먼저 보이므로, 씬에 켜진 채 저장된 Combo 그룹을 여기서 미리 숨긴다.
+            UpdateCombo(0);
         }
 
         private void OnDestroy()

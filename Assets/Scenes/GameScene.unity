@@ -1067,7 +1067,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 100
+  m_text: 0
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 94cea0fa5289b394eb977f8c2cda401e, type: 2}
   m_sharedMaterial: {fileID: 8049001121536648363, guid: 94cea0fa5289b394eb977f8c2cda401e, type: 2}
@@ -3288,7 +3288,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   testChartFile: {fileID: 4900000, guid: 3c5acbe65d472344aa7133ea4c74a96f, type: 3}
   testBpm: 160
-  testAudioPath: 
 --- !u!1 &1025296367
 GameObject:
   m_ObjectHideFlags: 0
