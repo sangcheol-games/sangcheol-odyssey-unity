@@ -107,32 +107,38 @@ namespace SCOdyssey.Game
             hitAnim.Play(onFinished);
         }
 
-        // 노트 표시 상태 전환(ChartManager가 호출). Hidden=투명, Ghost=반투명(설정값), Active=불투명(판정 대상)
+        // 노트 표시 상태 전환(ChartManager가 호출). Hidden=투명, Ghost=불투명·어둡게(설정값), Active=원색(판정 대상)
+        // Ghost를 알파로 낮추면 uGUI가 요소별로 블렌딩해 반투명 헤드 뒤로 홀드바가 비친다 → 알파 대신 RGB를 곱해 어둡게 한다.
         public void SetState(NoteState state)
         {
             currentState = state;
-            Color c = noteImage.color;
+            float brightness = 1f;
+            float alpha = 1f;
 
             switch (state)
             {
                 case NoteState.Hidden:
-                    c.a = 0f;
+                    alpha = 0f;
                     break;
                 case NoteState.Ghost:
-                    float ghostOpacity = 0.2f;
+                    brightness = 0.2f;
                     if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
-                        ghostOpacity = sm.Current.noteOpacity;
-                    c.a = ghostOpacity;
+                        brightness = sm.Current.noteOpacity;
                     break;
                 case NoteState.Active:
-                    c.a = 1f;
                     break;
             }
-            noteImage.color = c;
-            ApplyAlpha(c.a);
+            noteImage.color = Tint(_initialColor, brightness, alpha);
+            ApplyTint(brightness, alpha);
         }
 
-        protected virtual void ApplyAlpha(float alpha) { }
+        // 기준색의 RGB에 brightness를 곱하고 알파를 지정한 색
+        protected static Color Tint(Color baseColor, float brightness, float alpha)
+        {
+            return new Color(baseColor.r * brightness, baseColor.g * brightness, baseColor.b * brightness, alpha);
+        }
+
+        protected virtual void ApplyTint(float brightness, float alpha) { }
 
         protected abstract void SetVisual();
 

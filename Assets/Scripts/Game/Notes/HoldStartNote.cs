@@ -28,12 +28,14 @@ namespace SCOdyssey.Game
         private float rectScale;                    // 프리팹 localScale.x — 2배 제작 에셋 보정값
         private float remainingWidth;               // 남은 홀드바 폭(화면 단위). 기존 fillAmount 대체
 
-        protected override void ApplyAlpha(float alpha)
+        // 홀드바 Fill 원색. 풀링된 홀드바는 이전 노트의 tint가 남아 있어 매번 읽을 수 없으므로,
+        // 처음 보는(아직 tint되지 않은) 홀드바에서 한 번만 캐시한다. 모든 홀드바는 같은 프리팹이라 색이 같다.
+        private static Color? s_holdBaseColor;
+
+        protected override void ApplyTint(float brightness, float alpha)
         {
             if (holdImage == null) return;
-            Color c = holdImage.color;
-            c.a = alpha;
-            holdImage.color = c;
+            holdImage.color = Tint(s_holdBaseColor ?? Color.white, brightness, alpha);
         }
 
         /// <summary>
@@ -61,6 +63,9 @@ namespace SCOdyssey.Game
                 holdBarTransform = null;    // SetVisual/UpdateHoldFill이 안전하게 빠지도록
                 return;
             }
+
+            if (s_holdBaseColor == null)
+                s_holdBaseColor = holdImage.color;
 
             holdFillTransform = holdImage.rectTransform;
             barHeight = holdBarTransform.sizeDelta.y;
@@ -112,7 +117,7 @@ namespace SCOdyssey.Game
             remainingWidth = holdWidth;
             holdBarTransform.sizeDelta = new Vector2(rectWidth, barHeight);
 
-            ApplyAlpha(1f);     // 풀 재사용 시 이전 노트의 알파 잔재 제거
+            ApplyTint(1f, 1f);  // 풀 재사용 시 이전 노트의 tint 잔재 제거
         }
 
         // 판정 or Miss 시 시스템에서는 제거되지만, 홀드바 시각효과는 링거링으로 유지.
