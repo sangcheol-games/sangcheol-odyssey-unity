@@ -121,7 +121,7 @@ namespace SCOdyssey.Game
                     alpha = 0f;
                     break;
                 case NoteState.Ghost:
-                    brightness = 0.2f;
+                    brightness = 0.3f;
                     if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
                         brightness = sm.Current.noteOpacity;
                     break;
