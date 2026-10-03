@@ -34,7 +34,7 @@ namespace SCOdyssey.App
     //  판정 수신: ChartManager가 OnNoteJudged()/OnNoteMissed()/OnHoldStart() 등을 호출하면
     //        scoreManager.ProcessJudge()로 점수를 넘기고, *Event를 발행해 CharacterAnimator에 전파한다.
     //
-    //  종료: 채보와 음원이 끝나면 ChartManager가 OnGameFinished()를 호출한다 -> 클리어 연출 -> ResultUI 표시.
+    //  종료: 채보와 음원이 끝나면 ChartManager가 OnGameFinished()를 호출한다 -> 최고기록 저장(IUserDataManager) -> 클리어 연출 -> ResultUI 표시.
     // ──────────────────────────────────────────────────────────────────────────
     public class GameManager : MonoBehaviour, IGameManager
     {
@@ -383,8 +383,45 @@ namespace SCOdyssey.App
 
             Debug.Log($"Game Finished. Score: {finalScore}, Rank: {rank}");
 
+            SaveRecord(finalScore, rank);
+
             // 클리어 연출 시퀀스 시작 (2초 후)
             StartCoroutine(ShowClearSequence(rank));
+        }
+
+        // 곡 + 난이도의 최고기록 갱신 (실패한 판도 기록한다. 클리어 타입은 Fail로 남는다)
+        private void SaveRecord(int finalScore, ClearType rank)
+        {
+            if (!ServiceLocator.TryGet<IUserDataManager>(out var userDataManager))
+            {
+                Debug.LogWarning("[GameManager] IUserDataManager not found. 기록을 저장하지 않습니다.");
+                return;
+            }
+
+            var musicManager = ServiceLocator.Get<IMusicManager>();
+            var currentMusic = musicManager.GetCurrentMusic();
+            if (currentMusic == null)
+            {
+                // GameScene을 곡 선택 없이 직접 연 경우
+                Debug.LogWarning("[GameManager] 선택된 곡이 없어 기록을 저장하지 않습니다.");
+                return;
+            }
+
+            int musicId = currentMusic.id;
+            Difficulty difficulty = musicManager.GetCurrentDifficulty();
+
+            bool isNewRecord = userDataManager.SubmitResult(
+                musicId,
+                difficulty,
+                finalScore,
+                scoreManager.GetMaxCombo(),
+                scoreManager.GetGaugePercent(),
+                rank);
+
+            if (isNewRecord)
+            {
+                Debug.Log($"[GameManager] 기록 갱신: music {musicId} {difficulty}");
+            }
         }
 
         // 클리어 연출 표시 (즉시 등급 스프라이트 표시 후 4초 대기)

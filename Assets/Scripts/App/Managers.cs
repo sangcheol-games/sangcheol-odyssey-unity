@@ -48,6 +48,11 @@ namespace SCOdyssey.App
             var musicManager = new MusicManager();
             ServiceLocator.TryRegister<IMusicManager>(musicManager);
 
+            // 최고기록(서버 연동 전 임시 로컬 저장). 곡 선택 화면이 열리기 전에 불러 둔다
+            var userDataManager = new LocalUserDataManager();
+            ServiceLocator.TryRegister<IUserDataManager>(userDataManager);
+            userDataManager.Load();
+
             var characterManager = new CharacterManager();
             ServiceLocator.TryRegister<ICharacterManager>(characterManager);
 

@@ -38,7 +38,7 @@ Each installer registers services (`CoreLogger`, `GameClock`, `ServerTimeSkew`, 
 
 `Managers` is a `DontDestroyOnLoad` singleton placed in `MainScene` that directly instantiates and registers the gameplay-side managers into the same `ServiceLocator`, in this exact order:
 
-`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `ICharacterManager` → audio module (`AudioModuleInstaller.Install`, registers `IAudioEngine`/`IAudioOutputService`/`IAudioMixer`/`IOneShotPlayer`/`IMusicPlayers`/`ISongPlayer`; falls back to `InstallDisabled`, a silent module, if install throws) → `JudgementDriver` (+ `IJudgementTimingLog`)
+`ISettingsManager` → `IInputManager` → `IUIManager` → `IMusicManager` → `IUserDataManager` (temporary local best-record store, `LocalUserDataManager` → `persistentDataPath/records.json`; swap for a server-backed implementation later) → `ICharacterManager` → audio module (`AudioModuleInstaller.Install`, registers `IAudioEngine`/`IAudioOutputService`/`IAudioMixer`/`IOneShotPlayer`/`IMusicPlayers`/`ISongPlayer`; falls back to `InstallDisabled`, a silent module, if install throws) → `JudgementDriver` (+ `IJudgementTimingLog`)
 
 Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate`, resolution etc. during their init.
 

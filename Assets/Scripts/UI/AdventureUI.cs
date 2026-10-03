@@ -32,6 +32,16 @@ namespace SCOdyssey.UI
         private MusicSO selectedMusic => musicList[selectedIndex];
         private Difficulty selectedDifficulty = Difficulty.Easy;
 
+        private const string EMPTY_RECORD_TEXT = "- - -"; // 기록 없는 곡+난이도 표시
+
+        private enum Texts
+        {
+            BestScore,      // 최고 점수
+            BestCombo,      // 최고 콤보
+            BestRate,       // 최고 점수비율
+            BestClearType   // 최고 클리어 타입
+        }
+
         private enum Images
         {
             AlbumArt      // 앨범 아트
@@ -45,6 +55,7 @@ namespace SCOdyssey.UI
         protected override void Awake()
         {
             base.Awake();
+            BindText(typeof(Texts));
             BindImage(typeof(Images));
             BindButton(typeof(Buttons));
 
@@ -68,6 +79,8 @@ namespace SCOdyssey.UI
         {
             base.OnEnable();
 
+            // 결과 화면에서 돌아오면 이 인스턴스가 재사용되므로(UI 스택 유지) 방금 갱신된 기록을 다시 그린다
+            RefreshRecord();
             PlayPreviewAudio();
         }
 
@@ -124,6 +137,45 @@ namespace SCOdyssey.UI
                 int dataIndex = WrapIndex(selectedIndex - CENTER_INDEX + i);
                 slots[i].SetData(musicList[dataIndex], i == CENTER_INDEX, selectedDifficulty);
             }
+
+            // 곡 이동과 난이도 변경 모두 이 경로를 지난다
+            RefreshRecord();
+        }
+
+        /// <summary>
+        /// 현재 선택된 곡+난이도의 최고기록을 표시합니다.
+        /// 프리팹에 텍스트가 없으면(바인딩 실패) 해당 항목만 건너뜁니다.
+        /// </summary>
+        private void RefreshRecord()
+        {
+            if (musicList == null || musicList.Count == 0) return;
+            if (!ServiceLocator.TryGet<IUserDataManager>(out var userDataManager)) return;
+
+            string scoreText = EMPTY_RECORD_TEXT;
+            string comboText = EMPTY_RECORD_TEXT;
+            string rateText = EMPTY_RECORD_TEXT;
+            string clearTypeText = EMPTY_RECORD_TEXT;
+
+            if (userDataManager.TryGetRecord(selectedMusic.id, selectedDifficulty, out var record))
+            {
+                scoreText = record.bestScore.ToString("N0");
+                comboText = record.bestCombo.ToString();
+                rateText = $"{record.bestRate:F2}%";
+                clearTypeText = record.bestClearType.ToString();
+            }
+
+            SetRecordText(Texts.BestScore, scoreText);
+            SetRecordText(Texts.BestCombo, comboText);
+            SetRecordText(Texts.BestRate, rateText);
+            SetRecordText(Texts.BestClearType, clearTypeText);
+        }
+
+        private void SetRecordText(Texts textType, string value)
+        {
+            var text = GetText((int)textType);
+            if (text == null) return;
+
+            text.text = value;
         }
 
         /// <summary>
