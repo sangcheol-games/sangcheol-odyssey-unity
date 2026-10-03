@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using SCOdyssey.App;
 using SCOdyssey.Audio;
 using SCOdyssey.Core;
@@ -14,13 +16,37 @@ namespace SCOdyssey.UI
 {
     public class AdventureUI : BaseUI
     {
-        private const int DISPLAY_COUNT = 7;
-        private const int CENTER_INDEX = 3; // 0-based, 4번째 슬롯
+        private const int VISIBLE_COUNT = 7;                    // 화면에 보이는 슬롯 수
+        private const int WHEEL_BUFFER = 2;                     // 위아래 숨김 버퍼 칸 수(회전 때 들어오고 나가는 슬롯)
+        private const int SLOT_COUNT = VISIBLE_COUNT + WHEEL_BUFFER * 2;
+        private const int CENTER_INDEX = SLOT_COUNT / 2;        // 0-based, 선택된 곡 슬롯
         private const float ALBUM_ART_SPIN_DURATION = 8f; // 앨범아트 1바퀴에 걸리는 시간(초)
+        private const float MAX_WHEEL_OFFSET = WHEEL_BUFFER;    // 연타 시 밀려 있을 수 있는 최대 칸 수. 버퍼 칸 수를 넘으면 끝에 빈칸이 보인다
+
+        // 바퀴 회전 틱 효과음. 지금 원샷 뱅크가 타격음용이라 StreamingAssets/HitSound/ 기준이고 HitSound 버스로 나간다.
+        // 파일이 없으면 Register가 경고 후 None을 돌려주고 Play는 무시한다(애니메이션만 동작).
+        // TODO: UI SFX 전용 원샷/버스가 생기면 옮긴다.
+        private const string WHEEL_TICK_SOUND_FILE = "ui_wheel_tick.wav";
+
+        [Header("곡 리스트 바퀴")]
+        [SerializeField] private float wheelRadius = 800f;          // 바퀴 반지름. 중심은 리스트 오른쪽
+        [SerializeField] private float wheelStepAngle = 9.2f;       // 슬롯 한 칸 사이 각도(도). 세로 간격 ≈ 반지름 × sin(각도)
+        [SerializeField] private float wheelTickDuration = 0.16f;   // 한 칸 회전 시간(초)
+        [SerializeField] private float wheelOvershoot = 2f;         // 한 칸을 넘어갔다 걸리는 정도(OutBack overshoot)
+        [SerializeField, Range(0f, 1f)] private float edgeAlpha = 0.35f; // 보이는 양 끝 슬롯의 투명도
 
         private List<MusicSO> musicList;
         private MusicListUI[] slots;
+        private RectTransform[] slotRects;
+        private CanvasGroup[] slotCanvasGroups;
         private Transform musicListContainer;
+
+        // 시각 오프셋(칸 단위). 데이터는 즉시 바꾸고 이 값을 ±1에서 0으로 트윈해 바퀴가 도는 것처럼 보이게 한다.
+        private float wheelOffset;
+        private Tween wheelTween;
+
+        private IOneShotPlayer _oneShots;
+        private OneShotId _wheelTickSound;
 
         private RectTransform albumArtRect;
         private float albumArtAngle; // 시계방향 누적 각도(양수, 0~360)
@@ -91,6 +117,9 @@ namespace SCOdyssey.UI
             // stop preview audio when ui change
             CancelPreview();
             if (ServiceLocator.TryGet<IMusicPlayers>(out var music)) music.Preview.Stop();
+
+            // 회전 도중 화면을 떠나도 돌아왔을 때 정지 상태로 보이게 한다(UI 스택 재사용)
+            StopWheel();
         }
 
         private void Init()
@@ -112,27 +141,50 @@ namespace SCOdyssey.UI
                 Destroy(musicListContainer.GetChild(i).gameObject);
             }
 
-            // MusicListUI 프리팹 7개 동적 생성
-            slots = new MusicListUI[DISPLAY_COUNT];
-            for (int i = 0; i < DISPLAY_COUNT; i++)
+            // 슬롯 위치는 바퀴 배치(LayoutSlots)가 직접 정하므로 레이아웃 그룹은 끈다
+            if (musicListContainer.TryGetComponent(out LayoutGroup layoutGroup))
+                layoutGroup.enabled = false;
+
+            // MusicListUI 프리팹 동적 생성(보이는 7개 + 위아래 숨김 버퍼)
+            slots = new MusicListUI[SLOT_COUNT];
+            slotRects = new RectTransform[SLOT_COUNT];
+            slotCanvasGroups = new CanvasGroup[SLOT_COUNT];
+            for (int i = 0; i < SLOT_COUNT; i++)
             {
                 GameObject go = ResourceLoader.PrefabInstantiate("UI/MusicListUI", musicListContainer);
                 slots[i] = go.AddComponent<MusicListUI>();
+
+                // 컨테이너 중앙 기준으로 배치
+                RectTransform rect = (RectTransform)go.transform;
+                rect.anchorMin = new Vector2(0.5f, 0.5f);
+                rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                slotRects[i] = rect;
+
+                if (!go.TryGetComponent(out CanvasGroup canvasGroup))
+                    canvasGroup = go.AddComponent<CanvasGroup>();
+                slotCanvasGroups[i] = canvasGroup;
             }
 
+            // 바퀴 틱 효과음 id 확보. Register는 파일명 기준 멱등이다.
+            if (ServiceLocator.TryGet<IOneShotPlayer>(out _oneShots))
+                _wheelTickSound = _oneShots.Register(WHEEL_TICK_SOUND_FILE);
+
             selectedIndex = 0;
+            wheelOffset = 0f;
             RefreshList();
+            LayoutSlots();
             OnSelectedMusicChanged();
         }
 
         /// <summary>
-        /// 원형 큐 방식으로 7개 슬롯에 곡 데이터를 표시합니다.
+        /// 원형 큐 방식으로 슬롯(보이는 7개 + 위아래 버퍼)에 곡 데이터를 표시합니다.
         /// </summary>
         private void RefreshList()
         {
             if (musicList == null || musicList.Count == 0) return;
 
-            for (int i = 0; i < DISPLAY_COUNT; i++)
+            for (int i = 0; i < SLOT_COUNT; i++)
             {
                 int dataIndex = WrapIndex(selectedIndex - CENTER_INDEX + i);
                 slots[i].SetData(musicList[dataIndex], i == CENTER_INDEX, selectedDifficulty);
@@ -185,6 +237,86 @@ namespace SCOdyssey.UI
         {
             int count = musicList.Count;
             return ((index % count) + count) % count;
+        }
+
+        /// <summary>
+        /// 슬롯을 오른쪽에 중심을 둔 원의 호를 따라 배치합니다(관람차 곤돌라처럼 항상 똑바로).
+        /// p = 0(선택 슬롯)이 가장 왼쪽, |p|가 클수록 오른쪽으로 휘어 들어갑니다.
+        /// </summary>
+        private void LayoutSlots()
+        {
+            if (slotRects == null) return;
+
+            for (int i = 0; i < SLOT_COUNT; i++)
+            {
+                float p = (i - CENTER_INDEX) + wheelOffset;
+                float theta = p * wheelStepAngle * Mathf.Deg2Rad;
+
+                float x = wheelRadius * (1f - Mathf.Cos(theta));
+                float y = -wheelRadius * Mathf.Sin(theta); // p가 클수록 아래
+                slotRects[i].anchoredPosition = new Vector2(x, y);
+
+                slotCanvasGroups[i].alpha = GetSlotAlpha(Mathf.Abs(p));
+            }
+        }
+
+        /// <summary>
+        /// 가운데 5칸은 불투명, 보이는 양 끝 칸은 edgeAlpha, 그 바깥 버퍼 칸은 0. 회전 중에는 그 사이를 선형 보간합니다.
+        /// </summary>
+        private float GetSlotAlpha(float distance)
+        {
+            float edgeDistance = VISIBLE_COUNT / 2;      // 3: 보이는 양 끝 칸
+            float innerDistance = edgeDistance - 1f;     // 2: 불투명 구간 끝
+            float hiddenDistance = edgeDistance + 1f;    // 4: 첫 숨김 버퍼 칸
+
+            if (distance <= innerDistance)
+                return 1f;
+
+            if (distance <= edgeDistance)
+                return Mathf.Lerp(1f, edgeAlpha, distance - innerDistance);
+
+            if (distance <= hiddenDistance)
+                return Mathf.Lerp(edgeAlpha, 0f, distance - edgeDistance);
+
+            return 0f;
+        }
+
+        /// <summary>
+        /// 바퀴를 한 칸 돌립니다. 데이터는 이미 바뀐 상태이므로 오프셋을 ±1 밀어 직전 위치처럼 보이게 한 뒤
+        /// 0으로 트윈합니다. OutBack으로 살짝 넘어갔다 걸리는 '찰칵' 느낌을 냅니다.
+        /// 트윈 중 다시 들어오면 현재 오프셋에 이어 붙여 연타해도 끊기지 않습니다.
+        /// </summary>
+        /// <param name="step">+1 = 다음 곡(리스트가 위로), -1 = 이전 곡(리스트가 아래로)</param>
+        private void StartWheelTick(int step)
+        {
+            wheelTween?.Kill();
+
+            wheelOffset = Mathf.Clamp(wheelOffset + step, -MAX_WHEEL_OFFSET, MAX_WHEEL_OFFSET);
+            LayoutSlots();
+
+            wheelTween = DOTween.To(() => wheelOffset, SetWheelOffset, 0f, wheelTickDuration)
+                .SetEase(Ease.OutBack, wheelOvershoot)
+                .SetLink(gameObject);
+
+            if (_oneShots != null)
+                _oneShots.Play(_wheelTickSound);
+        }
+
+        private void SetWheelOffset(float value)
+        {
+            wheelOffset = value;
+            LayoutSlots();
+        }
+
+        /// <summary>
+        /// 회전을 멈추고 정지 위치로 되돌립니다.
+        /// </summary>
+        private void StopWheel()
+        {
+            wheelTween?.Kill();
+            wheelTween = null;
+            wheelOffset = 0f;
+            LayoutSlots();
         }
 
         private void OnClickBackButton()
@@ -269,6 +401,12 @@ namespace SCOdyssey.UI
             }
 
             RefreshList();
+
+            // 상하 이동은 바퀴를 한 칸 돌린다(아래 = 다음 곡 = 리스트가 위로)
+            if (direction.y > 0)
+                StartWheelTick(-1);
+            else if (direction.y < 0)
+                StartWheelTick(1);
 
             if(isMusicChanged)
                 OnSelectedMusicChanged();
