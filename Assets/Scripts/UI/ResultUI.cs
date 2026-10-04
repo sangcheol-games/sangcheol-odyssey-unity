@@ -15,7 +15,11 @@ namespace SCOdyssey.UI
         MusicSO currentMusic;
 
         // 등급 도장 스프라이트. ScoreRank enum 순서(SSS, SS, S, A, B, C, F)와 인덱스가 일치해야 함
+        [Tooltip("등급 도장 스프라이트. 순서는 SSS, SS, S, A, B, C, F (ScoreRank enum 순서와 일치해야 한다)")]
         [SerializeField] private Sprite[] rankStampSprites;
+
+        // 카운트업 연출 담당 (같은 오브젝트). 수치 조정과 연출 다시 재생은 그쪽 인스펙터에서 한다
+        private ResultCountAnimator countAnimator;
 
         // 텍스트 enum
         private enum Texts
@@ -59,6 +63,13 @@ namespace SCOdyssey.UI
             GetButton((int)Buttons.SubmitButton).onClick.AddListener(OnClickSubmitButton);
 
             currentMusic = ServiceLocator.Get<IMusicManager>().GetCurrentMusic();
+
+            countAnimator = GetComponent<ResultCountAnimator>();
+            if (countAnimator == null)
+            {
+                Debug.LogWarning("[ResultUI] 프리팹에 ResultCountAnimator가 없어 기본값으로 추가합니다. 연출 수치를 조정하려면 ResultUI 프리팹 루트에 컴포넌트를 붙이세요.");
+                countAnimator = gameObject.AddComponent<ResultCountAnimator>();
+            }
         }
 
         // 결과 화면 초기화
@@ -75,28 +86,50 @@ namespace SCOdyssey.UI
             GetText((int)Texts.MusicTitleText).text = currentMusic.title.GetLocalizedString();
             GetText((int)Texts.ArtistText).text = currentMusic.producer.GetLocalizedString();
 
-            // 점수 표시 (7자리 포맷)
-            GetText((int)Texts.ScoreText).text = finalScore.ToString("N0");
-
-            // 등급 도장 표시
-            ScoreRank scoreRank = GetScoreRank(finalScore);
-            GetImage((int)Images.RankStamp).sprite = rankStampSprites[(int)scoreRank];
-
-            // 게이지 퍼센트 표시
-            GetText((int)Texts.GaugeText).text = $"{gaugePercent:F2}%";
-
-            // 최대 콤보 표시
-            GetText((int)Texts.MaxComboText).text = maxCombo.ToString();
-
-            // 판정 통계 표시
+            // 판정 통계 표시 (총 노트 수는 카운트 없이 즉시 표시)
             GetText((int)Texts.TotalNotesText).text = totalNotes.ToString();
 
-            // Perfect는 ClearType과 무관하게 항상 표시
-            GetText((int)Texts.PerfectCountText).text = judgeCounts[JudgeType.Perfect].ToString();
-            GetText((int)Texts.MasterCountText).text = judgeCounts[JudgeType.Master].ToString();
-            GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();
-            GetText((int)Texts.KindCountText).text = judgeCounts[JudgeType.Kind].ToString();
-            GetText((int)Texts.UmmCountText).text = judgeCounts[JudgeType.Umm].ToString();
+            // 등급 도장 표시: 스프라이트만 여기서 정하고, 찍는 연출은 countAnimator가 마지막에 한다
+            ScoreRank scoreRank = GetScoreRank(finalScore);
+            Image stamp = GetImage((int)Images.RankStamp);
+            stamp.sprite = rankStampSprites[(int)scoreRank];
+
+            // 카운트업 줄 목록. 배열 순서 = 연출 순서(위 → 아래). 판정 그룹(Perfect~Umm)과 ScorePanel 그룹(Rate~Score) 사이에 텀을 둔다
+            var rows = new ResultCountAnimator.Row[]
+            {
+                // Perfect는 ClearType과 무관하게 항상 표시
+                new ResultCountAnimator.Row(GetText((int)Texts.PerfectCountText), judgeCounts[JudgeType.Perfect], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.MasterCountText), judgeCounts[JudgeType.Master], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.IdealCountText), judgeCounts[JudgeType.Ideal], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.KindCountText), judgeCounts[JudgeType.Kind], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.UmmCountText), judgeCounts[JudgeType.Umm], FormatCount),
+
+                // 게이지 퍼센트 표시 (ScorePanel 맨 위 Rate. 여기서 새 그룹 시작)
+                new ResultCountAnimator.Row(GetText((int)Texts.GaugeText), gaugePercent, FormatGauge, startsGroup: true),
+
+                // 최대 콤보 표시
+                new ResultCountAnimator.Row(GetText((int)Texts.MaxComboText), maxCombo, FormatCount),
+
+                // 점수 표시 (7자리 포맷)
+                new ResultCountAnimator.Row(GetText((int)Texts.ScoreText), finalScore, FormatScore, isFinale: true)
+            };
+
+            countAnimator.Play(rows, stamp);
+        }
+
+        private static string FormatCount(float v)
+        {
+            return Mathf.FloorToInt(v).ToString();
+        }
+
+        private static string FormatScore(float v)
+        {
+            return Mathf.FloorToInt(v).ToString("N0");
+        }
+
+        private static string FormatGauge(float v)
+        {
+            return $"{v:F2}%";
         }
 
         // finalScore → ScoreRank 계산
