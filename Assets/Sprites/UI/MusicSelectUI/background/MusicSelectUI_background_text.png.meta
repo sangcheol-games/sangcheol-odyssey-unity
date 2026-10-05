@@ -1,0 +1,455 @@
+fileFormatVersion: 2
+guid: a23a5e58d74af0e4c9245f82c8edcf7f
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3025601690418758811
+    second: MusicSelectUI_background_text_0
+  - first:
+      213: 2603402464687888253
+    second: MusicSelectUI_background_text_1
+  - first:
+      213: 3971941391852169224
+    second: MusicSelectUI_background_text_2
+  - first:
+      213: -4374824670491106533
+    second: MusicSelectUI_background_text_3
+  - first:
+      213: 3948458786998877802
+    second: MusicSelectUI_background_text_4
+  - first:
+      213: -627272396915627233
+    second: MusicSelectUI_background_text_5
+  - first:
+      213: -6510378190669518677
+    second: MusicSelectUI_background_text_6
+  - first:
+      213: 1758085216060740901
+    second: MusicSelectUI_background_text_7
+  - first:
+      213: 1111599001640981117
+    second: MusicSelectUI_background_text_8
+  - first:
+      213: -8856078897028421118
+    second: MusicSelectUI_background_text_9
+  - first:
+      213: -4087619887313937491
+    second: MusicSelectUI_background_text_10
+  - first:
+      213: 2926078046655278735
+    second: MusicSelectUI_background_text_11
+  - first:
+      213: -6290247279108892542
+    second: MusicSelectUI_background_text_12
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 200
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 0
+        width: 173
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56bb4cafa47e206d0800000000000000
+      internalID: -3025601690418758811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_1
+      rect:
+        serializedVersion: 2
+        x: 185
+        y: 0
+        width: 140
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d77191b8fb4212420800000000000000
+      internalID: 2603402464687888253
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_2
+      rect:
+        serializedVersion: 2
+        x: 334
+        y: 0
+        width: 135
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 808e402d6ab2f1730800000000000000
+      internalID: 3971941391852169224
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_3
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 35
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1323c814208943c0800000000000000
+      internalID: -4374824670491106533
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_4
+      rect:
+        serializedVersion: 2
+        x: 525
+        y: 0
+        width: 144
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a6e7651d85ebbc630800000000000000
+      internalID: 3948458786998877802
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_5
+      rect:
+        serializedVersion: 2
+        x: 756
+        y: 0
+        width: 135
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f1baf64141b7b47f0800000000000000
+      internalID: -627272396915627233
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_6
+      rect:
+        serializedVersion: 2
+        x: 902
+        y: 0
+        width: 125
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba861bf678d76a5a0800000000000000
+      internalID: -6510378190669518677
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_7
+      rect:
+        serializedVersion: 2
+        x: 1037
+        y: 0
+        width: 124
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5259a247039f56810800000000000000
+      internalID: 1758085216060740901
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_8
+      rect:
+        serializedVersion: 2
+        x: 1166
+        y: 0
+        width: 125
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d725d7907613d6f00800000000000000
+      internalID: 1111599001640981117
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_9
+      rect:
+        serializedVersion: 2
+        x: 1296
+        y: 0
+        width: 144
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 20aa9c72a23e81580800000000000000
+      internalID: -8856078897028421118
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_10
+      rect:
+        serializedVersion: 2
+        x: 1441
+        y: 0
+        width: 135
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dab94df9e5bd547c0800000000000000
+      internalID: -4087619887313937491
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_11
+      rect:
+        serializedVersion: 2
+        x: 1623
+        y: 67
+        width: 33
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f8ee4fbfa748b9820800000000000000
+      internalID: 2926078046655278735
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: MusicSelectUI_background_text_12
+      rect:
+        serializedVersion: 2
+        x: 1623
+        y: 7
+        width: 33
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 288d8534d6d84b8a0800000000000000
+      internalID: -6290247279108892542
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      MusicSelectUI_background_text_0: -3025601690418758811
+      MusicSelectUI_background_text_1: 2603402464687888253
+      MusicSelectUI_background_text_10: -4087619887313937491
+      MusicSelectUI_background_text_11: 2926078046655278735
+      MusicSelectUI_background_text_12: -6290247279108892542
+      MusicSelectUI_background_text_2: 3971941391852169224
+      MusicSelectUI_background_text_3: -4374824670491106533
+      MusicSelectUI_background_text_4: 3948458786998877802
+      MusicSelectUI_background_text_5: -627272396915627233
+      MusicSelectUI_background_text_6: -6510378190669518677
+      MusicSelectUI_background_text_7: 1758085216060740901
+      MusicSelectUI_background_text_8: 1111599001640981117
+      MusicSelectUI_background_text_9: -8856078897028421118
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

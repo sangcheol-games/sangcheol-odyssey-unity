@@ -3,8 +3,6 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Localization;
-using UnityEngine.Localization.Settings;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using SCOdyssey.App;
@@ -167,8 +165,9 @@ namespace SCOdyssey.UI
             Image backgroundArt = GetImage((int)Images.BackgroundArt);
             backgroundArt.sprite = music.backgroundArt;
             backgroundArt.enabled = music.backgroundArt != null;
-            GetText((int)Texts.MusicTitleText).text = GetLocalizedText(music.title, music.name);
-            GetText((int)Texts.ArtistText).text = GetLocalizedText(music.producer);
+            // 로딩 화면은 절대 던지면 안 된다. LocalizedTextUtil이 실패 시 폴백을 돌려준다.
+            GetText((int)Texts.MusicTitleText).text = LocalizedTextUtil.Get(music.title, music.name);
+            GetText((int)Texts.ArtistText).text = LocalizedTextUtil.Get(music.producer);
 
             // 비어 있는 정보는 레벨과 같은 규칙으로 "-"를 보인다. 지우지 않으면 지난 곡 값이 남는다.
             GetText((int)Texts.IllustText).text = OrDash(music.illustrator);
@@ -299,29 +298,6 @@ namespace SCOdyssey.UI
             return string.IsNullOrWhiteSpace(value) ? "-" : value;
         }
 
-        /// <summary>MusicListUI.GetLocalizedText와 같은 규칙. 로딩 화면은 절대 던지면 안 되므로 폴백을 둔다.</summary>
-        private static string GetLocalizedText(LocalizedString localizedString, string fallback = "")
-        {
-            if (localizedString == null) return fallback;
-
-            try
-            {
-                if (!ServiceLocator.TryGet<ISettingsManager>(out var settings))
-                    return localizedString.GetLocalizedString();
-
-                var locale = LocalizationSettings.AvailableLocales.GetLocale(settings.Current.displayLanguageCode);
-                if (locale == null) return localizedString.GetLocalizedString();
-
-                return LocalizationSettings.StringDatabase
-                    .GetLocalizedStringAsync(localizedString.TableReference, localizedString.TableEntryReference, locale)
-                    .WaitForCompletion();
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning("[GameLoadingUI] 곡 이름을 가져오지 못했습니다: " + e.Message);
-                return fallback;
-            }
-        }
 
         
         protected override void OnEnable() { }

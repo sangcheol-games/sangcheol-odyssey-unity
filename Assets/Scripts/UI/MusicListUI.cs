@@ -1,7 +1,5 @@
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.Localization.Settings;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Domain.Entity;
@@ -14,14 +12,10 @@ namespace SCOdyssey.UI
         private enum Texts
         {
             Title,
-            Artist,
-            Level_Easy,
-            Level_Normal,
-            Level_Hard,
-            Level_Extreme
+            Artist
         }
 
-        private enum DiffImages  // 난이도 컨테이너 배경 이미지
+        private enum DiffImages  // 난이도별 최고기록 클리어 타입 아이콘
         {
             Easy,
             Normal,
@@ -29,13 +23,18 @@ namespace SCOdyssey.UI
             Extreme
         }
 
-        private Image backgroundImage;  // 루트 배경 이미지
+        // 곡 패널. 선택된 곡만 selectedPanelSprite로 교체(PauseUI 버튼과 같은 방식)
+        [SerializeField] private Sprite panelSprite;
+        [SerializeField] private Sprite selectedPanelSprite;
 
-        private static readonly Color SELECTED_BG_COLOR = Color.white;
-        private static readonly Color DEFAULT_BG_COLOR = Color.white;
-        private static readonly Color SELECTED_DIFFICULTY_COLOR = Color.blue;
-        private static readonly Color DEFAULT_DIFFICULTY_COLOR = Color.black;
-        private static readonly Color UNAVAILABLE_DIFFICULTY_COLOR = Color.black;
+        // 클리어 타입 별 아이콘. ClearType enum 순서(Fail, Clear, FullCombo, OverMillion, AllPerfect)와 인덱스가 일치해야 함
+        // Fail 칸에는 회색 별(None)을 넣는다. 기록이 없는 난이도도 Fail 칸을 쓴다.
+        [SerializeField] private Sprite[] clearTypeSprites;
+
+        // 준비되지 않은 난이도(레벨 -1) 칸에 별 대신 넣는 표시(MusicListUI_ClearType_Null)
+        [SerializeField] private Sprite unavailableSprite;
+
+        private Image backgroundImage;  // 루트 배경 이미지
 
         protected override void Awake()
         {
@@ -43,6 +42,8 @@ namespace SCOdyssey.UI
             BindText(typeof(Texts));
             BindImage(typeof(DiffImages));
             backgroundImage = GetComponent<Image>();
+
+            WarnIfSpritesMissing();
         }
 
         // 슬롯은 입력을 직접 처리하지 않음 - AdventureUI가 담당
@@ -52,31 +53,10 @@ namespace SCOdyssey.UI
         protected override void HandleSubmit() { }
         protected override void HandleCancel() { }
 
-        private string GetLocalizedText(UnityEngine.Localization.LocalizedString localizedString, string fallback = "")
-        {
-            if (localizedString == null) return fallback;
-
-            var displayCode = ServiceLocator.Get<ISettingsManager>().Current.displayLanguageCode;
-            var locale = LocalizationSettings.AvailableLocales.GetLocale(displayCode);
-
-            // 해당 locale이 없으면 현재 선택된 locale로 폴백
-            if (locale == null)
-                return localizedString.GetLocalizedString();
-
-            // WaitForCompletion()은 테이블 미로드 시 블로킹 발생 가능
-            // 성능 이슈 시: Window > Asset Management > Localization Tables
-            //               → String Table Collection 선택
-            //               → Inspector에서 Preload All Tables 체크
-            // Preload 활성화 시 게임 시작 시 테이블이 미리 로드되어 즉시 반환됨
-            return LocalizationSettings.StringDatabase
-                .GetLocalizedStringAsync(localizedString.TableReference, localizedString.TableEntryReference, locale)
-                .WaitForCompletion();
-        }
-
         /// <summary>
         /// 곡 데이터 및 선택 상태를 표시합니다.
         /// </summary>
-        public void SetData(MusicSO music, bool isSelected = false, Difficulty selectedDifficulty = Difficulty.Easy)
+        public void SetData(MusicSO music, bool isSelected = false)
         {
             if (music == null)
             {
@@ -85,33 +65,96 @@ namespace SCOdyssey.UI
             }
 
             gameObject.SetActive(true);
-            GetText((int)Texts.Title).text = GetLocalizedText(music.title, music.name);
-            GetText((int)Texts.Artist).text = GetLocalizedText(music.producer);
+            GetText((int)Texts.Title).text = LocalizedTextUtil.Get(music.title, music.name);
+            GetText((int)Texts.Artist).text = LocalizedTextUtil.Get(music.producer);
 
             // 곡 선택 하이라이트
-            if (backgroundImage != null)
-                backgroundImage.color = isSelected ? SELECTED_BG_COLOR : DEFAULT_BG_COLOR;
+            SetPanelSprite(isSelected);
 
-            // 4단계 난이도 레벨 표시 + 하이라이트
+            // 4단계 난이도별 최고기록 클리어 타입 표시. 레벨 숫자와 선택 난이도 표시는 AdventureUI 몫이다
+            ServiceLocator.TryGet(out IUserDataManager userDataManager);
             for (int i = 0; i < 4; i++)
             {
                 Difficulty diff = (Difficulty)i;
                 int lv = 0;
                 bool isAvailable = music.level != null && music.level.TryGetValue(diff, out lv) && lv != -1;
-                bool isDiffSelected = isSelected && (int)selectedDifficulty == i;
 
-                TMP_Text levelText = GetText((int)Texts.Level_Easy + i);
-                if (levelText != null)
+                Image clearTypeIcon = GetImage(i);
+                if (clearTypeIcon == null) continue;
+
+                // 준비되지 않은 난이도는 별 대신 Null 표시를 넣는다. 회색 별은 '기록 없음·Fail'로만 읽히게 한다
+                if (!isAvailable)
                 {
-                    levelText.text = isAvailable ? lv.ToString() : "-";
-                    levelText.color = !isAvailable        ? UNAVAILABLE_DIFFICULTY_COLOR
-                                    : isDiffSelected      ? SELECTED_DIFFICULTY_COLOR
-                                    :                       DEFAULT_DIFFICULTY_COLOR;
+                    SetUnavailableSprite(clearTypeIcon);
+                    continue;
                 }
 
-                Image diffBg = GetImage(i);
-                if (diffBg != null)
-                    diffBg.color = isDiffSelected ? SELECTED_BG_COLOR : DEFAULT_BG_COLOR;
+                ClearType clearType = ClearType.Fail;
+                if (userDataManager != null && userDataManager.TryGetRecord(music.id, diff, out var record))
+                {
+                    clearType = record.bestClearType;
+                }
+
+                SetClearTypeSprite(clearTypeIcon, clearType);
+            }
+        }
+
+        /// <summary>
+        /// 선택 여부에 맞는 패널 스프라이트로 교체합니다. 지정되지 않았으면 프리팹 그림을 그대로 둡니다.
+        /// </summary>
+        private void SetPanelSprite(bool isSelected)
+        {
+            if (backgroundImage == null) return;
+
+            Sprite panel;
+            if (isSelected)
+                panel = selectedPanelSprite;
+            else
+                panel = panelSprite;
+
+            if (panel != null)
+                backgroundImage.sprite = panel;
+        }
+
+        /// <summary>
+        /// 클리어 타입에 맞는 별 아이콘으로 교체합니다(ResultUI의 등급 도장과 같은 방식).
+        /// 배열이 덜 채워졌으면 지금 그림을 유지합니다. 경고는 Awake에서 한 번만 남깁니다.
+        /// </summary>
+        private void SetClearTypeSprite(Image icon, ClearType clearType)
+        {
+            int index = (int)clearType;
+            if (clearTypeSprites == null || index >= clearTypeSprites.Length || clearTypeSprites[index] == null) return;
+
+            icon.sprite = clearTypeSprites[index];
+        }
+
+        /// <summary>
+        /// 준비되지 않은 난이도 표시로 교체합니다. 지정되지 않았으면 지금 그림을 유지합니다.
+        /// </summary>
+        private void SetUnavailableSprite(Image icon)
+        {
+            if (unavailableSprite == null) return;
+
+            icon.sprite = unavailableSprite;
+        }
+
+        // SetData는 입력마다 슬롯 전부에 대해 돌기 때문에 거기서 경고하면 로그가 쏟아진다. 인스펙터 누락은 생성 시 한 번만 알린다.
+        private void WarnIfSpritesMissing()
+        {
+            if (panelSprite == null || selectedPanelSprite == null)
+            {
+                Debug.LogWarning("[MusicListUI] 패널 스프라이트가 지정되지 않았습니다.");
+            }
+
+            int clearTypeCount = System.Enum.GetValues(typeof(ClearType)).Length;
+            if (clearTypeSprites == null || clearTypeSprites.Length != clearTypeCount)
+            {
+                Debug.LogWarning($"[MusicListUI] 클리어 타입 스프라이트는 ClearType 순서대로 {clearTypeCount}개가 필요합니다.");
+            }
+
+            if (unavailableSprite == null)
+            {
+                Debug.LogWarning("[MusicListUI] 준비되지 않은 난이도 스프라이트(ClearType_Null)가 지정되지 않았습니다.");
             }
         }
     }
