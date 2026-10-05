@@ -383,19 +383,20 @@ namespace SCOdyssey.App
 
             Debug.Log($"Game Finished. Score: {finalScore}, Rank: {rank}");
 
-            SaveRecord(finalScore, rank);
+            bool isNewBestScore = SaveRecord(finalScore, rank);
 
             // 클리어 연출 시퀀스 시작 (2초 후)
-            StartCoroutine(ShowClearSequence(rank));
+            StartCoroutine(ShowClearSequence(rank, isNewBestScore));
         }
 
         // 곡 + 난이도의 최고기록 갱신 (실패한 판도 기록한다. 클리어 타입은 Fail로 남는다)
-        private void SaveRecord(int finalScore, ClearType rank)
+        // 반환값: 점수가 이전 최고점수보다 높은지 (결과 화면 NEW RECORD 도장용). 기록이 없던 곡이면 이전 점수를 0으로 본다
+        private bool SaveRecord(int finalScore, ClearType rank)
         {
             if (!ServiceLocator.TryGet<IUserDataManager>(out var userDataManager))
             {
                 Debug.LogWarning("[GameManager] IUserDataManager not found. 기록을 저장하지 않습니다.");
-                return;
+                return false;
             }
 
             var musicManager = ServiceLocator.Get<IMusicManager>();
@@ -404,11 +405,19 @@ namespace SCOdyssey.App
             {
                 // GameScene을 곡 선택 없이 직접 연 경우
                 Debug.LogWarning("[GameManager] 선택된 곡이 없어 기록을 저장하지 않습니다.");
-                return;
+                return false;
             }
 
             int musicId = currentMusic.id;
             Difficulty difficulty = musicManager.GetCurrentDifficulty();
+
+            // SubmitResult는 콤보·비율 등 어느 항목이든 갱신되면 true라, 점수 신기록은 저장 전에 따로 비교한다
+            int previousBestScore = 0;
+            if (userDataManager.TryGetRecord(musicId, difficulty, out var previousRecord))
+            {
+                previousBestScore = previousRecord.bestScore;
+            }
+            bool isNewBestScore = finalScore > previousBestScore;
 
             bool isNewRecord = userDataManager.SubmitResult(
                 musicId,
@@ -422,10 +431,12 @@ namespace SCOdyssey.App
             {
                 Debug.Log($"[GameManager] 기록 갱신: music {musicId} {difficulty}");
             }
+
+            return isNewBestScore;
         }
 
         // 클리어 연출 표시 (즉시 등급 스프라이트 표시 후 4초 대기)
-        private IEnumerator ShowClearSequence(ClearType rank)
+        private IEnumerator ShowClearSequence(ClearType rank, bool isNewBestScore)
         {
             // 클리어 등급 스프라이트 설정 및 즉시 표시. 등급별 색상은 스프라이트가 담당한다
             if (clearEffectImage != null && (int)rank >= 0 && (int)rank < clearTypeSprites.Length)
@@ -449,11 +460,11 @@ namespace SCOdyssey.App
             {
                 gameCanvas.gameObject.SetActive(false);
             }
-            ShowResultScreen();
+            ShowResultScreen(isNewBestScore);
         }
 
         // 결과 화면 표시
-        private void ShowResultScreen()
+        private void ShowResultScreen(bool isNewBestScore)
         {
             if (ServiceLocator.TryGet<IUIManager>(out var uiManager))
             {
@@ -463,7 +474,8 @@ namespace SCOdyssey.App
                     scoreManager.GetMaxCombo(),
                     scoreManager.GetTotalNoteCount(),
                     scoreManager.GetJudgeCounts(),
-                    scoreManager.GetGaugePercent()
+                    scoreManager.GetGaugePercent(),
+                    isNewBestScore
                 );
             }
         }

@@ -10,9 +10,9 @@ using SCOdyssey.Core;
 namespace SCOdyssey.UI
 {
     /// <summary>
-    /// 결과 화면 카운트업 연출. 줄들이 위에서부터 차례로 0 → 최종값까지 올라가고 마지막에 등급 도장이 찍힌다.
+    /// 결과 화면 카운트업 연출. 줄들이 위에서부터 차례로 0 → 최종값까지 올라가고 마지막에 도장들이 동시에 찍힌다.
     /// ResultUI 프리팹 루트에 붙는다.
-    /// 무엇을 보여줄지(텍스트·값·표시 형식·도장 스프라이트)는 ResultUI가 정해 Play로 넘기고,
+    /// 무엇을 보여줄지(텍스트·값·표시 형식·도장 스프라이트·어떤 도장을 찍을지)는 ResultUI가 정해 Play로 넘기고,
     /// 이 컴포넌트는 그것을 어떻게 움직일지만 맡는다. ResultUI를 알지 못한다.
     ///
     /// UIManager가 인스턴스를 영구 캐시하므로 다시하기마다 Play가 재호출된다.
@@ -38,6 +38,26 @@ namespace SCOdyssey.UI
                 IsFinale = isFinale;
                 StartsGroup = startsGroup;
             }
+        }
+
+        // 찍을 도장 하나. Show인 도장은 모두 동시에 찍는다. Show가 false면 이번 판에는 숨긴 채로 둔다 (예: 신기록이 아닐 때 NEW RECORD)
+        public readonly struct Stamp
+        {
+            public readonly Image Image;
+            public readonly bool Show;
+
+            public Stamp(Image image, bool show)
+            {
+                Image = image;
+                Show = show;
+            }
+        }
+
+        // 도장의 정지 포즈 (프리팹 값)
+        private struct StampRest
+        {
+            public Vector3 Scale;
+            public Color Color;
         }
 
         // 카운트업 연출: 위에서부터 차례로 0 → 최종값까지 올라가고 마지막에 등급 도장이 찍힌다
@@ -75,9 +95,7 @@ namespace SCOdyssey.UI
 
         // 정지 포즈는 프리팹 값이 정본이다. 처음 Play될 때(아직 아무것도 움직이기 전) 캡처해 두고 매번 여기로 되돌린다
         private readonly Dictionary<RectTransform, Vector3> textRestScales = new Dictionary<RectTransform, Vector3>();
-        private Image stamp;   // 도장은 항상 같은 Image라고 가정한다
-        private Vector3 stampRestScale;
-        private Color stampRestColor;
+        private readonly Dictionary<Image, StampRest> stampRests = new Dictionary<Image, StampRest>();
 
         private IOneShotPlayer oneShots;
         private OneShotId tickSound;
@@ -99,25 +117,32 @@ namespace SCOdyssey.UI
         }
 
         /// <summary>
-        /// rows를 순서대로(위 → 아래) 카운트업하고 마지막에 stampImage를 찍는다.
+        /// rows를 순서대로(위 → 아래) 카운트업하고 마지막에 stamps 중 Show인 것을 동시에 찍는다.
         /// 도장 스프라이트는 호출 전에 바꿔 둘 것. 이 컴포넌트는 크기·알파만 움직인다.
+        /// 도장은 Show 여부와 상관없이 매번 전부 넘길 것 (정지 포즈를 캡처하고, 안 찍는 도장을 숨기는 데 필요하다).
         /// </summary>
-        public void Play(IReadOnlyList<Row> rows, Image stampImage)
+        public void Play(IReadOnlyList<Row> rows, IReadOnlyList<Stamp> stamps)
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             debugLastRows = rows;
+            debugLastStamps = stamps;
 #endif
 
             // 이전 연출의 잔상을 지우고 정지 포즈로 되돌린다
             KillSequence();
             ResetToRest();
-            CaptureRest(rows, stampImage);
+            CaptureRest(rows, stamps);
 
-            // 도장은 숨긴 상태(크게, 투명)에서 시작한다
-            stamp.rectTransform.localScale = stampRestScale * stampStartScale;
-            Color hidden = stampRestColor;
-            hidden.a = 0f;
-            stamp.color = hidden;
+            // 도장은 전부 숨긴 상태(크게, 투명)에서 시작한다. Show가 false인 도장은 끝까지 이 상태로 남는다
+            for (int i = 0; i < stamps.Count; i++)
+            {
+                Image image = stamps[i].Image;
+                StampRest rest = stampRests[image];
+                image.rectTransform.localScale = rest.Scale * stampStartScale;
+                Color hidden = rest.Color;
+                hidden.a = 0f;
+                image.color = hidden;
+            }
 
             sequence = DOTween.Sequence().SetLink(gameObject);
             float lastEnd = 0f;
@@ -138,10 +163,18 @@ namespace SCOdyssey.UI
                 indexInGroup++;
             }
 
-            // 등급 도장 표시: 크게 나타났다가 원래 크기로 내리꽂힌다. 페이드는 절반 시간에 끝내 착지 전에 또렷하게 보이게 한다
+            // 도장 표시: 크게 나타났다가 원래 크기로 내리꽂힌다. 페이드는 절반 시간에 끝내 착지 전에 또렷하게 보이게 한다
+            // Show인 도장은 모두 같은 시각에 동시에 찍는다
             float stampAt = lastEnd + stampDelay;
-            sequence.Insert(stampAt, stamp.rectTransform.DOScale(stampRestScale, stampDuration).SetEase(stampEase));
-            sequence.Insert(stampAt, stamp.DOFade(stampRestColor.a, stampDuration * 0.5f));
+            for (int i = 0; i < stamps.Count; i++)
+            {
+                if (!stamps[i].Show) continue;
+
+                Image image = stamps[i].Image;
+                StampRest rest = stampRests[image];
+                sequence.Insert(stampAt, image.rectTransform.DOScale(rest.Scale, stampDuration).SetEase(stampEase));
+                sequence.Insert(stampAt, image.DOFade(rest.Color.a, stampDuration * 0.5f));
+            }
         }
 
         // 한 줄의 카운트업과 완료 펀치를 시퀀스에 넣고, 그 줄이 끝나는 시각을 반환한다
@@ -201,7 +234,7 @@ namespace SCOdyssey.UI
         }
 
         // 처음 보는 텍스트·도장의 정지 포즈를 기록한다. ResetToRest 직후라 이미 아는 것은 정지 포즈 상태다
-        private void CaptureRest(IReadOnlyList<Row> rows, Image stampImage)
+        private void CaptureRest(IReadOnlyList<Row> rows, IReadOnlyList<Stamp> stamps)
         {
             for (int i = 0; i < rows.Count; i++)
             {
@@ -212,11 +245,13 @@ namespace SCOdyssey.UI
                 }
             }
 
-            if (stamp == null)
+            for (int i = 0; i < stamps.Count; i++)
             {
-                stamp = stampImage;
-                stampRestScale = stampImage.rectTransform.localScale;
-                stampRestColor = stampImage.color;
+                Image image = stamps[i].Image;
+                if (!stampRests.ContainsKey(image))
+                {
+                    stampRests.Add(image, new StampRest { Scale = image.rectTransform.localScale, Color = image.color });
+                }
             }
         }
 
@@ -228,10 +263,10 @@ namespace SCOdyssey.UI
                 pair.Key.localScale = pair.Value;
             }
 
-            if (stamp != null)
+            foreach (KeyValuePair<Image, StampRest> pair in stampRests)
             {
-                stamp.rectTransform.localScale = stampRestScale;
-                stamp.color = stampRestColor;
+                pair.Key.rectTransform.localScale = pair.Value.Scale;
+                pair.Key.color = pair.Value.Color;
             }
         }
 
@@ -240,6 +275,7 @@ namespace SCOdyssey.UI
         // 주의: 플레이 중 인스펙터에서 바꾼 값은 플레이를 멈추면 사라진다.
         //       Copy Component → 정지 후 ResultUI 프리팹의 ResultCountAnimator에 Paste Component Values로 옮길 것
         private IReadOnlyList<Row> debugLastRows;
+        private IReadOnlyList<Stamp> debugLastStamps;
 
         private void Update()
         {
@@ -248,20 +284,51 @@ namespace SCOdyssey.UI
 
             if (keyboard.f5Key.wasPressedThisFrame)
             {
-                DebugReplay();
+                if (keyboard.shiftKey.isPressed)
+                {
+                    DebugReplayAllStamps();
+                }
+                else
+                {
+                    DebugReplay();
+                }
             }
         }
 
         [Sirenix.OdinInspector.Button("연출 다시 재생 (F5)"), Sirenix.OdinInspector.DisableInEditorMode]
         private void DebugReplay()
         {
-            if (debugLastRows == null)
+            if (!HasDebugReplayData()) return;
+
+            Play(debugLastRows, debugLastStamps);
+        }
+
+        // 신기록이 아니었던 판에서도 NEW RECORD 도장 연출을 조정할 수 있게 모든 도장을 찍는다
+        [Sirenix.OdinInspector.Button("연출 다시 재생 - 도장 전부 표시 (Shift+F5)"), Sirenix.OdinInspector.DisableInEditorMode]
+        private void DebugReplayAllStamps()
+        {
+            if (!HasDebugReplayData()) return;
+
+            var allStamps = new Stamp[debugLastStamps.Count];
+            for (int i = 0; i < debugLastStamps.Count; i++)
             {
-                Debug.LogWarning("[ResultCountAnimator] 다시 재생할 결과 데이터가 없습니다. 곡을 한 번 플레이해 결과 화면을 띄운 뒤 사용하세요.");
-                return;
+                allStamps[i] = new Stamp(debugLastStamps[i].Image, true);
             }
 
-            Play(debugLastRows, stamp);
+            // Play가 debugLastStamps를 덮으므로 되돌려 둔다. 이후 F5는 실제 결과(신기록 여부 그대로)로 재생된다
+            IReadOnlyList<Stamp> actualStamps = debugLastStamps;
+            Play(debugLastRows, allStamps);
+            debugLastStamps = actualStamps;
+        }
+
+        private bool HasDebugReplayData()
+        {
+            if (debugLastRows == null || debugLastStamps == null)
+            {
+                Debug.LogWarning("[ResultCountAnimator] 다시 재생할 결과 데이터가 없습니다. 곡을 한 번 플레이해 결과 화면을 띄운 뒤 사용하세요.");
+                return false;
+            }
+            return true;
         }
 #endif
     }

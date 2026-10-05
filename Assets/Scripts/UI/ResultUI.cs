@@ -47,7 +47,8 @@ namespace SCOdyssey.UI
         private enum Images
         {
             AlbumArt,     // 앨범 아트
-            RankStamp     // 클리어 등급 도장
+            RankStamp,    // 클리어 등급 도장
+            NewRecordStamp // 신기록 도장 (점수가 이전 최고점수보다 높을 때만)
         }
 
         protected override void Awake()
@@ -79,7 +80,8 @@ namespace SCOdyssey.UI
             int maxCombo,
             int totalNotes,
             Dictionary<JudgeType, int> judgeCounts,
-            float gaugePercent)
+            float gaugePercent,
+            bool isNewBestScore)
         {
             // 곡 정보 표시
             GetImage((int)Images.AlbumArt).sprite = currentMusic.albumArt;
@@ -114,7 +116,14 @@ namespace SCOdyssey.UI
                 new ResultCountAnimator.Row(GetText((int)Texts.ScoreText), finalScore, FormatScore, isFinale: true)
             };
 
-            countAnimator.Play(rows, stamp);
+            // 도장 목록. 동시에 찍힌다. 등급 도장은 항상, NEW RECORD는 점수 신기록일 때만 찍는다
+            var stamps = new ResultCountAnimator.Stamp[]
+            {
+                new ResultCountAnimator.Stamp(stamp, true),
+                new ResultCountAnimator.Stamp(GetImage((int)Images.NewRecordStamp), isNewBestScore)
+            };
+
+            countAnimator.Play(rows, stamps);
         }
 
         private static string FormatCount(float v)
