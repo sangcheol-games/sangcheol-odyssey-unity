@@ -83,7 +83,9 @@ Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`Judge
 
 So `Lane.L2` = group `Top`, position `Bottom`. `LaneLayout` (`Assets/Scripts/Game/View/`) is the only place that derives group / position / countdown slot from a `Lane`. `NotePosition.Middle` is never parsed from a chart — `CharacterAnimator` derives it at runtime two ways: both holds active simultaneously (`UpdateHoldState`), or opposite-position inputs within the same frame (`OnLaneInputEvent`).
 
-Character animation: `CharacterAnimator` subscribes to `GameManager.OnNoteJudgedEvent / OnHoldStartEvent / OnHoldEndEvent` and drives a 14-state machine (Idle, Hit0-3, Top/Middle/Bottom, Fall, *Hold, *HitWhile*Hold). It sets `_targetY` and lerps the root in `Update()` — animation clips provide only relative motion. See `Assets/Scripts/Game/Animation_mechanic.md` for the full state machine spec, AnimatorController setup, and CharacterSO authoring checklist — read it before touching animation code or creating character assets.
+**Judgement bus** (`IJudgementBus`, registered in `ServiceLocator` by `GameManager`) carries engine vocabulary only: `LaneInput(LaneInputEvent{Lane, IsPressed, Time})`, published by `GameManager` on every key press/release before judging, and `NoteJudged(JudgeEvent)`, published by `ChartManager` for every hit and miss (events from one `Advance` are in `Time` order). Subscribers derive group/position with `LaneLayout`; `LaneGroup` lives in `Game/View/LaneLayout.cs`.
+
+Character animation: `CharacterAnimator` subscribes to the bus (press → move/attack, release → leave hold pose, non-miss `NoteJudged` → hit animation, `HoldHead` hit → hold pose) and drives a 14-state machine (Idle, Hit0-3, Top/Middle/Bottom, Fall, *Hold, *HitWhile*Hold). It sets `_targetY` and lerps the root in `Update()` — animation clips provide only relative motion. See `Assets/Scripts/Game/Animation_mechanic.md` for the full state machine spec, AnimatorController setup, and CharacterSO authoring checklist — read it before touching animation code or creating character assets.
 
 ## UI flow
 

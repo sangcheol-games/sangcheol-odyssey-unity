@@ -159,5 +159,67 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(h.Engine.StatusOf(0), Is.EqualTo(NoteStatus.Pending));
             Assert.That(h.Engine.StatusOf(1), Is.EqualTo(NoteStatus.Pending));
         }
+
+        [Test]
+        public void Advance_EmitsEventsInTimeOrder()
+        {
+            // 꼬리 시간 초과(1.226)는 레인 루프에서, 탭 스윕(1.176)은 커서 루프에서 나온다. 한 번에 진행해도 시각순이어야 한다
+            var engine = new JudgeEngine(JudgeSettings.Default);
+            engine.Load(new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 2), N(1.05, Lane.L2), N(1.1, Lane.L1, NoteKind.HoldTail, 0) });
+            var events = new System.Collections.Generic.List<JudgeEvent>();
+            engine.Press(Lane.L1, 1.0, events);
+            events.Clear();
+
+            engine.Advance(2.0, events);
+
+            Assert.That(events.ConvertAll(e => e.NoteId), Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(events[0].Time, Is.LessThan(events[1].Time));
+        }
+
+        [Test]
+        public void Advance_SameTimeMisses_KeepHeadBeforeTail()
+        {
+            var engine = new JudgeEngine(JudgeSettings.Default);
+            engine.Load(new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) });
+            var events = new System.Collections.Generic.List<JudgeEvent>();
+
+            engine.Advance(3.0, events);
+
+            Assert.That(events.ConvertAll(e => e.NoteId), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(events[0].Time, Is.EqualTo(events[1].Time), "머리가 놓친 순간 꼬리도 같이 죽는다");
+        }
+
+        private static readonly object[] InvalidTracks =
+        {
+            new object[] { "시간 역순", new[] { N(2.0, Lane.L1), N(1.0, Lane.L2) } },
+            new object[] { "짝이 서로 안 가리킴", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail) } },
+            new object[] { "다른 레인 짝", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L2, NoteKind.HoldTail, 0) } },
+            new object[] { "꼬리가 머리보다 앞", new[] { N(1.0, Lane.L1, NoteKind.HoldTail, 1), N(2.0, Lane.L1, NoteKind.HoldHead, 0) } },
+            new object[] { "탭에 짝", new[] { N(1.0, Lane.L1, NoteKind.Tap, 1), N(2.0, Lane.L1, NoteKind.Tap, 0) } },
+            new object[] { "짝 인덱스 범위 밖", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 5) } },
+            new object[] { "자기 자신이 짝", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 0) } },
+        };
+
+        [TestCaseSource(nameof(InvalidTracks))]
+        public void Load_RejectsBrokenTrack(string reason, JudgeNote[] track)
+        {
+            var engine = new JudgeEngine(JudgeSettings.Default);
+
+            Assert.Throws<ArgumentException>(() => engine.Load(track), reason);
+        }
+
+        [Test]
+        public void Load_AcceptsSameTimeNotesAndUnpairedNotes()
+        {
+            var engine = new JudgeEngine(JudgeSettings.Default);
+            JudgeNote[] track =
+            {
+                N(1.0, Lane.L1), N(1.0, Lane.L2, NoteKind.HoldHead, 3), N(1.5, Lane.L3, NoteKind.HoldTail), N(2.0, Lane.L2, NoteKind.HoldTail, 1),
+            };
+
+            Assert.DoesNotThrow(() => engine.Load(track));
+            Assert.DoesNotThrow(() => engine.Load(null));
+            Assert.That(engine.Count, Is.Zero);
+        }
     }
 }

@@ -15,24 +15,20 @@
 ## 전체 데이터 흐름
 
 ```
-유저 입력
-  └─ ChartManager.ApplyJudgement()
-       ├─ judgementBus.PublishNoteJudged(judge, pos, group)
-       ├─ judgementBus.PublishHoldStarted(pos, group)    ← HoldStart / Holding 판정 시
-       ├─ judgementBus.PublishHoldEnded(pos, group)      ← HoldEnd 판정 시
-       └─ judgementBus.PublishHoldReleased(pos, group)   ← HoldRelease 판정 시
+GameManager (키 입력 자체, 판정보다 먼저)
+  └─ judgementBus.PublishLaneInput(LaneInputEvent { Lane, IsPressed, Time })
 
-GameManager (키 입력 자체)
-  ├─ judgementBus.PublishLaneInput(pos, group)
-  └─ judgementBus.PublishHoldReleased(pos, group)   ← 키를 뗀 순간(판정 성공 여부 무관)
+ChartManager.DispatchJudge() (적중·miss 모두)
+  └─ judgementBus.PublishNoteJudged(JudgeEvent { Lane, Kind, Judge, IsMiss, ... })
 
-IJudgementBus
+IJudgementBus (레인만 싣는다. 그룹/위치는 받는 쪽이 LaneLayout으로 파생)
   └─ 구독자: ScoreManager(점수) / CharacterAnimator(연출)
 
-CharacterAnimator (구독)
-  ├─ OnNoteJudgedHandler → OnNoteHit(pos)
-  ├─ OnHoldStart(pos)    → UpdateHoldState()
-  └─ OnHoldEnd(pos)      → UpdateHoldState()
+CharacterAnimator (구독, LaneLayout.GroupOf로 자기 그룹만)
+  ├─ LaneInput 누름            → HandleLaneInput(pos)   (같은 프레임 반대 위치면 Middle)
+  ├─ LaneInput 뗌              → 그 위치 홀드 해제 → UpdateHoldState()
+  ├─ NoteJudged (miss 제외)    → HandleNoteJudged(judge, pos)
+  └─ NoteJudged (HoldHead 적중) → 그 위치 홀드 진입 → UpdateHoldState()
 ```
 
 ---

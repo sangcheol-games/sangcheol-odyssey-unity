@@ -9,13 +9,6 @@ namespace SCOdyssey.Rhythm
         L4 = 3,
     };
 
-    // 판정선/캐릭터 소속. 판정은 쓰지 않고 JudgementBus 페이로드에만 실린다.
-    public enum LaneGroup
-    {
-        Top,
-        Bottom,
-    };
-
     // 채보 파일, Input System은 레인을 1~4로 세고, 내부에서는 0~3이다.
     public static class LaneMap
     {

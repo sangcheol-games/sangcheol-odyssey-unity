@@ -233,11 +233,11 @@ namespace SCOdyssey.App
         {
             if (!IsGameRunning) return;
 
-            var group = LaneLayout.GroupOf(lane);
+            double inputTime = inputDspTime - globalStartTime;
             // 판정 결과와 무관하게 입력 이벤트를 먼저 발화 (캐릭터 Y 이동 담당)
-            _judgementBus.PublishLaneInput(LaneLayout.PositionOf(lane), group);
+            _judgementBus.PublishLaneInput(new LaneInputEvent(lane, true, inputTime));
 
-            chartManager.TryJudgeInput(lane, inputDspTime - globalStartTime);
+            chartManager.TryJudgeInput(lane, inputTime);
         }
 
         private void HandleLaneRelease(Lane lane, double inputDspTime)
@@ -245,11 +245,11 @@ namespace SCOdyssey.App
             if (!IsGameRunning) return;
             //Debug.Log($"Lane {lane} Released");
 
-            var group = LaneLayout.GroupOf(lane);
+            double inputTime = inputDspTime - globalStartTime;
             // 키 릴리즈는 판정 성공 여부와 무관하게 홀드 상태 해제 신호로 사용
-            _judgementBus.PublishHoldReleased(LaneLayout.PositionOf(lane), group);
+            _judgementBus.PublishLaneInput(new LaneInputEvent(lane, false, inputTime));
 
-            chartManager.TryJudgeRelease(lane, inputDspTime - globalStartTime);
+            chartManager.TryJudgeRelease(lane, inputTime);
         }
 
         private void HandleRestart()

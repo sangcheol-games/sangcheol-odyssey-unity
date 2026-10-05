@@ -3,6 +3,13 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Game
 {
+    // 판정선/캐릭터 소속. 판정 층은 모른다(레인만 안다).
+    public enum LaneGroup
+    {
+        Top,
+        Bottom,
+    };
+
     // 카운트다운 텍스트 슬롯. (그룹 x 진행방향, 레인x)
     // countdownTexts 배열 인덱스와 1:1 대응.
     public enum CountdownSlot

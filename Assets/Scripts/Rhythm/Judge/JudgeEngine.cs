@@ -36,10 +36,33 @@ namespace SCOdyssey.Rhythm
 
         private JudgeWindows Windows => _settings.Windows;
 
+        // 트랙은 복사하지 않고 그대로 쓴다. 커서 스윕과 홀드 짝이 기대는 전제(시간순, 짝이 서로를 가리킴)만 검사한다
         public void Load(JudgeNote[] notes)
         {
-            _notes = notes ?? Array.Empty<JudgeNote>();
+            notes ??= Array.Empty<JudgeNote>();
+            Validate(notes);
+            _notes = notes;
             Reset();
+        }
+
+        private static void Validate(JudgeNote[] notes)
+        {
+            for (int i = 0; i < notes.Length; i++)
+            {
+                JudgeNote note = notes[i];
+                if (i > 0 && notes[i - 1].Time > note.Time)
+                    throw new ArgumentException($"판정 트랙이 시간순이 아니다: #{i - 1} {notes[i - 1]} 다음 #{i} {note}");
+
+                if (note.PairId < 0) continue;
+                if (note.PairId >= notes.Length || note.PairId == i)
+                    throw new ArgumentException($"#{i} {note}의 짝 인덱스가 범위 밖이다");
+
+                JudgeNote pair = notes[note.PairId];
+                bool headToTail = note.Kind == NoteKind.HoldHead && pair.Kind == NoteKind.HoldTail && note.PairId > i;
+                bool tailToHead = note.Kind == NoteKind.HoldTail && pair.Kind == NoteKind.HoldHead && note.PairId < i;
+                if (pair.PairId != i || pair.Lane != note.Lane || !(headToTail || tailToHead))
+                    throw new ArgumentException($"홀드 짝이 맞지 않는다: #{i} {note} ↔ #{note.PairId} {pair}");
+            }
         }
 
         public void Reset()
@@ -71,6 +94,7 @@ namespace SCOdyssey.Rhythm
         {
             if (time > Now) Now = time;
             double now = Now;
+            int first = outEvents.Count;
 
             for (int lane = 0; lane < LANE_COUNT; lane++)
             {
@@ -89,6 +113,25 @@ namespace SCOdyssey.Rhythm
             {
                 if (_status[_cursor] == NoteStatus.Pending) SweepMiss(_cursor, outEvents);
                 _cursor++;
+            }
+
+            SortByTime(outEvents, first);
+        }
+
+        // 홀드 시간 초과를 레인별로 먼저 처리하므로 한 번에 나온 miss가 시각순이 아닐 수 있다.
+        // 받는 쪽이 순서를 믿을 수 있게 이번에 추가한 구간만 Time 순으로 맞춘다(같은 시각이면 원래 순서 유지)
+        private static void SortByTime(List<JudgeEvent> events, int first)
+        {
+            for (int i = first + 1; i < events.Count; i++)
+            {
+                JudgeEvent e = events[i];
+                int j = i - 1;
+                while (j >= first && events[j].Time > e.Time)
+                {
+                    events[j + 1] = events[j];
+                    j--;
+                }
+                events[j + 1] = e;
             }
         }
 

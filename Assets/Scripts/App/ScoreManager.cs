@@ -13,7 +13,7 @@ namespace SCOdyssey.App
     //  게임 시작 시 GameManager가 Init(totalNotes)를 호출한다.
     //        점수 설정(ScoreSettingsSO)을 읽어 ScoreModel을 새로 만든다.
     //
-    //  노트 판정마다 버스 구독으로 ProcessJudge(type)가 호출된다.
+    //  노트 판정마다 버스(NoteJudged) 구독으로 OnNoteJudged(e)가 호출된다. miss도 같은 이벤트로 온다.
     //        ScoreModel에 반영 -> UpdateUI()로 점수·콤보·게이지 이벤트 발행.
     //
     //  게임 종료 시 GameManager가 GetFinalScore()/GetClearRank()/GetScoreRank()로 최종 결과를 조회한다.
@@ -59,7 +59,6 @@ namespace SCOdyssey.App
             if (judgementBus == null) return;
 
             judgementBus.NoteJudged += OnNoteJudged;
-            judgementBus.NoteMissed += OnNoteMissed;
         }
 
         private void UnbindBus()
@@ -67,22 +66,28 @@ namespace SCOdyssey.App
             if (judgementBus == null) return;
 
             judgementBus.NoteJudged -= OnNoteJudged;
-            judgementBus.NoteMissed -= OnNoteMissed;
             judgementBus = null;
         }
 
         private void OnDestroy() => UnbindBus();
 
-        private void OnNoteJudged(JudgeType type, NotePosition pos, LaneGroup group) => ProcessJudge(type);
-        private void OnNoteMissed() => ProcessJudge(JudgeType.Umm);
+        // 노트 1개 판정마다(버스 구독). miss는 모델이 Umm으로 센다
+        private void OnNoteJudged(JudgeEvent e)
+        {
+            _model.Apply(e);
+            AfterJudge();
+        }
 
-        // 노트 1개 판정마다 호출(버스 구독). 모델에 반영하고 UI 이벤트 발행
+        // 등급 하나를 직접 반영한다
         public void ProcessJudge(JudgeType type)
         {
             _model.Apply(type);
+            AfterJudge();
+        }
 
+        private void AfterJudge()
+        {
             Debug.Log($"Score: {_model.Score}, Combo: {_model.Combo}");
-
             UpdateUI();
         }
 
