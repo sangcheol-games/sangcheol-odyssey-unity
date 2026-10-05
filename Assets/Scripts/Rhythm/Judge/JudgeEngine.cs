@@ -61,6 +61,7 @@ namespace SCOdyssey.Rhythm
 
         private double TimeOf(int index) => _notes[index].Time + _settings.OffsetSec;
         private double WindowOf(int index) => _notes[index].Kind == NoteKind.HoldTail ? _settings.TailWindow : Windows.Umm;
+        private double ClosedAt(int index) => TimeOf(index) + WindowOf(index);   // 이 시각을 넘으면(>) 윈도우가 닫힌 것
 
         /// <summary>
         /// 시각을 time까지 진행한다. 되돌아가지 않는다(Now보다 이른 time은 Now로 본다).
@@ -76,7 +77,7 @@ namespace SCOdyssey.Rhythm
                 int tail = _holding[lane];
                 if (tail < 0) continue;
 
-                double closedAt = TimeOf(tail) + _settings.TailWindow;
+                double closedAt = ClosedAt(tail);
                 if (now <= closedAt) continue;
 
                 _holding[lane] = -1;
@@ -84,7 +85,7 @@ namespace SCOdyssey.Rhythm
                 outEvents.Add(JudgeEvent.Miss(tail, _notes[tail], _settings.TailWindow, closedAt));
             }
 
-            while (_cursor < _notes.Length && TimeOf(_cursor) - now < -WindowOf(_cursor))
+            while (_cursor < _notes.Length && now > ClosedAt(_cursor))
             {
                 if (_status[_cursor] == NoteStatus.Pending) SweepMiss(_cursor, outEvents);
                 _cursor++;
@@ -154,7 +155,7 @@ namespace SCOdyssey.Rhythm
         private void SweepMiss(int index, List<JudgeEvent> outEvents)
         {
             JudgeNote note = _notes[index];
-            double closedAt = TimeOf(index) + WindowOf(index);
+            double closedAt = ClosedAt(index);
             Decide(index, NoteStatus.Missed, JudgeType.Umm);
             outEvents.Add(JudgeEvent.Miss(index, note, WindowOf(index), closedAt));
 
