@@ -9,7 +9,7 @@ using static SCOdyssey.Domain.Service.Constants;
 namespace SCOdyssey.Game
 {
     // ── 흐름 (노트 1개의 생명주기) ────────────────────────────────────────────
-    //  노트 오브젝트 1개의 뷰/상태 컨트롤러(타입별 파생: NormalNote/HoldStart/Holding/HoldEnd/HoldReleaseNote).
+    //  노트 오브젝트 1개의 뷰/상태 컨트롤러(타입별 파생: NormalNote/HoldStartNote/HoldEndNote/HoldReleaseNote).
     //  판정은 RhythmSession이 하고, 이 클래스는 표시/상태 전이만 담당한다.
     //
     //  스폰: NoteFieldSpawner.SpawnBar가 풀에서 꺼내 Init(데이터·위치·방향·반환콜백)으로 초기화한다.
@@ -149,17 +149,6 @@ namespace SCOdyssey.Game
             isJudged = true;
             gameObject.SetActive(false);
             onReturn?.Invoke(this);
-        }
-
-        public bool AnyOf(params NoteType[] types)
-        {
-            foreach(var type in types)
-            {
-                if(noteData.noteType == type)
-                    return true;
-            }
-
-            return false;
         }
     }
 }

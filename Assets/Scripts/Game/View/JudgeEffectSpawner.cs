@@ -16,16 +16,15 @@ namespace SCOdyssey.Game
         // 꺼 두면 Perfect도 Master로 보여준다(설정)
         public bool ShowPerfect { get; set; }
 
-        public void SpawnHit(JudgeType judge, NoteController at)
+        public void SpawnHit(JudgeType judge, Vector3 world)
         {
-            Spawn(!ShowPerfect && judge == JudgeType.Perfect ? JudgeType.Master : judge, at);
+            Spawn(!ShowPerfect && judge == JudgeType.Perfect ? JudgeType.Master : judge, world);
         }
 
-        public void Spawn(JudgeType type, NoteController at)
+        public void Spawn(JudgeType type, Vector3 world)
         {
             GameObject effect = _pool.Get();
-            effect.GetComponent<EffectController>().Setup(type,
-                at.GetComponent<RectTransform>().anchoredPosition, returned => _pool.Return(returned.gameObject));
+            effect.GetComponent<EffectController>().Setup(type, world, returned => _pool.Return(returned.gameObject));
         }
     }
 }

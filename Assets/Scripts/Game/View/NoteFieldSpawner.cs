@@ -25,6 +25,9 @@ namespace SCOdyssey.Game
         // noteId -> 뷰. 스폰 때 등록하고, 판정/miss로 꺼낼 때 해제한다
         private NoteController[] _views = Array.Empty<NoteController>();
 
+        // noteId -> 스폰한 자리(월드). 판정 이펙트는 뷰가 풀로 돌아간 뒤에도 이 자리에 띄운다
+        private Vector3[] _spawnWorld = Array.Empty<Vector3>();
+
         // 판정된 홀드 머리 뷰(홀드바가 남아 있는 동안). 꼬리 noteId -> (머리 noteId, 뷰)
         private (int headId, HoldStartNote view)[] _holdHeads = Array.Empty<(int, HoldStartNote)>();
 
@@ -44,6 +47,7 @@ namespace SCOdyssey.Game
         {
             foreach (var queue in _ghostNotes) queue.Clear();
             _views = new NoteController[noteCount];
+            _spawnWorld = new Vector3[noteCount];
             _holdHeads = new (int, HoldStartNote)[noteCount];
         }
 
@@ -73,8 +77,8 @@ namespace SCOdyssey.Game
                     NoteController view = note.GetComponent<NoteAdapter>().ActivateAndGet(noteData.noteType);
                     _ghostNotes[(int)laneId].Enqueue(view);
 
-                    if (noteData.id >= 0 && noteData.id < _views.Length)
-                        _views[noteData.id] = view;
+                    bool tracked = noteData.id >= 0 && noteData.id < _views.Length;
+                    if (tracked) _views[noteData.id] = view;
 
                     var spawnPos = new Vector2(_geometry.NoteX(lane, noteData.index), laneY);
 
@@ -95,6 +99,8 @@ namespace SCOdyssey.Game
                         view.Init(noteData, spawnPos, lane.isLTR, noteInterval, returned => _notePool.Return(returned.gameObject));
                     }
 
+                    if (tracked) _spawnWorld[noteData.id] = view.transform.position;
+
                     if (currentLine != null && !_geometry.IsAtEnd(spawnPos.x, currentLine.isLTR))
                     {
                         view.TrackTimeline(currentLine);
@@ -109,10 +115,10 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 마디 시작 시 띄워 둔 노트를 모두 Active로 올린다(표시만 바뀐다).
+        /// 마디 시작 시 띄워 둔 노트를 Active로 올린다(표시만 바뀐다). 그 사이 판정돼 화면에서 빠진 노트는 건너뛴다.
         /// 홀드 머리는 홀드바가 판정선을 따라 줄어들도록 그 그룹 판정선을 따라가게 한다.
         /// </summary>
-        public void ActivateGhosts(JudgeLineDirector lines)
+        public void ActivateGhosts(JudgeLineDirector lines, NoteLifecycle lifecycle)
         {
             for (int i = 0; i < _ghostNotes.Length; i++)
             {
@@ -122,6 +128,8 @@ namespace SCOdyssey.Game
                 while (queue.Count > 0)
                 {
                     NoteController note = queue.Dequeue();
+                    if (!note.gameObject.activeSelf || !lifecycle.ShouldActivate(note.noteData.id)) continue;
+
                     note.SetState(NoteState.Active);
 
                     if (note.noteData.noteType == NoteType.HoldStart && line != null)
@@ -131,27 +139,28 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 판정 1건을 노트 뷰에 반영하고 그 뷰를 돌려준다(스폰 전이거나 이미 꺼냈으면 null).
-        /// 탭·꼬리 뷰는 이때 풀로 돌아가고, 홀드 머리는 홀드바가 다 지나갈 때까지 남는다.
+        /// 판정이 끝난 노트 하나를 뷰에 반영한다. 화면에 있던 노트면 true와 스폰 자리(월드)를 돌려준다
+        /// (스폰 전이거나 이미 반영했으면 false). 탭·꼬리 뷰는 이때 풀로 돌아가고, 홀드 머리는 홀드바가 다 지나갈 때까지 남는다.
         /// </summary>
-        public NoteController ApplyJudged(in JudgeEvent judged)
+        public bool ApplyDecided(int noteId, NoteKind kind, int pairId, bool missed, out Vector3 spawnWorld)
         {
-            NoteController view = TakeView(judged.NoteId);
-            if (judged.Kind == NoteKind.HoldHead && judged.PairId >= 0 && view is HoldStartNote head)
-                _holdHeads[judged.PairId] = (judged.NoteId, head);
+            NoteController view = TakeView(noteId);
+            spawnWorld = view != null ? _spawnWorld[noteId] : default;
+            if (kind == NoteKind.HoldHead && pairId >= 0 && view is HoldStartNote head)
+                _holdHeads[pairId] = (noteId, head);
 
-            if (judged.IsMiss)
+            if (missed)
             {
                 view?.OnMiss();
-                if (judged.Kind == NoteKind.HoldTail) BreakHoldBar(judged.NoteId);
+                if (kind == NoteKind.HoldTail) BreakHoldBar(noteId);
             }
             else
             {
                 view?.OnHit();
-                if (judged.Kind == NoteKind.HoldTail) _holdHeads[judged.NoteId] = default;
+                if (kind == NoteKind.HoldTail) _holdHeads[noteId] = default;
             }
 
-            return view;
+            return view != null;
         }
 
         // 뷰를 꺼내면서 등록 해제. 같은 노트를 두 번 건드리지 않게 한다

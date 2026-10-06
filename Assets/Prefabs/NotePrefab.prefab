@@ -104,7 +104,6 @@ GameObject:
   - component: {fileID: 1609179209512074592}
   - component: {fileID: 7197527008378443410}
   - component: {fileID: 7842607200106172733}
-  - component: {fileID: 7117195830361352419}
   - component: {fileID: 7626824503859641924}
   - component: {fileID: -5289519762158181006}
   m_Layer: 5
@@ -156,7 +155,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   normalNote: {fileID: 7197527008378443410}
   holdStartNote: {fileID: 7842607200106172733}
-  holdingNote: {fileID: 7117195830361352419}
   holdEndNote: {fileID: 7626824503859641924}
   holdReleaseNote: {fileID: -5289519762158181006}
 --- !u!114 &7197527008378443410
@@ -183,18 +181,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec7179cb9175f2545999cd73e0447ddc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &7117195830361352419
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3709894694565103827}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7ce6c4b688f49c34ebeea20e719b4fe6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  brokenHoldAlpha: 0.3
 --- !u!114 &7626824503859641924
 MonoBehaviour:
   m_ObjectHideFlags: 0

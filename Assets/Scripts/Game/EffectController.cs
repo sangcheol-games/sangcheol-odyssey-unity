@@ -40,6 +40,13 @@ namespace SCOdyssey.Game
             StartCoroutine(AnimateRoutine());
         }
 
+        // 월드 좌표로 자리를 받는다(노트와 부모가 달라도 같은 화면 위치). 깊이(z)는 그대로 둔다
+        public void Setup(JudgeType type, Vector3 worldPosition, Action<EffectController> returnCallback)
+        {
+            rectTransform.position = new Vector3(worldPosition.x, worldPosition.y, rectTransform.position.z);
+            Setup(type, rectTransform.anchoredPosition, returnCallback);
+        }
+
         private void SetStyle(JudgeType type)
         {
             switch (type)

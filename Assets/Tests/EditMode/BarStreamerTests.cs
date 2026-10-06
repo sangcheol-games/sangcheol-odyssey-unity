@@ -55,6 +55,24 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(streamer.IsDone, Is.False);
         }
 
+        [Test]
+        public void EmptyBar_InTheMiddle_LeavesLaterBarsForTheirTurn()
+        {
+            // 뷰는 빈 마디도 그냥 넘어가므로, 마디 번호가 비어도 뒤 마디는 제 차례에 나온다
+            var streamer = new BarStreamer(new[] { Lane(0), Lane(1), Lane(3) });
+            var perBar = new List<int>();
+
+            for (int bar = 0; bar <= 4; bar++)
+            {
+                var taken = new List<LaneData>();
+                streamer.TakeUpTo(bar, taken);
+                perBar.Add(taken.Count);
+            }
+
+            Assert.That(perBar, Is.EqualTo(new[] { 1, 1, 0, 1, 0 }));
+            Assert.That(streamer.IsDone, Is.True);
+        }
+
         // 뷰는 채보 레인이 마디 순으로 적혀 있다고 보고 앞에서부터 꺼낸다
         [TestCase("Chart_0001_Normal", 195)]
         [TestCase("Chart_0001_Hard", 195)]

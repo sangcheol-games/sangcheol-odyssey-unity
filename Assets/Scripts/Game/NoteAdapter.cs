@@ -10,7 +10,6 @@ namespace SCOdyssey.Game
         [Header("Components")]
         public NormalNote normalNote;
         public HoldStartNote holdStartNote;
-        public HoldingNote holdingNote;
         public HoldEndNote holdEndNote;
         public HoldReleaseNote holdReleaseNote;
 
@@ -18,7 +17,6 @@ namespace SCOdyssey.Game
         {
             if (!normalNote) normalNote = GetComponent<NormalNote>();
             if (!holdStartNote) holdStartNote = GetComponent<HoldStartNote>();
-            if (!holdingNote) holdingNote = GetComponent<HoldingNote>();
             if (!holdEndNote) holdEndNote = GetComponent<HoldEndNote>();
             if (!holdReleaseNote) holdReleaseNote = GetComponent<HoldReleaseNote>();
         }
@@ -28,7 +26,6 @@ namespace SCOdyssey.Game
         {
             normalNote.enabled = false;
             holdStartNote.enabled = false;
-            holdingNote.enabled = false;
             holdEndNote.enabled = false;
             holdReleaseNote.enabled = false;
 
@@ -38,7 +35,7 @@ namespace SCOdyssey.Game
             {
                 case NoteType.Normal: selected = normalNote; break;
                 case NoteType.HoldStart: selected = holdStartNote; break;
-                case NoteType.Holding: selected = holdingNote; break;
+                case NoteType.Holding:   // 본체(3)는 게임에선 띄우지 않고, 채보 에디터 프리뷰에선 안 보이는 노트로 둔다
                 case NoteType.HoldEnd: selected = holdEndNote; break;
                 case NoteType.HoldRelease: selected = holdReleaseNote; break;
                 default: selected = normalNote; break;

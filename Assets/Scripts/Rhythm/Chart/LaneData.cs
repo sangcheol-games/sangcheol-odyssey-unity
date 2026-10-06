@@ -85,20 +85,5 @@ namespace SCOdyssey.Rhythm
                 default: return NoteType.None;
             }
         }
-
-        public int GetTimelineStartPosition()
-        {
-            int index = -1;
-            if (line == 1 || line == 2)
-            {
-                index = 0;
-            }
-            else if (line == 3 || line == 4)
-            {
-                index = 1;
-            }
-            return index;
-        }
-
     }
 }
