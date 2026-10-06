@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using SCOdyssey.App;
 using SCOdyssey.Core;
 using SCOdyssey.Rhythm;
 using UnityEngine;
@@ -13,7 +12,7 @@ namespace SCOdyssey.Game
     //        startX < endX 이면 LTR로 판단해 캐릭터 방향과 그룹을 세팅한다.
     //        유턴 시에는 풀에 반환하지 않고 방향만 바꿔 다시 Init으로 재사용한다.
     //
-    //  이동: 매 프레임 Update() -> UpdatePosition()이 GameManager.GetCurrentTime() 기준 진행도로
+    //  이동: 매 프레임 Update() -> UpdatePosition()이 게임 시계(IRhythmClock) 기준 진행도로
     //        startX -> endX 를 보간 이동한다(일시정지 시 시간이 멈춰 자동 정지).
     //        현재 위치(rectTransform)는 HoldStartNote의 홀드바 fill 계산이 실시간으로 읽는다.
     //
@@ -37,6 +36,7 @@ namespace SCOdyssey.Game
 
         private Action<TimelineController> onReturn;
         private Func<double> timeProvider;  // 외부 시간 소스 (채보에디터 프리뷰용으로만 사용. 채보에디터도 처음부터 다시 만들 예정이니 없어도 됨)
+        private IRhythmClock _clock;        // 게임 시계. 처음 읽을 때 ServiceLocator에서 받아 둔다
 
         private float screenBoundX; // 화면 경계 X 좌표
         private bool isRunning = false;
@@ -85,12 +85,12 @@ namespace SCOdyssey.Game
         }
 
         // 현재 게임 시간 기준 진행도(progress)를 계산해 startX→endX로 보간 이동.
-        // 시간 소스는 GameManager.GetCurrentTime()(일시정지 시 자동으로 멈춤). timeProvider는 에디터 프리뷰용.
+        // 시간 소스는 게임 시계(일시정지 시 자동으로 멈춤). timeProvider는 에디터 프리뷰용.
         private void UpdatePosition()
         {
             double currentTime = timeProvider != null
                 ? timeProvider()
-                : ServiceLocator.Get<IGameManager>().GetCurrentTime();
+                : (_clock ??= ServiceLocator.Get<IRhythmClock>()).Now;
             double elapsedTime = currentTime - startTime;
             float progress = (float)(elapsedTime / duration);
 

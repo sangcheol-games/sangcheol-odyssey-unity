@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using SCOdyssey.App;
-using SCOdyssey.Config;
 using SCOdyssey.Core;
 using SCOdyssey.Rhythm;
 using TMPro;
@@ -12,20 +11,16 @@ namespace SCOdyssey.Game
 {
     // ── 코어 루프 (메서드 호출 순서) ──────────────────────────────────────────
     //
-    //  게임 시작 시 Init()을 1회 호출한다.
-    //    PrepareNextBar() -> StartCurrentBar() -> StartMusic()
+    //  게임 시작 시 GameManager가 Init()을 1회 호출한다.
+    //    PrepareNextBar() -> StartCurrentBar()
     //
-    //  이후 매 프레임 GameManager.Update()가 SyncTime(time)을 호출하고,
-    //  SyncTime()은 아래를 순서대로 수행한다.
-    //    1) 현재 시간이 마디 종료 시각을 넘었으면  StartCurrentBar() -> CheckGameClear()
-    //    2) JudgeEngine.Advance() -> 나온 JudgeEvent를 DispatchJudge()로 흘림 (윈도우가 지난 노트·홀드 꼬리의 miss 확정)
-    //    3) UpdateCountdowns()
+    //  이후 매 프레임 GameManager.Update()가 판정 세션을 진행시킨 뒤 Tick(time)을 호출하고,
+    //  Tick()은 아래를 순서대로 수행한다.
+    //    1) 현재 시간이 마디 종료 시각을 넘었으면  StartCurrentBar()
+    //    2) UpdateCountdowns()
     //
-    //  키 입력은 프레임 루프와 별개로 들어온다.
-    //    누르면 TryJudgeInput(), 떼면 TryJudgeRelease() 가 호출되고,
-    //    판정이 잡히면 DispatchJudge() -> ApplyJudgement() 로 마무리한다.
-    //
-    //  판정 권한은 JudgeEngine(순수 데이터)에 있고, 여기는 그 결과를 뷰/점수/연출로 옮기는 역할만 한다.
+    //  판정은 RhythmSession이 하고 버스(NoteJudged)로 알려 온다. 여기는 OnNoteJudged()에서
+    //  그 결과를 노트 뷰/이펙트로 옮기기만 한다(miss 포함).
     //  뷰 연결은 noteId(= NoteData.id = 판정 트랙 인덱스) -> _noteViews 로 되찾는다.
     //
     //  마디 전환은 StartCurrentBar() 내부에서 일어난다.
@@ -36,8 +31,8 @@ namespace SCOdyssey.Game
     // ──────────────────────────────────────────────────────────────────────────
     public class ChartManager : MonoBehaviour
     {
-        private IGameManager gameManager;
-        private JudgementBus _judgementBus;
+        private IJudgementBus _judgementBus;
+        private IJudgeStateReader _judge;
 
         public RectTransform noteParent;
         public RectTransform timelineParent;
@@ -83,20 +78,13 @@ namespace SCOdyssey.Game
         private Queue<LaneData> nextBarLanes = new Queue<LaneData>();   // 다음 스크롤을 준비 중인 마디의 LaneData 리스트
 
         private int currentBarNumber = 0;      // 현재 마디 인덱스(0부터). StartCurrentBar 승격 시 ++
-        private double currentBarEndTime = 0f; // 현재 마디의 종료 시간. SyncTime에서 currentTime이 이 값을 넘으면 다음 마디로 전환
+        private double currentBarEndTime = 0f; // 현재 마디의 종료 시간. Tick에서 currentTime이 이 값을 넘으면 다음 마디로 전환
         private bool endOfChartLogged = false; // 채보 종료 로그 1회 제한 (StartCurrentBar가 매 프레임 재진입하므로)
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
 
         public TextMeshProUGUI[] countdownTexts = new TextMeshProUGUI[COUNTDOWN_SLOT_COUNT];
 
         private ChartState _chartState;
-
-        [Header("판정 설정 (비우면 Resources/Config/JudgeSettings)")]
-        [SerializeField] private JudgeSettingsSO judgeSettings;
-
-        private JudgeEngine _judge = new(JudgeSettings.Default);   // Init에서 설정을 읽어 새로 만든다
-        private readonly List<JudgeEvent> _judgeEvents = new();   // Advance 결과 수신용. 매 프레임 재사용
-        private readonly List<JudgeEvent> _inputEvents = new();   // 입력 판정 결과 수신용
 
         // noteId -> 뷰. 판정 결과로 어떤 NoteController를 건드릴지 되찾는 통로.
         // 스폰 때 등록하고, 판정/miss로 꺼낼 때 해제한다.
@@ -110,43 +98,40 @@ namespace SCOdyssey.Game
         private readonly Dictionary<LaneGroup, bool> _nextGroupDirBuffer = new(); // 그룹별 진행 방향(isLTR)
 
 
+        // 마디 하나의 길이(초). GameManager가 음원을 이만큼 늦게 시작한다
+        public double BarDuration => barDuration;
+
         void Awake()
         {
             _chartState = new();
         }
 
-        /// <summary>
-        /// 게임 시작 시 GameManager가 1회 호출. 채보를 큐에 적재하고 설정을 로드한 뒤
-        /// 첫 마디를 준비/시작하고 음원 재생을 예약한다.
-        /// 흐름: 설정 로드 → barDuration 계산 → PrepareNextBar → StartCurrentBar → StartMusic.
-        /// </summary>
-        public void Init(ChartData chartData, IGameManager gameManager, JudgementBus judgementBus)
+        private void OnDestroy()
         {
-            this.gameManager = gameManager;
+            if (_judgementBus != null) _judgementBus.NoteJudged -= OnNoteJudged;
+        }
+
+        /// <summary>
+        /// 게임 시작 시 GameManager가 1회 호출. 채보를 큐에 적재하고 판정 버스를 구독한 뒤
+        /// 첫 마디를 준비/시작한다.
+        /// 흐름: 설정 로드 → barDuration 계산 → PrepareNextBar → StartCurrentBar.
+        /// </summary>
+        public void Init(ChartData chartData, IJudgeStateReader judge, IJudgementBus judgementBus)
+        {
+            if (_judgementBus != null) _judgementBus.NoteJudged -= OnNoteJudged;
+            _judge = judge;
             _judgementBus = judgementBus;
+            _judgementBus.NoteJudged += OnNoteJudged;
+
             remainingChart = new Queue<LaneData>(chartData.GetFullChartList());
             currentBarNumber = 0;
             endOfChartLogged = false;   // 재시작 시 로그 1회 제한 초기화
 
-            double judgementOffsetSec = 0;
-
             if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager))
-            {
                 m_showPerfect = settingsManager.Current.showPerfect;
-                judgementOffsetSec = settingsManager.Current.judgmentOffset * 0.003;
-            }
 
-            var trackReport = new ChartParseReport();
-            JudgeNote[] judgeNotes = chartData.BuildJudgeTrack(trackReport);
-            foreach (string error in trackReport.Errors) Debug.LogError(error);
-            foreach (string warning in trackReport.Warnings) Debug.LogWarning(warning);
-            JudgeSettings judgeSettingsInUse = JudgeSettingsSO.Resolve(judgeSettings).WithOffset(judgementOffsetSec);
-            _judge = new JudgeEngine(judgeSettingsInUse);
-            _judge.Load(judgeNotes);
-            Debug.Log($"[Judge] 윈도우 {judgeSettingsInUse.Windows}, 선택 {judgeSettingsInUse.Select}, 오프셋 {judgeSettingsInUse.OffsetSec * 1000:0.#}ms");
-            _noteViews = new NoteController[judgeNotes.Length];
-            _holdHeads = new (int, HoldStartNote)[judgeNotes.Length];
-            LogJudgeTrackSummary(chartData, judgeNotes);
+            _noteViews = new NoteController[judge.Count];
+            _holdHeads = new (int, HoldStartNote)[judge.Count];
 
             // TODO: 4/4박자가 아닐경우의 barDuration 계산 (BPM 기반)
             barDuration = 60f / chartData.bpm * 4f; // 4/4박자 기준
@@ -162,49 +147,19 @@ namespace SCOdyssey.Game
 
             PrepareNextBar();   // 0번(빈) 마디 이후 첫 마디를 미리 준비
             StartCurrentBar();  // 준비된 마디를 현재 마디로 승격 + 다음 마디 선행 준비
-
-            // barDuration만큼 음원 재생을 지연 → 0번 빈 마디가 흐르는 동안 1번 마디를 준비할 시간을 확보
-            gameManager.StartMusic(barDuration);
-        }
-
-        // 판정 트랙 요약 로그(정렬·짝 검증은 JudgeEngine.Load가 한다)
-        private void LogJudgeTrackSummary(ChartData chartData, JudgeNote[] judgeNotes)
-        {
-            int viewNoteCount = 0;
-            int bodyCount = 0;
-            foreach (LaneData lane in chartData.GetFullChartList())
-            {
-                viewNoteCount += lane.Notes.Count;
-                foreach (NoteData note in lane.Notes)
-                    if (note.noteType == NoteType.Holding) bodyCount++;
-            }
-
-            var kindCount = new int[3];
-            foreach (JudgeNote note in judgeNotes) kindCount[(int)note.Kind]++;
-
-            Debug.Log(
-                $"[JudgeTrack] {judgeNotes.Length}개 (채보 노트 {viewNoteCount}개 중 본체(3) {bodyCount}개 제외 / 총 노트 {chartData.totalNotes})\n" +
-                $"  종류: Tap={kindCount[(int)NoteKind.Tap]}, " +
-                $"HoldHead={kindCount[(int)NoteKind.HoldHead]}, " +
-                $"HoldTail={kindCount[(int)NoteKind.HoldTail]}");
         }
 
         /// <summary>
         /// 매 프레임 GameManager가 현재 게임 시간을 주입하는 진입점.
-        /// 마디 종료 시각을 넘으면 다음 마디로 전환하고, 윈도우가 지난 노트의 miss 확정과 카운트다운을 갱신한다.
+        /// 마디 종료 시각을 넘으면 다음 마디로 전환하고 카운트다운을 갱신한다.
         /// </summary>
-        public void SyncTime(double time)
+        public void Tick(double time)
         {
-            // 현재 마디 종료 시각을 넘어서면 다음 마디로 전환하고 종료 조건도 확인
+            // 현재 마디 종료 시각을 넘어서면 다음 마디로 전환
             if (time >= this.currentBarEndTime)
             {
                 this.StartCurrentBar();
-                this.CheckGameClear();
             }
-
-            _judgeEvents.Clear();
-            _judge.Advance(time, _judgeEvents);
-            foreach (JudgeEvent judged in _judgeEvents) DispatchJudge(judged);
 
             /// 매 프레임 호출. 활성 카운트다운 레인에 대해 다음 마디 시작까지 남은 ¼마디 비트 수를 3/2/1로 표시.
             /// 목표 시각에 도달하면(남은 시간 &lt;= 0) 텍스트를 끄고 비활성화한다.
@@ -232,27 +187,6 @@ namespace SCOdyssey.Game
                     }
                 }
             );
-        }
-        
-        /// <summary>
-        /// 게임 종료 조건을 모두 만족하는지 검사. 만족 시 GameManager.OnGameFinished 호출.
-        /// 조건: 남은 마디 0 + 준비 중 마디 0 + 모든 레인의 active/ghost 큐 비움 + 음원 종료.
-        /// </summary>
-        private void CheckGameClear()
-        {
-            // 게임이 이미 종료되었으면 중복 호출 방지
-            if (!gameManager.IsGameRunning) return;
-
-            if (remainingChart.Count > 0) return;
-            if (nextBarLanes.Count > 0) return;
-
-            if (!_judge.IsFinished) return;
-
-            // 음악이 아직 재생 중이면 대기
-            if (gameManager.IsAudioPlaying) return;
-
-            Debug.Log("Game Cleared.");
-            gameManager.OnGameFinished();
         }
 
 
@@ -573,27 +507,6 @@ namespace SCOdyssey.Game
 
 
         #region Judgement
-        /// <summary>
-        /// 키를 눌렀을 때 호출(GameManager가 라우팅). 탭과 홀드 머리를 누르는 타이밍으로 판정한다.
-        /// (홀드 꼬리는 TryJudgeRelease, 윈도우가 지난 노트의 miss는 SyncTime의 Advance 담당)
-        /// </summary>
-        public void TryJudgeInput(Lane lane, double inputGameTime)
-        {
-            _inputEvents.Clear();
-            _judge.Press(lane, inputGameTime, _inputEvents);
-            foreach (JudgeEvent judged in _inputEvents) DispatchJudge(judged);
-        }
-
-        /// <summary>
-        /// 키를 뗐을 때 호출. 그 레인에서 누르고 있던 홀드의 꼬리를 판정한다. 꼬리 윈도우 전에 뗐으면 꼬리 Miss(홀드 끊김).
-        /// </summary>
-        public void TryJudgeRelease(Lane lane, double inputGameTime)
-        {
-            _inputEvents.Clear();
-            _judge.Release(lane, inputGameTime, _inputEvents);
-            foreach (JudgeEvent judged in _inputEvents) DispatchJudge(judged);
-        }
-
         // 판정된 노트의 뷰를 꺼내면서 등록 해제. 같은 노트를 두 번 건드리지 않게 한다.
         private NoteController TakeNoteView(int noteId)
         {
@@ -604,8 +517,8 @@ namespace SCOdyssey.Game
             return view;
         }
 
-        // JudgeEngine이 확정한 판정 1건을 뷰/점수/연출로 흘려보낸다.
-        private void DispatchJudge(JudgeEvent judged)
+        // 버스로 온 판정 1건을 노트 뷰/연출에 반영한다.
+        private void OnNoteJudged(JudgeEvent judged)
         {
             NoteController view = TakeNoteView(judged.NoteId);
             if (judged.Kind == NoteKind.HoldHead && judged.PairId >= 0 && view is HoldStartNote head)
@@ -614,7 +527,6 @@ namespace SCOdyssey.Game
             if (judged.IsMiss)
             {
                 view?.OnMiss();
-                _judgementBus.PublishNoteJudged(judged);
                 if (judged.Kind == NoteKind.HoldTail) BreakHoldBar(judged.NoteId);
 
                 // 제 시각 전에 끊긴 꼬리는 앞쪽 꼬리 자리에 이펙트를 띄우지 않는다. 끊김은 흐려진 홀드바로 보인다
@@ -641,13 +553,11 @@ namespace SCOdyssey.Game
 
 
         /// <summary>
-        /// 적중 판정 공통 처리. 버스로 판정을 내보내고(ScoreManager·CharacterAnimator가 구독) 이펙트를 띄운다.
+        /// 적중 판정의 이펙트를 띄운다. 점수·캐릭터는 같은 버스 이벤트를 각자 받는다.
         /// </summary>
         private void ApplyJudgement(JudgeEvent judged, NoteController view)
         {
-            _judgementBus.PublishNoteJudged(judged);
-
-            if (view == null) return;   // 스폰 전이거나 이미 회수된 노트. 점수/이벤트는 위에서 이미 나갔다
+            if (view == null) return;   // 스폰 전이거나 이미 회수된 노트
 
             if (!m_showPerfect && judged.Judge == JudgeType.Perfect)
                 EffectJudgement(JudgeType.Master, view);

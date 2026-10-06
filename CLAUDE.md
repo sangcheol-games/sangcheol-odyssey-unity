@@ -49,13 +49,14 @@ Settings must load first so other managers see `audioOffsetMs`, `targetFrameRate
 
 ### Time model — **FMOD DSP clock is authoritative**
 
-`GameManager` uses `IAudioManager.GetDSPTime()` (FMOD's DSP clock) as the single time source. **Never use `AudioSettings.dspTime`** — its epoch differs from FMOD's and will cause desync.
+`GameplayClock` (`SCOdyssey.Rhythm`, owned by `GameManager`, registered as `IRhythmClock`) reads `IAudioManager.GetDSPTime()` (FMOD's DSP clock) as the single time source. **Never use `AudioSettings.dspTime`** — its epoch differs from FMOD's and will cause desync.
 
-- `globalStartTime` is captured at `StartGame()` from the DSP clock.
-- Chart time = `GetDSPTime() - globalStartTime` (frozen to `_pauseDspTime - globalStartTime` during pause).
-- On resume, `globalStartTime += GetDSPTime() - _pauseDspTime` so chart position is preserved.
-- `InputManager.SetTimeSyncPoint(dspNow, realtimeNow)` records one sync sample; input timestamps (`InputAction.context.time`, OS realtime) are converted back to DSP time by linear offset in `ConvertToDspTime`.
-- Audio offset from `SettingsManager.Current.audioOffsetMs` is applied in `StartMusic()` (positive = music starts later).
+- `OriginDsp` is captured by `Start()` in `GameManager.StartGame()`.
+- Chart time `Now = GetDSPTime() - OriginDsp` (0 before start, frozen during pause and after `Stop()`).
+- On resume, `OriginDsp += GetDSPTime() - pausedDsp` so chart position is preserved.
+- `InputManager.SetTimeSyncPoint(dspNow, realtimeNow)` records one sync sample; input timestamps (`InputAction.context.time`, OS realtime) are converted back to DSP time by linear offset in `ConvertToDspTime`, then to chart time by `GameplayClock.ToChartTime`.
+- Music is scheduled at `OriginDsp + barDuration + audioOffsetMs` (`GameManager.StartMusic`; positive offset = music starts later).
+- Each frame `GameManager.Update` runs `RhythmSession.Advance(now)` → `ChartManager.Tick(now)` → game end check (`IsFinished && !IsAudioPlaying`).
 
 ### Chart format and parsing
 
@@ -70,7 +71,7 @@ Charts live in `Assets/Charts/` as text files. Format (see `ChartParser.cs`):
 
 ### Judgement & character animation
 
-Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`JudgeSettingsSO`, milliseconds: `Perfect=21 / Master=42 / Ideal=84 / Kind=105 / Umm=126`). `ChartManager` resolves it through `ConfigLocator` (Inspector → ServiceLocator → Resources) and falls back to `JudgeWindows.Default`. Grade edges are inclusive (`<=`); the outer Umm edge is exclusive.
+Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`JudgeSettingsSO`, milliseconds: `Perfect=21 / Master=42 / Ideal=84 / Kind=105 / Umm=126`). `GameManager` resolves it through `ConfigLocator` (Inspector → ServiceLocator → Resources) and falls back to `JudgeWindows.Default`. Grade edges are inclusive (`<=`); the outer Umm edge is exclusive.
 
 **Hold model**: a hold is two judgements — head (press timing) and tail (release timing, window `Umm × tailWindowScale`). Releasing before the tail window → tail Miss at that moment (hold broken, `HoldStartNote.OnHoldBroken()` fades the bar), no recovery; missing the head kills the tail; holding past the tail window → tail Miss. `JudgeEngine` advances to each input's timestamp before handling it, so results do not depend on frame rate.
 
@@ -83,7 +84,7 @@ Judge windows are tuned in `Assets/Resources/Config/JudgeSettings.asset` (`Judge
 
 So `Lane.L2` = group `Top`, position `Bottom`. `LaneLayout` (`Assets/Scripts/Game/View/`) is the only place that derives group / position / countdown slot from a `Lane`. `NotePosition.Middle` is never parsed from a chart — `CharacterAnimator` derives it at runtime two ways: both holds active simultaneously (`UpdateHoldState`), or opposite-position inputs within the same frame (`OnLaneInputEvent`).
 
-**Judgement bus** (`IJudgementBus`, registered in `ServiceLocator` by `GameManager`) carries engine vocabulary only: `LaneInput(LaneInputEvent{Lane, IsPressed, Time})`, published by `GameManager` on every key press/release before judging, and `NoteJudged(JudgeEvent)`, published by `ChartManager` for every hit and miss (events from one `Advance` are in `Time` order). Subscribers derive group/position with `LaneLayout`; `LaneGroup` lives in `Game/View/LaneLayout.cs`.
+**Judgement bus** (`IJudgementBus`, registered in `ServiceLocator` by `GameManager`) carries engine vocabulary only: `LaneInput(LaneInputEvent{Lane, IsPressed, Time})`, published on every key press/release before judging, and `NoteJudged(JudgeEvent)` for every hit and miss (events from one `Advance` are in `Time` order). `RhythmSession` (`Rhythm/Session/`, wraps `JudgeEngine`, built by `GameManager`) is the only publisher; `ChartManager` subscribes like the other views and reads the engine only through `IJudgeStateReader`. Subscribers derive group/position with `LaneLayout`; `LaneGroup` lives in `Game/View/LaneLayout.cs`.
 
 Character animation: `CharacterAnimator` subscribes to the bus (press → move/attack, release → leave hold pose, non-miss `NoteJudged` → hit animation, `HoldHead` hit → hold pose) and drives a 14-state machine (Idle, Hit0-3, Top/Middle/Bottom, Fall, *Hold, *HitWhile*Hold). It sets `_targetY` and lerps the root in `Update()` — animation clips provide only relative motion. See `Assets/Scripts/Game/Animation_mechanic.md` for the full state machine spec, AnimatorController setup, and CharacterSO authoring checklist — read it before touching animation code or creating character assets.
 

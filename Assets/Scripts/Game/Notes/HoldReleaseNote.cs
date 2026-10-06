@@ -1,6 +1,6 @@
 namespace SCOdyssey.Game
 {
-    // 홀드 꼬리 노트(채보 5): 헤드만 표시. 떼는 타이밍으로 판정한다(TryJudgeRelease)
+    // 홀드 꼬리 노트(채보 5): 헤드만 표시. 떼는 타이밍으로 판정한다(RhythmSession.Release)
     public class HoldReleaseNote : NoteController
     {
         protected override void SetVisual()

@@ -15,14 +15,14 @@
 ## 전체 데이터 흐름
 
 ```
-GameManager (키 입력 자체, 판정보다 먼저)
+RhythmSession.Press/Release (GameManager가 키 입력마다 호출. 판정보다 먼저)
   └─ judgementBus.PublishLaneInput(LaneInputEvent { Lane, IsPressed, Time })
 
-ChartManager.DispatchJudge() (적중·miss 모두)
+RhythmSession.Press/Release/Advance (적중·miss 모두)
   └─ judgementBus.PublishNoteJudged(JudgeEvent { Lane, Kind, Judge, IsMiss, ... })
 
 IJudgementBus (레인만 싣는다. 그룹/위치는 받는 쪽이 LaneLayout으로 파생)
-  └─ 구독자: ScoreManager(점수) / CharacterAnimator(연출)
+  └─ 구독자: ScoreManager(점수) / CharacterAnimator(연출) / ChartManager(노트 뷰·이펙트)
 
 CharacterAnimator (구독, LaneLayout.GroupOf로 자기 그룹만)
   ├─ LaneInput 누름            → HandleLaneInput(pos)   (같은 프레임 반대 위치면 Middle)

@@ -18,8 +18,6 @@ namespace SCOdyssey.App
         bool IsPaused { get; }
         bool IsAudioPlaying { get; }  // 오디오 재생 중인지 확인
 
-        void StartMusic(double delay);
-
         void SetChartData(ChartData chartData);
         ChartData GetCachedChartData();  // 캐시된 차트 데이터 반환 (다시하기용)
 

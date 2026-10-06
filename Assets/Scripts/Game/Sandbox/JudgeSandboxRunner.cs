@@ -372,7 +372,7 @@ namespace SCOdyssey.Game
 
         private void UpdateMusicStart()
         {
-            // 게임은 0번(빈) 마디만큼 늦게 음악을 시작한다(ChartManager.Init -> StartMusic(barDuration))
+            // 게임은 0번(빈) 마디만큼 늦게 음악을 시작한다(GameManager.StartGame -> StartMusic(barDuration))
             _musicStartClock = _beatSec * 4 + audioOffsetMs / 1000.0;
         }
 
