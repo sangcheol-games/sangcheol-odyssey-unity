@@ -1,3 +1,4 @@
+using SCOdyssey.Config;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
@@ -9,24 +10,24 @@ namespace SCOdyssey.Game
     // 홀드가 끊기면(꼬리 miss) 남은 홀드바를 흐리게 표시한다.
     public class HoldStartNote : NoteController
     {
-        [SerializeField] private float brokenHoldAlpha = 0.3f;
-
         private Image holdImage;
         private RectTransform holdBarTransform;
         private bool isBroken;
+
+        private static float BrokenHoldAlpha => PlayfieldSettingsSO.Shared.brokenHoldAlpha;
 
         protected override void ApplyAlpha(float alpha)
         {
             if (holdImage == null) return;
             Color c = holdImage.color;
-            c.a = isBroken ? Mathf.Min(alpha, brokenHoldAlpha) : alpha;
+            c.a = isBroken ? Mathf.Min(alpha, BrokenHoldAlpha) : alpha;
             holdImage.color = c;
         }
 
         public void OnHoldBroken()
         {
             isBroken = true;
-            ApplyAlpha(holdImage != null ? holdImage.color.a : brokenHoldAlpha);
+            ApplyAlpha(holdImage != null ? holdImage.color.a : BrokenHoldAlpha);
         }
 
         /// <summary>

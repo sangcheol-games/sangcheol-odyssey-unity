@@ -124,7 +124,6 @@ namespace SCOdyssey.Game
 
         private void OnLanePressed(NotePosition pos)
         {
-            Debug.Log($"[CA {_group}] OnLaneInput pos={pos} frame={Time.frameCount} lastFrame={_lastInputFrame} lastPos={_lastInputPos} topHold={_topHold} bottomHold={_bottomHold} _pos={_pos} anim={_currentAnim}");
 
             // 같은 프레임 내 반대 레인 입력 → Middle 승격
             // (GameManager가 입력 콜백에서 바로 발행하므로 같은 프레임 입력은 같은 frameCount를 공유)
@@ -149,7 +148,6 @@ namespace SCOdyssey.Game
             if (pos == NotePosition.Top    && !_topHold)    { _topHold    = true; changed = true; }
             if (pos == NotePosition.Bottom && !_bottomHold) { _bottomHold = true; changed = true; }
 
-            Debug.Log($"[CA {_group}] HoldStart pos={pos} changed={changed} topHold={_topHold} bottomHold={_bottomHold}");
             if (changed) UpdateHoldState();
         }
 
@@ -160,7 +158,6 @@ namespace SCOdyssey.Game
             if (pos == NotePosition.Top    && _topHold)    { _topHold    = false; changed = true; }
             if (pos == NotePosition.Bottom && _bottomHold) { _bottomHold = false; changed = true; }
 
-            Debug.Log($"[CA {_group}] HoldRelease pos={pos} changed={changed} topHold={_topHold} bottomHold={_bottomHold}");
             if (changed) UpdateHoldState();
         }
 
@@ -170,21 +167,15 @@ namespace SCOdyssey.Game
 
         private void HandleLaneInput(NotePosition notePos)
         {
-            if (_topHold || _bottomHold)
-            {
-                Debug.Log($"[CA {_group}] HandleLaneInput BLOCKED by hold (topHold={_topHold} bottomHold={_bottomHold})");
-                return;
-            }
+            if (_topHold || _bottomHold) return;
 
             LanePos target = ToLanePos(notePos);
             if (target == _pos)
             {
-                Debug.Log($"[CA {_group}] HandleLaneInput SAME pos={target} → Attack");
                 Play(CharacterState.Attack);
                 return;
             }
 
-            Debug.Log($"[CA {_group}] HandleLaneInput MOVE {_pos} → {target}, Y={YOf(target)}");
             _pos = target;
             SnapY(YOf(target));
             Play(StateOf(target));

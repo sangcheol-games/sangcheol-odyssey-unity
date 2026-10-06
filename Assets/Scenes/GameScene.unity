@@ -640,7 +640,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: db5235b1cf260214b83a01d305482cc9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  noteParent: {fileID: 32057178}
   timelineParent: {fileID: 1970010354}
   objectPoolParent: {fileID: 332942914}
   notePrefab: {fileID: 3709894694565103827, guid: f05570748528ee44e8ab223fecca343b, type: 3}
@@ -1965,53 +1964,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 892353461}
   m_CullTransparentMesh: 1
---- !u!1 &973460060
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 973460061}
-  - component: {fileID: 973460062}
-  m_Layer: 0
-  m_Name: GameTester
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!4 &973460061
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 973460060}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1190698959}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &973460062
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 973460060}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e26953cec4c5ba547914a7748228a9f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  testChartFile: {fileID: 4900000, guid: 3c5acbe65d472344aa7133ea4c74a96f, type: 3}
-  testBpm: 160
-  testAudioPath: 
 --- !u!1 &1077280429
 GameObject:
   m_ObjectHideFlags: 0
@@ -2248,7 +2200,6 @@ Transform:
   - {fileID: 1983276612}
   - {fileID: 222975565}
   - {fileID: 2128768034}
-  - {fileID: 973460061}
   - {fileID: 1954116327}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -3212,8 +3163,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   scoreManager: {fileID: 2128768035}
-  chartManager: {fileID: 222975566}
+  playfield: {fileID: 222975566}
   bgaController: {fileID: 199462507}
+  judgeSettings: {fileID: 0}
   gameCanvas: {fileID: 1381600517}
   hudView: {fileID: 1983276615}
   bannerView: {fileID: 1983276614}
@@ -3802,6 +3754,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8bb53f8395cd95340b65b5232a291ece, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  scoreSettings: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

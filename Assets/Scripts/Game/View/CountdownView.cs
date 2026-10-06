@@ -8,15 +8,16 @@ namespace SCOdyssey.Game
     // 목표 시각에 닿으면 텍스트를 끈다
     public sealed class CountdownView
     {
-        private const int MaxCount = 3;
-        private const double ShowWithinBeats = 3.01;   // 경계에서 3이 늦게 뜨지 않게 조금 여유를 둔다
-
         private readonly TextMeshProUGUI[] _texts;
         private readonly double?[] _targets = new double?[COUNTDOWN_SLOT_COUNT];
+        private readonly int _maxCount;
+        private readonly double _showWithinBeats;   // 경계에서 첫 숫자가 늦게 뜨지 않게 조금 여유를 둔다
 
-        public CountdownView(TextMeshProUGUI[] texts)
+        public CountdownView(TextMeshProUGUI[] texts, int countdownBeats, double epsilonBeats)
         {
             _texts = texts;
+            _maxCount = countdownBeats;
+            _showWithinBeats = countdownBeats + epsilonBeats;
         }
 
         public void Reset()
@@ -51,10 +52,10 @@ namespace SCOdyssey.Game
                 }
 
                 double remainingBeats = timeDiff / beatDuration;
-                if (remainingBeats <= ShowWithinBeats)
+                if (remainingBeats <= _showWithinBeats)
                 {
                     int displayNum = (int)Math.Ceiling(remainingBeats);
-                    if (displayNum > 0 && displayNum <= MaxCount)
+                    if (displayNum > 0 && displayNum <= _maxCount)
                         _texts[i].text = displayNum.ToString();
                 }
                 else

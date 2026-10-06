@@ -1,5 +1,6 @@
 using System;
 using SCOdyssey.App;
+using SCOdyssey.Config;
 using SCOdyssey.Core;
 using SCOdyssey.Rhythm;
 using UnityEngine;
@@ -70,7 +71,7 @@ namespace SCOdyssey.Game
                     c.a = 0f;
                     break;
                 case NoteState.Ghost:
-                    float ghostOpacity = 0.2f;
+                    float ghostOpacity = PlayfieldSettingsSO.Shared.ghostAlphaFallback;
                     if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
                         ghostOpacity = sm.Current.noteOpacity;
                     c.a = ghostOpacity;
@@ -113,15 +114,16 @@ namespace SCOdyssey.Game
 
             bool isPassed = false;
 
-            const float TIMELINE_OFFSET = 20f; // 판정선이 충분히 지나간 후 ghost로 전환하도록 여유 공간 설정
+            // 판정선이 충분히 지나간 뒤에 Ghost로 바꾼다
+            float offset = PlayfieldSettingsSO.Shared.hiddenToGhostOffsetPx;
 
             if (trackingTimeline.isLTR)
             {
-                if (timelineX > noteX + TIMELINE_OFFSET) isPassed = true;
+                if (timelineX > noteX + offset) isPassed = true;
             }
             else
             {
-                if (timelineX < noteX - TIMELINE_OFFSET) isPassed = true;
+                if (timelineX < noteX - offset) isPassed = true;
             }
 
             if (isPassed)

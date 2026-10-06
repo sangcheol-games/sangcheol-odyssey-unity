@@ -87,7 +87,6 @@ namespace SCOdyssey.App
 
         private void AfterJudge()
         {
-            Debug.Log($"Score: {_model.Score}, Combo: {_model.Combo}");
             UpdateUI();
         }
 

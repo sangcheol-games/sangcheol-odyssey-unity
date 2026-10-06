@@ -145,7 +145,7 @@ namespace SCOdyssey.App
             // AudioSettings.dspTime(Unity 내장)은 FMOD 클럭과 기준점이 다르므로 사용 금지
             _inputManager?.SetTimeSyncPoint(_clock.OriginDsp, Time.realtimeSinceStartupAsDouble);
 
-            // 0번(빈) 마디만큼 늦게 음원을 시작한다 → 그동안 1번 마디가 준비된다
+            // 채보는 1번 마디 시작이 음원 0초가 되게 쓰여 있다. 그래서 0번(빈) 마디만큼 늦게 음원을 시작한다
             StartMusic(playfield.BarDuration);
 
             IsGameRunning = true;
@@ -260,10 +260,11 @@ namespace SCOdyssey.App
             _inputManager.SetInputActive(false); // 카운트다운 중 입력 차단
             if (bannerView != null)
             {
-                for (int i = 3; i >= 1; i--)
+                PlayfieldSettingsSO settings = PlayfieldSettingsSO.Shared;
+                for (int i = settings.resumeCountFrom; i >= 1; i--)
                 {
                     bannerView.ShowCount(i);
-                    yield return new WaitForSeconds(1f);
+                    yield return new WaitForSeconds(settings.resumeCountSec);
                 }
                 bannerView.Hide();
             }
@@ -330,13 +331,13 @@ namespace SCOdyssey.App
             StartCoroutine(ShowClearSequence(rank));
         }
 
-        // 클리어 연출 표시 (즉시 텍스트 표시 후 4초 대기)
+        // 클리어 연출 표시 (즉시 텍스트 표시 후 설정한 시간만큼 대기)
         private IEnumerator ShowClearSequence(ClearType rank)
         {
             if (bannerView != null)
             {
                 bannerView.ShowClear(rank);
-                yield return new WaitForSeconds(4f);
+                yield return new WaitForSeconds(PlayfieldSettingsSO.Shared.clearBannerSec);
                 bannerView.Hide();
             }
 

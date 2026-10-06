@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SCOdyssey.App;
+using SCOdyssey.Config;
 using SCOdyssey.Core;
 using SCOdyssey.Rhythm;
 using TMPro;
@@ -79,7 +80,8 @@ namespace SCOdyssey.Game
             _lines = new JudgeLineDirector(new GameObjectPool(timelinePrefab, objectPoolParent), timelineParent, timelineTransforms, geometry);
             _field = new NoteFieldSpawner(new GameObjectPool(notePrefab, objectPoolParent), new GameObjectPool(holdBarPrefab, objectPoolParent),
                 headLayer, holdLayer, laneTransforms, geometry);
-            _countdown = new CountdownView(countdownTexts);
+            PlayfieldSettingsSO settings = PlayfieldSettingsSO.Shared;
+            _countdown = new CountdownView(countdownTexts, settings.countdownBeats, settings.countdownEpsilonBeats);
             _effects = new JudgeEffectSpawner(new GameObjectPool(effectPrefab, objectPoolParent));
         }
 

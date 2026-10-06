@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using SCOdyssey.Config;
 using SCOdyssey.Core;
 using SCOdyssey.Rhythm;
 using UnityEngine;
@@ -35,7 +36,7 @@ namespace SCOdyssey.Game
         public bool isLTR;            // 왼쪽에서 오른쪽으로 이동하는지 여부
 
         private Action<TimelineController> onReturn;
-        private Func<double> timeProvider;  // 외부 시간 소스 (채보에디터 프리뷰용으로만 사용. 채보에디터도 처음부터 다시 만들 예정이니 없어도 됨)
+        private Func<double> timeProvider;  // 외부 시간 소스. 채보 에디터 프리뷰가 넘기고, 없으면 게임 시계를 읽는다
         private IRhythmClock _clock;        // 게임 시계. 처음 읽을 때 ServiceLocator에서 받아 둔다
 
         private float screenBoundX; // 화면 경계 X 좌표
@@ -46,7 +47,7 @@ namespace SCOdyssey.Game
             rectTransform = GetComponent<RectTransform>();
             canvasGroup = GetComponent<CanvasGroup>();
 
-            screenBoundX = Screen.width / 2 + 100f; // TODO: 화면 밖으로 나가는 여유 공간 100px(임시값) -> 정확한 값은 캐릭터 애니메이션 적용 후 수정
+            screenBoundX = Screen.width / 2 + PlayfieldSettingsSO.Shared.timelineScreenMarginPx;   // 화면 밖으로 이만큼 더 나가면 반환
 
         }
 
