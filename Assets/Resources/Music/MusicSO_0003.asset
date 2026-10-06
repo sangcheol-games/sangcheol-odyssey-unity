@@ -181,8 +181,8 @@ MonoBehaviour:
   audioFilePath: Lazy Dance.ogg
   previewAudioFilePath: Lazy Dance.mp4
   videoFileName: Lazy Dance.mp4
-  backgroundArt: {fileID: 2633286254177539184, guid: 9cd66c49c5bf7934d8399590515c3d7f, type: 3}
-  albumArt: {fileID: 2633286254177539184, guid: 9cd66c49c5bf7934d8399590515c3d7f, type: 3}
+  backgroundArt: {fileID: -6898227814294223165, guid: b7b320d740720e242b80625c6bad1538, type: 3}
+  albumArt: {fileID: -9216041662464849085, guid: d8ac049e0fa42b64c9670205b4c88134, type: 3}
   references:
     version: 2
     RefIds: []

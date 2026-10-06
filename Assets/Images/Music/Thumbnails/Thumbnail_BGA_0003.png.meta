@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 8efa9a02e4a648141b9fa9a3422af7ec
+guid: b7b320d740720e242b80625c6bad1538
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 1693527514909790199
-    second: Una_Alarm AlbumArt_0
+      213: -6898227814294223165
+    second: Thumbnail_BGA_0003_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Una_Alarm AlbumArt_0
+      name: Thumbnail_BGA_0003_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1280
-        height: 1280
+        width: 1920
+        height: 1080
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 7ff4c875d4e908710800000000000000
-      internalID: 1693527514909790199
+      spriteID: 3c6064de9529440a0800000000000000
+      internalID: -6898227814294223165
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Una_Alarm AlbumArt_0: 1693527514909790199
+      Thumbnail_BGA_0003_0: -6898227814294223165
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -1,16 +1,10 @@
 fileFormatVersion: 2
-guid: accacbb7c6a5c0e49a3745f4e255308b
+guid: 4847a1ddfc26859468ca91884019a27a
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -8031870507174531496
-    second: "\uB300\uD30C_0"
-  - first:
-      213: -14450217750410989
-    second: "\uB300\uD30C_1"
-  - first:
-      213: 1754952002474511655
-    second: "\uB300\uD30C_2"
+      213: 2690450654785119229
+    second: AlbumArt_BGA_0001_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -102,17 +96,30 @@ TextureImporter:
     ignorePlatformSupport: 0
     androidETC2FallbackOverride: 0
     forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: "\uB300\uD30C_0"
+      name: AlbumArt_BGA_0001_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 57
-        height: 1536
+        width: 3000
+        height: 3000
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -121,52 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 85eece11450198090800000000000000
-      internalID: -8031870507174531496
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: "\uB300\uD30C_1"
-      rect:
-        serializedVersion: 2
-        x: 21
-        y: 648
-        width: 1003
-        height: 888
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 3194f008a99accff0800000000000000
-      internalID: -14450217750410989
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: "\uB300\uD30C_2"
-      rect:
-        serializedVersion: 2
-        x: 59
-        y: 0
-        width: 965
-        height: 1375
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 72d8a515c87da5810800000000000000
-      internalID: 1754952002474511655
+      spriteID: df32f2cad96665520800000000000000
+      internalID: 2690450654785119229
       vertices: []
       indices: 
       edges: []
@@ -185,9 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      "\uB300\uD30C_0": -8031870507174531496
-      "\uB300\uD30C_1": -14450217750410989
-      "\uB300\uD30C_2": 1754952002474511655
+      AlbumArt_BGA_0001_0: 2690450654785119229
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
