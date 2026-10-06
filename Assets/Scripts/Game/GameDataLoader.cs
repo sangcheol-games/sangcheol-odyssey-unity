@@ -76,7 +76,7 @@ namespace SCOdyssey.Game
 
             var gameManager = ServiceLocator.Get<IGameManager>();
 
-            // 캐시된 ChartData 확인 (다시하기용): 있으면 재파싱 없이 그대로 재사용 → ChartManager.Init에서 즉시 시작
+            // 캐시된 ChartData 확인 (다시하기용): 있으면 재파싱 없이 그대로 재사용 → PlayfieldView.Init에서 즉시 시작
             ChartData cachedData = gameManager.GetCachedChartData();
             if (cachedData != null)
             {

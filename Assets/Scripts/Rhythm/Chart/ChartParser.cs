@@ -23,8 +23,7 @@ namespace SCOdyssey.Rhythm
             // 1. 줄 단위로 나누기 (윈도우/맥/리눅스 개행문자 대응)
             string[] lines = chartText.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
 
-            // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
-            double duration = (60f / bpm) * 4f;  // TODO: 박자표(4/4)가 아닐때 가변적으로 처리 필요
+            double duration = BarClock.FromBpm(bpm).BarDuration;   // 마디 길이(4/4)
 
             foreach (string line in lines)
             {

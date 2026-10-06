@@ -6,6 +6,7 @@ using SCOdyssey.Rhythm;
 using SCOdyssey.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.App
@@ -16,18 +17,18 @@ namespace SCOdyssey.App
     //        Start()에서 IInputManager의 입력 이벤트를 구독하고 HudView를 ScoreManager에 연결한다.
     //
     //  게임 시작: GameDataLoader가 StartGame()을 호출한다.
-    //        판정 세션 생성 -> scoreManager.Init() -> chartManager.Init() -> 시계 시작 -> 입력 동기점 설정 -> 음원 예약
+    //        판정 세션 생성 -> scoreManager.Init() -> playfield.Init() -> 시계 시작 -> 입력 동기점 설정 -> 음원 예약
     //
     //  시간: GameplayClock이 (현재 DSP - 원점), 즉 게임 상대시간을 낸다. 일시정지 중엔 멈추고 재개하면 이어진다.
     //        ※ FMOD DSP 클럭만 사용한다. AudioSettings.dspTime은 기준점이 달라 쓰지 않는다.
     //
-    //  매 프레임: Update() -> session.Advance(now) -> chartManager.Tick(now) -> 종료 체크
+    //  매 프레임: Update() -> session.Advance(now) -> playfield.Tick(now) -> 종료 체크
     //
     //  입력: HandleLaneInput()/HandleLaneRelease() -> session.Press()/Release()
     //        (입력 DSP 시각을 게임 상대시간으로 바꿔 넘긴다)
     //
     //  판정 전파: RhythmSession이 버스에 키 입력과 판정을 발행하고,
-    //        ScoreManager·CharacterAnimator·ChartManager(노트 뷰)가 각자 구독해 받는다.
+    //        ScoreManager·CharacterAnimator·PlayfieldView(노트 뷰)가 각자 구독해 받는다.
     //
     //  종료: 모든 노트가 판정되고 음원이 끝나면 OnGameFinished() -> 클리어 연출 -> ResultUI 표시.
     //
@@ -40,7 +41,8 @@ namespace SCOdyssey.App
         private IAudioManager _audioManager;
         private IInputManager _inputManager;
         public ScoreManager scoreManager;
-        public ChartManager chartManager;
+        [FormerlySerializedAs("chartManager")]
+        public PlayfieldView playfield;
         public ChartData chartData;
 
         [Header("BGA")]
@@ -50,7 +52,7 @@ namespace SCOdyssey.App
         [SerializeField] private JudgeSettingsSO judgeSettings;
 
         // 판정/입력 결과를 뿌리는 버스. RhythmSession이 발행하고
-        // ScoreManager·CharacterAnimator·ChartManager가 각자 구독한다.
+        // ScoreManager·CharacterAnimator·PlayfieldView가 각자 구독한다.
         private readonly JudgementBus _judgementBus = new();
         private GameplayClock _clock;
         private RhythmSession _session;
@@ -125,7 +127,7 @@ namespace SCOdyssey.App
 
         public void StartGame()
         {
-            if (chartManager == null || _audioManager == null || chartData == null)
+            if (playfield == null || _audioManager == null || chartData == null)
             {
                 Debug.LogError("GameManager 초기화 실패!");
                 return;
@@ -135,7 +137,7 @@ namespace SCOdyssey.App
 
             // 점수 구독을 먼저 붙인 뒤 채보를 준비한다
             scoreManager.Init(chartData.totalNotes, _judgementBus);
-            chartManager.Init(chartData, _session.Reader, _judgementBus);
+            playfield.Init(chartData, _session.Reader, _judgementBus);
 
             _clock.Start();
 
@@ -144,7 +146,7 @@ namespace SCOdyssey.App
             _inputManager?.SetTimeSyncPoint(_clock.OriginDsp, Time.realtimeSinceStartupAsDouble);
 
             // 0번(빈) 마디만큼 늦게 음원을 시작한다 → 그동안 1번 마디가 준비된다
-            StartMusic(chartManager.BarDuration);
+            StartMusic(playfield.BarDuration);
 
             IsGameRunning = true;
         }
@@ -218,7 +220,7 @@ namespace SCOdyssey.App
 
             double now = _clock.Now;
             _session.Advance(now);
-            chartManager.Tick(now);
+            playfield.Tick(now);
 
             if (_session.IsFinished && !IsAudioPlaying)
             {
@@ -279,8 +281,6 @@ namespace SCOdyssey.App
         public void SetChartData(ChartData data)
         {
             this.chartData = data;
-            // ChartManager 초기화를 여기서 하는게 나을지도?
-            // chartManager.Initialize(data); 
         }
 
         private void HandleLaneInput(Lane lane, double inputDspTime)

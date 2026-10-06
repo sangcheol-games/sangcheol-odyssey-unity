@@ -321,7 +321,7 @@ namespace SCOdyssey.Game
             _engine = new JudgeEngine(_settings);
             _engine.Load(track);
             _cursor = new ScriptCursor(_script);
-            _beatSec = (60f / bpm) * 4f / 4.0;   // 파서와 같은 float 마디 길이를 4등분
+            _beatSec = BarClock.FromBpm(bpm).BeatDuration;   // 파서와 같은 마디 길이의 한 비트
             UpdateMusicStart();
 
             _clock.Reset(startAtSec);
@@ -373,7 +373,7 @@ namespace SCOdyssey.Game
         private void UpdateMusicStart()
         {
             // 게임은 0번(빈) 마디만큼 늦게 음악을 시작한다(GameManager.StartGame -> StartMusic(barDuration))
-            _musicStartClock = _beatSec * 4 + audioOffsetMs / 1000.0;
+            _musicStartClock = _beatSec * BarClock.BeatsPerBar + audioOffsetMs / 1000.0;
         }
 
         private void Reanchor()
@@ -403,7 +403,7 @@ namespace SCOdyssey.Game
             for (; _nextBeat * _beatSec <= horizon; _nextBeat++)
             {
                 if (metronomeOn && _nextBeat >= 0)
-                    _audio.ScheduleClick(_nextBeat * _beatSec, _nextBeat % 4 == 0 ? ClickKind.Downbeat : ClickKind.Beat);
+                    _audio.ScheduleClick(_nextBeat * _beatSec, _nextBeat % BarClock.BeatsPerBar == 0 ? ClickKind.Downbeat : ClickKind.Beat);
             }
         }
 

@@ -10,21 +10,21 @@ namespace SCOdyssey.Game
 {
     // ── 흐름 (노트 1개의 생명주기) ────────────────────────────────────────────
     //  노트 오브젝트 1개의 뷰/상태 컨트롤러(타입별 파생: NormalNote/HoldStart/Holding/HoldEnd/HoldReleaseNote).
-    //  판정 로직 자체는 ChartManager가 소유하고, 이 클래스는 표시/상태 전이만 담당한다.
+    //  판정은 RhythmSession이 하고, 이 클래스는 표시/상태 전이만 담당한다.
     //
-    //  스폰: ChartManager.SpawnNextNotes가 풀에서 꺼내 Init(데이터·위치·방향·반환콜백)으로 초기화한다.
+    //  스폰: NoteFieldSpawner.SpawnBar가 풀에서 꺼내 Init(데이터·위치·방향·반환콜백)으로 초기화한다.
     //
     //  상태: SetState(Hidden/Ghost/Active)로 표시를 바꾼다. 고난이도 충돌 시 Hidden으로 숨겼다가,
     //        Update()에서 감시 중인 판정선이 지나가면(CheckGhostState) 스스로 Ghost로 전환한다.
-    //        마디가 시작될 때 ChartManager가 Active로 올린다.
+    //        마디가 시작될 때 NoteFieldSpawner가 Active로 올린다.
     //
-    //  판정/소멸: 판정되면 ChartManager가 OnHit(), 놓치면 OnMiss()를 호출한다.
+    //  판정/소멸: 판정되면 NoteFieldSpawner가 OnHit(), 놓치면 OnMiss()를 호출한다.
     //        결국 DeleteNote() -> onReturn 콜백으로 풀에 반환된다(HoldStart는 홀드바도 함께).
     // ──────────────────────────────────────────────────────────────────────────
     public abstract class NoteController : MonoBehaviour
     {
-        public NoteData noteData { get; private set; }        // ChartManager가 판정에 쓰는 노트 데이터
-        protected Action<NoteController> onReturn;            // 풀 반환 콜백(ChartManager가 Init에서 주입)
+        public NoteData noteData { get; private set; }        // 이 뷰가 보여주는 노트 데이터(id로 판정과 연결)
+        protected Action<NoteController> onReturn;            // 풀 반환 콜백(스폰하는 쪽이 Init에서 주입)
 
         protected Image noteImage;
         protected float holdWidth = 0f;
@@ -58,7 +58,7 @@ namespace SCOdyssey.Game
             gameObject.SetActive(true);
         }
 
-        // 노트 표시 상태 전환(ChartManager가 호출). Hidden=투명, Ghost=반투명(설정값), Active=불투명(판정 대상)
+        // 노트 표시 상태 전환(NoteFieldSpawner가 호출). Hidden=투명, Ghost=반투명(설정값), Active=불투명(판정 대상)
         public void SetState(NoteState state)
         {
             currentState = state;
@@ -143,7 +143,7 @@ namespace SCOdyssey.Game
             DeleteNote();
         }
 
-        // 노트를 비활성화하고 onReturn 콜백으로 ChartManager 풀에 반환(HoldStart면 홀드바도 함께 회수)
+        // 노트를 비활성화하고 onReturn 콜백으로 풀에 반환(HoldStart면 홀드바도 함께 회수)
         public void DeleteNote()
         {
             isJudged = true;

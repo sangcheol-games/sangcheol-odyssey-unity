@@ -30,7 +30,7 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// ChartManager에서 Init() 호출 전에 holdBar 오브젝트를 전달.
+        /// NoteFieldSpawner가 Init() 호출 전에 holdBar 오브젝트를 전달.
         /// </summary>
         public void SetHoldBar(GameObject holdBarObj)
         {

@@ -6,7 +6,7 @@ using System; // JudgeType 사용
 
 namespace SCOdyssey.Game
 {
-    // 판정 이펙트(PERFECT/MASTER/... 텍스트). ChartManager.EffectJudgement가 풀에서 꺼내 Setup으로 구동하고,
+    // 판정 이펙트(PERFECT/MASTER/... 텍스트). JudgeEffectSpawner가 풀에서 꺼내 Setup으로 구동하고,
     // 애니메이션(위로 떠오르며 페이드아웃)이 끝나면 onReturn 콜백으로 풀에 반환된다.
     public class EffectController : MonoBehaviour
     {

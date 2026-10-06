@@ -5,7 +5,7 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Rhythm
 {
-    // 파싱이 끝난 한 곡·난이도의 채보 전체. ChartManager.Init이 GetFullChartList()로 받아 remainingChart에 적재한다.
+    // 파싱이 끝난 한 곡·난이도의 채보 전체. PlayfieldView.Init이 GetFullChartList()로 받아 BarStreamer에 싣는다.
     // 개별 노트의 판정 시각은 파싱 단계(ChartParser/LaneData)에서 이미 계산되어 들어 있다.
     public class ChartData
     {
@@ -23,7 +23,7 @@ namespace SCOdyssey.Rhythm
             chart.Add(laneData);
         }
 
-        // 전체 LaneData 목록 반환. ChartManager가 이 목록으로 Queue<LaneData> remainingChart를 만든다.
+        // 전체 LaneData 목록 반환(채보 파일 순서. 뷰는 마디 순으로 적혀 있다고 보고 앞에서부터 꺼낸다).
         public List<LaneData> GetFullChartList()
         {
             return chart;

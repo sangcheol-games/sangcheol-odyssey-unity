@@ -246,7 +246,7 @@ namespace SCOdyssey.ChartEditor.Preview
 
             // 타임라인 Y 위치 설정 (해당 그룹의 레인 위치 기반)
             int timelineIndex = (int)group;   // 0=상단, 1=하단
-            // ChartManager와 동일하게 월드 좌표 사용 (anchoredPosition은 부모 좌표계에 종속되어 불일치 발생 가능)
+            // 게임(JudgeLineDirector)과 동일하게 월드 좌표 사용 (anchoredPosition은 부모 좌표계에 종속되어 불일치 발생 가능)
             if (editorManager.laneTransforms.Length > timelineIndex * 2)
             {
                 float worldY = (editorManager.laneTransforms[timelineIndex * 2].position.y

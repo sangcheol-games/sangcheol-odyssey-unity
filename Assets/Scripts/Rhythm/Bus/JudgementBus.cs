@@ -27,7 +27,7 @@ namespace SCOdyssey.Rhythm
         event Action<JudgeEvent> NoteJudged;      // miss도 온다(IsMiss). 한 번에 여러 개면 Time 순
     }
 
-    // GameManager가 소유하고, GameManager(입력)와 ChartManager(판정)가 발행한다.
+    // GameManager가 소유하고, RhythmSession이 발행한다.
     public sealed class JudgementBus : IJudgementBus
     {
         public event Action<LaneInputEvent> LaneInput;

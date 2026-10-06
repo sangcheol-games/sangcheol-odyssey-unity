@@ -8,7 +8,7 @@ namespace SCOdyssey.Game
 {
     // ── 흐름 (판정선 1개 = 그룹 1개) ──────────────────────────────────────────
     //
-    //  생성/재사용: ChartManager가 Init(시작시각·길이·좌우 X·반환콜백·group)으로 구동한다.
+    //  생성/재사용: JudgeLineDirector가 Init(시작시각·길이·좌우 X·반환콜백·group)으로 구동한다.
     //        startX < endX 이면 LTR로 판단해 캐릭터 방향과 그룹을 세팅한다.
     //        유턴 시에는 풀에 반환하지 않고 방향만 바꿔 다시 Init으로 재사용한다.
     //
@@ -51,7 +51,7 @@ namespace SCOdyssey.Game
         }
 
         // 판정선을 (재)초기화해 이동을 시작. startX<endX면 LTR로 판단하고 캐릭터 방향/그룹을 세팅한다.
-        // ChartManager의 PreloadTimelines(신규 생성)와 StartCurrentBar(유턴 재활용) 양쪽에서 호출된다.
+        // JudgeLineDirector의 Preload(신규 생성)와 Promote(유턴 재활용) 양쪽에서 호출된다.
         public void Init(double startTime, double duration, float startX, float endX, Action<TimelineController> returnCallback, LaneGroup group = LaneGroup.Top, Func<double> timeProvider = null)
         {
             this.startTime = startTime;
