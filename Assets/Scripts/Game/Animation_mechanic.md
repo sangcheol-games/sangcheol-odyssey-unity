@@ -430,7 +430,8 @@ void Play(CharacterState state, CharacterState follow);
 머리 적중을 못 본다. `SetGroup`이 엔진의 `HoldInProgressOf`를 읽어 `BeginHold`하므로 A3(`HoldEnter`)으로 들어간다 —
 입력 없이 진입 원샷과 Y 트윈이 나가지만 그 시점의 판정선은 아직 화면 가장자리라 보이지 않는다.
 시딩 뒤에 `LoadCharacter`가 오면 `Run`이 아니라 `Hold`를 튼다(`FollowOf(_holds)`).
-코드에서 추론한 것이고 플레이로 확인하지는 않았다.
+풀에서 재사용된 판정선에서도 시딩이 남도록 `TimelineController.Init`은 `SetGroup` 앞에 `Activate()`를 부른다(§3-4).
+두 마디 넘는 홀드를 플레이로 따로 확인하지는 않았다.
 
 **일시정지를 특별 취급하지 않는다.** `Time.timeScale`을 건드리지 않는 프로젝트라
 일시정지 중에도 Spine은 계속 재생된다. Y만 멈추면 오히려 일관성이 깨진다.
