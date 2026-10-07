@@ -26,20 +26,33 @@ namespace SCOdyssey.Rhythm
             PublishJudged();
         }
 
-        public void Press(Lane lane, double time)
+        // 이 누름이 친 노트를 돌려준다. 윈도우 밖이거나 칠 노트가 없으면 NoTarget
+        public PressOutcome Press(Lane lane, double time)
         {
-            _bus.PublishLaneInput(new LaneInputEvent(lane, true, time));
+            _bus.PublishLaneInput(new LaneKeyEvent(lane, true, time));
             _events.Clear();
-            _engine.Press(lane, time, _events);
+            bool hit = _engine.Press(lane, time, _events);
             PublishJudged();
+
+            if (!hit) return PressOutcome.NoTarget;
+            JudgeEvent last = _events[_events.Count - 1];
+            return new PressOutcome(last.NoteId, last.Kind, last.Judge);
         }
 
         public void Release(Lane lane, double time)
         {
-            _bus.PublishLaneInput(new LaneInputEvent(lane, false, time));
+            _bus.PublishLaneInput(new LaneKeyEvent(lane, false, time));
             _events.Clear();
             _engine.Release(lane, time, _events);
             PublishJudged();
+        }
+
+        // 실제로 뗀 것이 아닌 release(일시정지·포커스 상실·입력 맵 전환으로 생긴 합성 release).
+        // 입력 이벤트만 내보내고 엔진은 건드리지 않는다. 홀드 중인 꼬리는 그대로 남아,
+        // 다시 잡고 윈도우 안에 떼면 판정되고 아니면 윈도우가 닫힐 때 miss가 된다.
+        public void ReleaseUnjudged(Lane lane, double time)
+        {
+            _bus.PublishLaneInput(new LaneKeyEvent(lane, false, time));
         }
 
         private void PublishJudged()

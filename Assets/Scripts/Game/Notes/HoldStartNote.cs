@@ -76,7 +76,10 @@ namespace SCOdyssey.Game
 
             // Active 상태에서도 타임라인이 지나가는 동안 홀드바 fill을 미리 업데이트
             // (판정/miss 전부터 타임라인 위치에 맞춰 홀드바가 실시간으로 줄어들어야 함)
-            if (!isHoldRemaining && currentState == NoteState.Active && trackingTimeline != null && trackingTimeline.gameObject.activeSelf)
+            // Ghost(마디 시작 전)에 판정된 머리는 판정선이 아직 안 붙어 있다. Active가 될 때까지 홀드바를 건드리지 않는다
+            if (currentState != NoteState.Active) return;
+
+            if (!isHoldRemaining && trackingTimeline != null && trackingTimeline.gameObject.activeSelf)
             {
                 UpdateHoldFill();
             }

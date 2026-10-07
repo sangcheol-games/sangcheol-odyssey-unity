@@ -101,6 +101,108 @@ namespace SCOdyssey.Rhythm.Tests
         }
 
         [Test]
+        public void Press_OnTap_ReturnsTheHit()
+        {
+            RhythmSession session = Create(new[] { N(1.0, Lane.L2) }, out _, out _);
+
+            PressOutcome outcome = session.Press(Lane.L2, 1.03);
+
+            Assert.That(outcome.Hit, Is.True);
+            Assert.That(outcome.NoteId, Is.EqualTo(0));
+            Assert.That(outcome.Kind, Is.EqualTo(NoteKind.Tap));
+            Assert.That(outcome.Judge, Is.EqualTo(JudgeType.Master));
+        }
+
+        [Test]
+        public void Press_OnHoldHead_ReturnsTheHeadHit()
+        {
+            RhythmSession session = Create(
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                out _, out _);
+
+            PressOutcome outcome = session.Press(Lane.L1, 1.0);
+
+            Assert.That(outcome.Hit, Is.True);
+            Assert.That(outcome.Kind, Is.EqualTo(NoteKind.HoldHead));
+            Assert.That(outcome.Judge, Is.EqualTo(JudgeType.Perfect));
+        }
+
+        [Test]
+        public void Press_Whiff_ReturnsNoTarget()
+        {
+            RhythmSession session = Create(new[] { N(5.0, Lane.L1) }, out BusLog log, out _);
+
+            PressOutcome otherLane = session.Press(Lane.L3, 1.0);
+            PressOutcome outsideWindow = session.Press(Lane.L1, 1.0);
+
+            Assert.That(otherLane.Hit, Is.False);
+            Assert.That(outsideWindow.Hit, Is.False);
+            Assert.That(log.Judged, Is.Empty);
+        }
+
+        [Test]
+        public void Press_ThatOnlyFlushesEarlierMisses_ReturnsNoTarget()
+        {
+            RhythmSession session = Create(new[] { N(1.0, Lane.L1) }, out BusLog log, out _);
+
+            PressOutcome outcome = session.Press(Lane.L1, 3.0);
+
+            Assert.That(outcome.Hit, Is.False);
+            Assert.That(log.Lines, Is.EqualTo(new[] { "input L1 P", "judged #0 Miss" }));
+        }
+
+        [Test]
+        public void ReleaseUnjudged_PublishesOnlyTheInput_AndKeepsTheTailInProgress()
+        {
+            RhythmSession session = Create(
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                out BusLog log, out _);
+
+            session.Press(Lane.L1, 1.0);
+            session.ReleaseUnjudged(Lane.L1, 1.4);
+
+            Assert.That(log.Lines, Is.EqualTo(new[] { "input L1 P", "judged #0 Perfect", "input L1 R" }));
+            Assert.That(session.Reader.StatusOf(1), Is.EqualTo(NoteStatus.InProgress));
+        }
+
+        [Test]
+        public void ReleaseUnjudged_WithoutRegrip_TailMissesWhenItsWindowCloses()
+        {
+            RhythmSession session = Create(
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                out BusLog log, out _);
+
+            session.Press(Lane.L1, 1.0);
+            session.ReleaseUnjudged(Lane.L1, 1.4);
+            session.Advance(3.0);
+
+            Assert.That(log.Judged, Has.Count.EqualTo(2));
+            Assert.That(log.Judged[1].NoteId, Is.EqualTo(1));
+            Assert.That(log.Judged[1].IsMiss, Is.True);
+            Assert.That(log.Judged[1].Time, Is.EqualTo(2.0 + JudgeSettings.Default.TailWindow).Within(1e-9));
+        }
+
+        [Test]
+        public void ReleaseUnjudged_ThenRegripAndRelease_GradesTheTail()
+        {
+            RhythmSession session = Create(
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                out BusLog log, out _);
+
+            session.Press(Lane.L1, 1.0);
+            session.ReleaseUnjudged(Lane.L1, 1.4);
+            PressOutcome regrip = session.Press(Lane.L1, 1.6);
+            session.Release(Lane.L1, 2.0);
+
+            Assert.That(regrip.Hit, Is.False);
+            Assert.That(log.Judged, Has.Count.EqualTo(2));
+            Assert.That(log.Judged[1].NoteId, Is.EqualTo(1));
+            Assert.That(log.Judged[1].IsMiss, Is.False);
+            Assert.That(log.Judged[1].Judge, Is.EqualTo(JudgeType.Perfect));
+            Assert.That(session.IsFinished, Is.True);
+        }
+
+        [Test]
         public void Reader_IsTheEngine()
         {
             RhythmSession session = Create(new[] { N(1.0, Lane.L4) }, out _, out JudgeEngine engine);

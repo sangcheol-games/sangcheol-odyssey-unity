@@ -18,7 +18,7 @@
 
 ```
 RhythmSession.Press/Release (GameManager가 키 입력마다 호출. 판정보다 먼저)
-  └─ judgementBus.PublishLaneInput(LaneInputEvent { Lane, IsPressed, Time })
+  └─ judgementBus.PublishLaneInput(LaneKeyEvent { Lane, IsPressed, Time })
 
 RhythmSession.Press/Release/Advance (적중·miss 모두)
   └─ judgementBus.PublishNoteJudged(JudgeEvent { Lane, Kind, Judge, IsMiss, ... })

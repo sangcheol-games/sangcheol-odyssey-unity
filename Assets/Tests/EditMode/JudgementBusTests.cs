@@ -10,19 +10,19 @@ namespace SCOdyssey.Rhythm.Tests
         public void Publish_ReachesSubscribers_UntilUnsubscribed()
         {
             var bus = new JudgementBus();
-            var inputs = new List<LaneInputEvent>();
+            var inputs = new List<LaneKeyEvent>();
             var judged = new List<JudgeEvent>();
-            void OnInput(LaneInputEvent e) => inputs.Add(e);
+            void OnInput(LaneKeyEvent e) => inputs.Add(e);
             void OnJudged(JudgeEvent e) => judged.Add(e);
             bus.LaneInput += OnInput;
             bus.NoteJudged += OnJudged;
 
             var note = new JudgeNote(1.0, Lane.L3, NoteKind.Tap);
-            bus.PublishLaneInput(new LaneInputEvent(Lane.L3, true, 1.01));
+            bus.PublishLaneInput(new LaneKeyEvent(Lane.L3, true, 1.01));
             bus.PublishNoteJudged(JudgeEvent.Hit(0, note, JudgeType.Perfect, 0.01, 1.01));
             bus.LaneInput -= OnInput;
             bus.NoteJudged -= OnJudged;
-            bus.PublishLaneInput(new LaneInputEvent(Lane.L3, false, 1.2));
+            bus.PublishLaneInput(new LaneKeyEvent(Lane.L3, false, 1.2));
             bus.PublishNoteJudged(JudgeEvent.Miss(0, note, 0.126, 1.126));
 
             Assert.That(inputs, Has.Count.EqualTo(1));
@@ -38,7 +38,7 @@ namespace SCOdyssey.Rhythm.Tests
         {
             var bus = new JudgementBus();
 
-            Assert.DoesNotThrow(() => bus.PublishLaneInput(new LaneInputEvent(Lane.L1, true, 0)));
+            Assert.DoesNotThrow(() => bus.PublishLaneInput(new LaneKeyEvent(Lane.L1, true, 0)));
         }
     }
 }

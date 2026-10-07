@@ -103,7 +103,7 @@ namespace SCOdyssey.Game
         // ─────────────────────────────────────────────
 
         // 버스 이벤트는 레인만 싣는다. 그룹·위치는 LaneLayout으로 바꾼다
-        private void OnLaneInputEvent(LaneInputEvent e)
+        private void OnLaneInputEvent(LaneKeyEvent e)
         {
             if (LaneLayout.GroupOf(e.Lane) != _group) return;
 
