@@ -75,6 +75,9 @@ namespace SCOdyssey.Game
             trackingTimeline = null;
 
             SetVisual();
+
+            rectTransform.SetAsFirstSibling();
+
             gameObject.SetActive(true);
         }
 
