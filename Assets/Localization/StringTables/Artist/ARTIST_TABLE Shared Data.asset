@@ -23,6 +23,10 @@ MonoBehaviour:
     m_Key: ARTIST_MaroNote
     m_Metadata:
       m_Items: []
+  - m_Id: 81423551606202368
+    m_Key: ARTIST_Leo
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

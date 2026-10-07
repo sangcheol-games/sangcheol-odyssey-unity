@@ -1,0 +1,188 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d5cb096c24637a46818cc126d5706fc, type: 3}
+  m_Name: MusicSO_0004
+  m_EditorClassIdentifier: 
+  serializationData:
+    SerializedFormat: 2
+    SerializedBytes: 
+    ReferencedUnityObjects:
+    - {fileID: 4900000, guid: c1ce33f5791e0344d948bb1e892e785f, type: 3}
+    - {fileID: 4900000, guid: dff7274678ca8d245a8b9f0a600266d0, type: 3}
+    SerializedBytesString: 
+    Prefab: {fileID: 0}
+    PrefabModificationsReferencedUnityObjects: []
+    PrefabModifications: []
+    SerializationNodes:
+    - Name: level
+      Entry: 7
+      Data: 0|System.Collections.Generic.Dictionary`2[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp],[System.Int32, mscorlib]], mscorlib
+    - Name: comparer
+      Entry: 7
+      Data: 1|System.Collections.Generic.EnumEqualityComparer`1[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 0
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 12
+      Data: 4
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 0
+    - Name: $v
+      Entry: 3
+      Data: 2
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 1
+    - Name: $v
+      Entry: 3
+      Data: 4
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 2
+    - Name: $v
+      Entry: 3
+      Data: -1
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 3
+    - Name: $v
+      Entry: 3
+      Data: -1
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: chartFile
+      Entry: 7
+      Data: 2|System.Collections.Generic.Dictionary`2[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp],[UnityEngine.TextAsset, UnityEngine.CoreModule]], mscorlib
+    - Name: comparer
+      Entry: 7
+      Data: 3|System.Collections.Generic.EnumEqualityComparer`1[[SCOdyssey.Domain.Service.Constants+Difficulty,
+        Assembly-CSharp]], mscorlib
+    - Name: 
+      Entry: 12
+      Data: 0
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 12
+      Data: 2
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 1
+    - Name: $v
+      Entry: 10
+      Data: 0
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 7
+      Data: 
+    - Name: $k
+      Entry: 3
+      Data: 0
+    - Name: $v
+      Entry: 10
+      Data: 1
+    - Name: 
+      Entry: 8
+      Data: 
+    - Name: 
+      Entry: 13
+      Data: 
+    - Name: 
+      Entry: 8
+      Data: 
+  id: 4
+  title:
+    m_TableReference:
+      m_TableCollectionName: GUID:f4d7877f300fa34448bbaf75dfb1b389
+    m_TableEntryReference:
+      m_KeyId: 83036802307760128
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  producer:
+    m_TableReference:
+      m_TableCollectionName: GUID:191f8a71a059972429c30e757a1bb0ed
+    m_TableEntryReference:
+      m_KeyId: 81423551606202368
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  vocal:
+    m_TableReference:
+      m_TableCollectionName: GUID:df65b7b7ffdb3e34e92c243cd4010b91
+    m_TableEntryReference:
+      m_KeyId: 81422098518941696
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  illustrator: Leo
+  animator: Leo
+  bpm: 184
+  audioFilePath: "\uC77C\uBCF8\uC5B4 \uBABB\uD569\uB2C8\uB2E4.ogg"
+  previewAudioFilePath: "\uC77C\uBCF8\uC5B4 \uBABB\uD569\uB2C8\uB2E4.ogg"
+  videoFileName: "\uC77C\uBCF8\uC5B4 \uBABB\uD569\uB2C8\uB2E4.mp4"
+  backgroundArt: {fileID: -5688015261729859151, guid: a98f8bdd7754b9f49bebc15ea9c3ee53, type: 3}
+  albumArt: {fileID: 8677130772124960080, guid: ab78152d563229549991d9429e257a68, type: 3}
+  references:
+    version: 2
+    RefIds: []

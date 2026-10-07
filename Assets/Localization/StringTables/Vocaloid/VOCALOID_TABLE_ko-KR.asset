@@ -23,7 +23,11 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 54602493003735040
-    m_Localized: "\uC624\uD1A0\uB9C8\uCE58 \uC6B0"
+    m_Localized: "\uC624\uD1A0\uB9C8\uCE58 \uC6B0\uB098"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 81422098518941696
+    m_Localized: "\uCE74\uC0AC\uB124 \uD14C\uD1A0"
     m_Metadata:
       m_Items: []
   references:

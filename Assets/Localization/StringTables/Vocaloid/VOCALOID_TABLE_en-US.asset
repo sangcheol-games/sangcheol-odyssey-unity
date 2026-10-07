@@ -26,6 +26,10 @@ MonoBehaviour:
     m_Localized: Otomachi Una
     m_Metadata:
       m_Items: []
+  - m_Id: 81422098518941696
+    m_Localized: Kasane Teto
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -30,6 +30,18 @@ MonoBehaviour:
     m_Localized: Lazy Dance
     m_Metadata:
       m_Items: []
+  - m_Id: 81596242686550016
+    m_Localized: Don't Just Understand Me
+    m_Metadata:
+      m_Items: []
+  - m_Id: 83036802307760128
+    m_Localized: ' I Can''t Speak Japanese'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 83469750681116672
+    m_Localized: CrabCarnival!
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

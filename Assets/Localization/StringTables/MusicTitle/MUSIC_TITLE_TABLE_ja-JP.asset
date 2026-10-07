@@ -30,6 +30,18 @@ MonoBehaviour:
     m_Localized: Lazy Dance
     m_Metadata:
       m_Items: []
+  - m_Id: 81596242686550016
+    m_Localized: "\u7406\u89E3\u3060\u3051\u306F\u3057\u306A\u3044\u3067"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 83036802307760128
+    m_Localized: "\u65E5\u672C\u8A9E\u3067\u304D\u307E\u305B\u3093"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 83469750681116672
+    m_Localized: "\u30CB\u30AB\u30FC\u30CB\u30D0\u30EB\uFF01"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

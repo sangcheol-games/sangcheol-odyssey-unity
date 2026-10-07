@@ -23,6 +23,10 @@ MonoBehaviour:
     m_Key: VOCALOID_OTOMACHI_UNA
     m_Metadata:
       m_Items: []
+  - m_Id: 81422098518941696
+    m_Key: VOCALOID_KASANE_TETO
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

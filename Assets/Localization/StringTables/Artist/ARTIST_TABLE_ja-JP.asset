@@ -26,6 +26,10 @@ MonoBehaviour:
     m_Localized: Maro Note
     m_Metadata:
       m_Items: []
+  - m_Id: 81423551606202368
+    m_Localized: "\u30EC\u30AA"
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
