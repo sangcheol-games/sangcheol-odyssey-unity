@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: eb49e1e0bb3949c4ab282814562980c5
+guid: 44bff7a8e6763bc458289b3d8d27593d
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 8231413142621817882
-    second: MusicListUI_Panel_selected_0
+      213: -8641724433498657718
+    second: Temp_SettingUI_Tag_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -52,7 +52,7 @@ TextureImporter:
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
   spritePixelsToUnits: 200
-  spriteBorder: {x: 100, y: 92, z: 100, w: 92}
+  spriteBorder: {x: 63, y: 75, z: 62, w: 135}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: MusicListUI_Panel_selected_0
+      name: Temp_SettingUI_Tag_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 1440
-        height: 184
+        width: 232
+        height: 408
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: a1c847d24aadb3270800000000000000
-      internalID: 8231413142621817882
+      spriteID: a4caf7ed96d621880800000000000000
+      internalID: -8641724433498657718
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      MusicListUI_Panel_selected_0: 8231413142621817882
+      Temp_SettingUI_Tag_0: -8641724433498657718
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
