@@ -10,8 +10,8 @@ namespace SCOdyssey.Config
         public const string ResourcePath = "Config/PlayfieldSettings";
 
         [Header("노트")]
-        [Tooltip("유저 설정(노트 투명도)을 못 읽을 때 Ghost 노트의 알파")]
-        public float ghostAlphaFallback = 0.2f;
+        [Tooltip("유저 설정(노트 투명도)을 못 읽을 때 Ghost 노트의 밝기(RGB 배율). Ghost는 알파가 아니라 색을 어둡게 해 표시한다")]
+        public float ghostBrightnessFallback = 0.3f;
         [Tooltip("Hidden 노트를 판정선이 이만큼(px) 지나간 뒤에 Ghost로 보인다")]
         public float hiddenToGhostOffsetPx = 20f;
         [Tooltip("홀드가 끊긴 뒤 남은 홀드바의 최대 알파")]
@@ -59,7 +59,7 @@ namespace SCOdyssey.Config
 
         private void OnValidate()
         {
-            ghostAlphaFallback = Mathf.Clamp01(ghostAlphaFallback);
+            ghostBrightnessFallback = Mathf.Clamp01(ghostBrightnessFallback);
             brokenHoldAlpha = Mathf.Clamp01(brokenHoldAlpha);
             hiddenToGhostOffsetPx = Mathf.Max(0f, hiddenToGhostOffsetPx);
             timelineScreenMarginPx = Mathf.Max(0f, timelineScreenMarginPx);

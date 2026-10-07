@@ -195,8 +195,8 @@ MonoBehaviour:
   audioFilePath: Una Alarm.ogg
   previewAudioFilePath: Una Alarm_preview.wav
   videoFileName: BGA_0002.mp4
-  backgroundArt: {fileID: -7052913442509953211, guid: 64fa82816eb702e4eaf33bc551902ad4, type: 3}
-  albumArt: {fileID: -3368966193787546213, guid: f759dd26a7284014a86f48e835797d0d, type: 3}
+  backgroundArt: {fileID: 6223663959160995927, guid: 9188cd0ecc7482e4483e9f1212f98aaa, type: 3}
+  albumArt: {fileID: -5167633534449725708, guid: e97b32ae96a475e43991174807318429, type: 3}
   references:
     version: 2
     RefIds: []

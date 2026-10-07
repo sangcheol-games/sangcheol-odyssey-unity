@@ -8,5 +8,13 @@ namespace SCOdyssey.Game
             // 릴리즈 판정 노트: 헤드만 표시 (홀드바 없음)
             noteImage.enabled = true;
         }
+
+        // 판정 즉시 확정하고, 히트 애니메이션이 끝나면 풀에 반환
+        public override void OnHit()
+        {
+            if (isJudged) return;
+            isJudged = true;
+            PlayHitAnim(DeleteNote);
+        }
     }
 }

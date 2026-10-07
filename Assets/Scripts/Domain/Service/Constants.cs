@@ -1,11 +1,10 @@
-
 namespace SCOdyssey.Domain.Service
 {
     public static class Constants
     {
         public const int LANE_GROUP_COUNT = 2;
         public const int LANE_COUNT = 4;   // 레인 수
-        public const int COUNTDOWN_SLOT_COUNT = LANE_GROUP_COUNT * 2;   // 그룹 x 진행방향(LTR/RTL). countdownTexts 배열 크기
+        public const int COUNTDOWN_SLOT_COUNT = LANE_GROUP_COUNT * 2;   // 그룹 x 진행방향(LTR/RTL). countdownImages 배열 크기
 
 
         public enum Difficulty
@@ -70,19 +69,5 @@ namespace SCOdyssey.Domain.Service
             Middle,
             Bottom
         }
-
-        public enum CharacterState
-        {
-            Idle,
-            Hit0, Hit1, Hit2, Hit3,
-            Top, Middle, Bottom,
-            TopHold, MiddleHold, BottomHold,
-            TopHitWhileBottomHold,              // 아래 홀드 중 위 히트 (bottomY 유지)
-            BottomHitWhileTopHold,              // 위 홀드 중 아래 히트 (topY 유지)
-            Attack,                             // 같은 레인 재입력 (Y 유지)
-            Hit_Kind,                           // Kind 판정 히트
-            Hit_Umm                             // Umm 판정 히트
-        }
-
     }
 }

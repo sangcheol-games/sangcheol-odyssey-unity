@@ -63,6 +63,10 @@ namespace SCOdyssey.Game
             this.timeProvider = timeProvider;
 
             isLTR = startX < endX;
+
+            // 풀에서 꺼낸 판정선은 비활성이라 SetActive(true)가 캐릭터의 OnEnable(상태 초기화)을 부른다.
+            // 홀드 상태 시딩(SetGroup)이 그 초기화에 지워지지 않도록 먼저 켠다
+            Activate();
             if (_characterAnimator != null)
             {
                 _characterAnimator.SetGroup(group);
@@ -71,10 +75,7 @@ namespace SCOdyssey.Game
                     : Quaternion.Euler(0, 180, 0);
             }
 
-
             rectTransform.anchoredPosition = new Vector2(startX, rectTransform.anchoredPosition.y);
-
-            Activate();
             UpdatePosition();
         }
 

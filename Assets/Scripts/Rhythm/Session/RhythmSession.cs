@@ -35,8 +35,13 @@ namespace SCOdyssey.Rhythm
             PublishJudged();
 
             if (!hit) return PressOutcome.NoTarget;
-            JudgeEvent last = _events[_events.Count - 1];
-            return new PressOutcome(last.NoteId, last.Kind, last.Judge);
+            // 친 노트는 이 입력 시각의 유일한 적중. 떼지 않은 채 다음 머리를 누르면 앞 홀드 꼬리의 miss가 뒤에 붙는다
+            for (int i = _events.Count - 1; i >= 0; i--)
+            {
+                JudgeEvent e = _events[i];
+                if (!e.IsMiss) return new PressOutcome(e.NoteId, e.Kind, e.Judge);
+            }
+            return PressOutcome.NoTarget;
         }
 
         public void Release(Lane lane, double time)

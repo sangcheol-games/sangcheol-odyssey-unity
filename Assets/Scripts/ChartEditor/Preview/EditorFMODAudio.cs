@@ -7,7 +7,7 @@ namespace SCOdyssey.ChartEditor.Preview
 {
     /// <summary>
     /// 채보 에디터 전용 FMOD Low-Level 오디오 플레이어.
-    /// FMODAudioManager를 수정하지 않고 에디터에서 독립적으로 FMOD를 사용한다.
+    /// 게임 오디오 모듈을 거치지 않고 RuntimeManager.CoreSystem을 직접 쓴다(에디터 전용 예외).
     /// CREATESAMPLE로 전체 디코딩하여 재생과 PCM 데이터 추출을 모두 지원.
     /// </summary>
     public class EditorFMODAudio : MonoBehaviour

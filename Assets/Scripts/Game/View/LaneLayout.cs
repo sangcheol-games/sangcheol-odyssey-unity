@@ -10,8 +10,8 @@ namespace SCOdyssey.Game
         Bottom,
     };
 
-    // 카운트다운 텍스트 슬롯. (그룹 x 진행방향, 레인x)
-    // countdownTexts 배열 인덱스와 1:1 대응.
+    // 카운트다운 이미지 슬롯. (그룹 x 진행방향, 레인x)
+    // countdownImages 배열 인덱스와 1:1 대응.
     public enum CountdownSlot
     {
         TopLTR = 0,

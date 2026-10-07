@@ -11,8 +11,7 @@ namespace SCOdyssey.Domain.Dto
         public string languageCode = "ko-KR";       // BCP 47 (ko-KR / ja-JP / en-US)
         public string displayLanguageCode = "origin";  // 곡 제목 표시 언어 (origin / ko-KR / ja-JP / en-US)
         public float bgaOpacity = 0.4f;               // BGA 투명도 0 ~ 1
-        public float noteOpacity = 0.2f;              // 고스트 노트 투명도 0 ~ 0.5
-        public bool showPerfect = false;    // 노트 세부판정 표시
+        public float noteOpacity = 0.3f;              // 고스트 노트 밝기 0 ~ 0.5
 
         // Graphic
         public int displayMode = 0;         // 0=전체 화면 / 1=창 모드 / 2=전체 창 모드
@@ -24,9 +23,18 @@ namespace SCOdyssey.Domain.Dto
         public float bgmVolume = 1f;          // 배경음(음악)
         public float hitSoundVolume = 1f;     // 타격음
         public float sfxVolume = 1f;          // 효과음
-        public int audioDeviceIndex = 0;     // FMOD 출력 장치 인덱스
-        public int audioBufferIndex = 2;      // 0=64 / 1=128 / 2=256 / 3=512 / 4=1024
         public bool playInBackground = false; // true=백그라운드 재생 / false=포커스 잃으면 음소거
+
+        // Sound v2 (출력). 부팅 때 AudioSettingsMapper가 읽고, 설정 화면은 적용이 요청 구성으로 성공했을 때만 저장한다.
+        // v1의 audioDeviceIndex·audioBufferIndex는 지웠다(마이그레이션은 SettingsMigration이 원문 JSON에서 읽는다).
+        public const int CurrentVersion = 2;
+        public int settingsVersion = CurrentVersion;
+        public string audioOutputType = "WASAPI";   // "WASAPI" | "ASIO"
+        public string deviceGuid = "";              // 비어 있으면 기본 장치 따라가기
+        public string deviceName = "";              // GUID로 못 찾을 때의 보조 키, 표시용
+        public int systemRate = 0;                  // 마지막으로 확인한 장치 레이트
+        public int dspBufferLength = 256;
+        public int dspBufferCount = 4;              // UI에 노출하지 않음. ASIO는 2
 
         // Input
         public int inputPollingRateHz = 2000;  // 입력 폴링레이트 (Hz): 1000 / 2000 / 4000 / 8000

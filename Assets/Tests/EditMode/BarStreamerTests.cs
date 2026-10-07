@@ -79,6 +79,8 @@ namespace SCOdyssey.Rhythm.Tests
         [TestCase("Chart_0002_Easy", 155)]
         [TestCase("Chart_0002_Normal", 155)]
         [TestCase("Chart_0002_Hard", 155)]
+        [TestCase("Chart_0003_Easy", 160)]
+        [TestCase("Chart_0003_Normal", 160)]
         public void ShippedCharts_AreInBarOrder(string name, int bpm)
         {
             string text = File.ReadAllText(Path.Combine(Application.dataPath, "Charts", name + ".txt"));

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using SCOdyssey.App;
 using SCOdyssey.Config;
 using SCOdyssey.Domain.Entity;
 using SCOdyssey.Rhythm;
@@ -88,7 +87,7 @@ namespace SCOdyssey.Game
 
         private SandboxAudio _audio;
         private SandboxPanel _panel;
-        private InputManager _keyboard;
+        private InputSystem_Actions _keys;
         private JudgeEngine _engine;
         private JudgeSettings _settings;
         private InputScript _script;
@@ -140,11 +139,13 @@ namespace SCOdyssey.Game
             _audio = new SandboxAudio();
             _audio.SetVolume(volume);
 
-            _keyboard = new InputManager();
-            _keyboard.SetTimeSyncPoint(0, 0);   // 콜백 시각을 realtime 그대로 받는다
-            _keyboard.OnLanePressed += (lane, realtime) => OnKey(lane, true, realtime);
-            _keyboard.OnLaneReleased += (lane, realtime) => OnKey(lane, false, realtime);
-            _keyboard.SwitchToGameplay();
+            // 게임 입력 맵의 레인 액션을 그대로 쓴다. Managers가 없는 씬이라 InputManager를 거치지 않는다
+            _keys = new InputSystem_Actions();
+            BindLane(_keys.Game.Lane1, Lane.L1);
+            BindLane(_keys.Game.Lane2, Lane.L2);
+            BindLane(_keys.Game.Lane3, Lane.L3);
+            BindLane(_keys.Game.Lane4, Lane.L4);
+            _keys.Game.Enable();
 
             if (document != null) _panel = new SandboxPanel(document.rootVisualElement, this, styleSheet, font);
             Restart();
@@ -152,7 +153,12 @@ namespace SCOdyssey.Game
 
         private void OnDestroy()
         {
-            _keyboard?.Disable();
+            if (_keys != null)
+            {
+                _keys.Game.Disable();
+                _keys.Dispose();
+                _keys = null;
+            }
             _audio?.Dispose();
         }
 
@@ -368,6 +374,13 @@ namespace SCOdyssey.Game
                     });
                 }
             }
+        }
+
+        // ctx.time은 realtime 도메인이라 QueueKeyboard가 그대로 시계 구간에 대응시킨다
+        private void BindLane(InputAction action, Lane lane)
+        {
+            action.performed += ctx => OnKey(lane, true, ctx.time);
+            action.canceled += ctx => OnKey(lane, false, ctx.time);
         }
 
         private void UpdateMusicStart()

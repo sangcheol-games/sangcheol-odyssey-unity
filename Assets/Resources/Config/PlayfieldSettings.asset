@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2a7908e395d326f45bbbaa406c20830f, type: 3}
   m_Name: PlayfieldSettings
   m_EditorClassIdentifier: Assembly-CSharp::SCOdyssey.Config.PlayfieldSettingsSO
-  ghostAlphaFallback: 0.2
+  ghostBrightnessFallback: 0.3
   hiddenToGhostOffsetPx: 20
   brokenHoldAlpha: 0.3
   timelineScreenMarginPx: 100

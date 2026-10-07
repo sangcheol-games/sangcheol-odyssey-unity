@@ -128,6 +128,26 @@ namespace SCOdyssey.Rhythm.Tests
         }
 
         [Test]
+        public void Press_OnNextHeadWhileStillHolding_ReturnsTheNewHead_NotTheBrokenTail()
+        {
+            RhythmSession session = Create(
+                new[]
+                {
+                    N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0),
+                    N(2.1, Lane.L1, NoteKind.HoldHead, 3), N(3.0, Lane.L1, NoteKind.HoldTail, 2),
+                },
+                out BusLog log, out _);
+
+            session.Press(Lane.L1, 1.0);
+            PressOutcome outcome = session.Press(Lane.L1, 2.1);
+
+            Assert.That(outcome.Hit, Is.True);
+            Assert.That(outcome.NoteId, Is.EqualTo(2));
+            Assert.That(outcome.Kind, Is.EqualTo(NoteKind.HoldHead));
+            Assert.That(log.Lines, Is.EqualTo(new[] { "input L1 P", "judged #0 Perfect", "input L1 P", "judged #2 Perfect", "judged #1 Miss" }));
+        }
+
+        [Test]
         public void Press_Whiff_ReturnsNoTarget()
         {
             RhythmSession session = Create(new[] { N(5.0, Lane.L1) }, out BusLog log, out _);

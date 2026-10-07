@@ -21,7 +21,7 @@ namespace SCOdyssey.Rhythm.Tests
             int I(string field) => so.FindProperty(field).intValue;
 
             // 연출을 일부러 바꿨다면 여기 기대값도 같이 바꾼다
-            Assert.That(F("ghostAlphaFallback"), Is.EqualTo(0.2f));
+            Assert.That(F("ghostBrightnessFallback"), Is.EqualTo(0.3f));
             Assert.That(F("hiddenToGhostOffsetPx"), Is.EqualTo(20f));
             Assert.That(F("brokenHoldAlpha"), Is.EqualTo(0.3f));
             Assert.That(F("timelineScreenMarginPx"), Is.EqualTo(100f));
@@ -30,6 +30,16 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(F("clearBannerSec"), Is.EqualTo(4f));
             Assert.That(I("resumeCountFrom"), Is.EqualTo(3));
             Assert.That(F("resumeCountSec"), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void GhostFallback_IsBrightness_NotAlpha()
+        {
+            // Ghost는 알파가 아니라 RGB 배율로 어둡게 보인다. 옛 알파 필드가 남아 있으면 안 된다
+            var so = new SerializedObject(AssetDatabase.LoadAssetAtPath<ScriptableObject>(AssetPath));
+
+            Assert.That(so.FindProperty("ghostBrightnessFallback"), Is.Not.Null);
+            Assert.That(so.FindProperty("ghostAlphaFallback"), Is.Null);
         }
 
         [Test]

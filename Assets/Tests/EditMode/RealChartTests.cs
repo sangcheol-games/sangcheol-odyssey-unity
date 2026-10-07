@@ -24,11 +24,13 @@ namespace SCOdyssey.Rhythm.Tests
         // Bpm은 MusicSO 에셋 값
         private static readonly Case[] Cases =
         {
-            new() { Name = "Chart_0001_Normal", Bpm = 195, Header = 619, Synthesized = 7, Tap = 340, HoldHead = 109, HoldTail = 109, Bodies = 68 },
-            new() { Name = "Chart_0001_Hard", Bpm = 195, Header = 629, Synthesized = 8, Tap = 356, HoldHead = 107, HoldTail = 107, Bodies = 67 },
+            new() { Name = "Chart_0001_Normal", Bpm = 195, Header = 551, Synthesized = 7, Tap = 340, HoldHead = 109, HoldTail = 109, Bodies = 0 },
+            new() { Name = "Chart_0001_Hard", Bpm = 195, Header = 562, Synthesized = 8, Tap = 356, HoldHead = 107, HoldTail = 107, Bodies = 0 },
             new() { Name = "Chart_0002_Easy", Bpm = 155, Header = 252, Synthesized = 17, Tap = 171, HoldHead = 49, HoldTail = 49, Bodies = 0 },
             new() { Name = "Chart_0002_Normal", Bpm = 155, Header = 353, Synthesized = 19, Tap = 266, HoldHead = 53, HoldTail = 53, Bodies = 0 },
-            new() { Name = "Chart_0002_Hard", Bpm = 155, Header = 403, Synthesized = 21, Tap = 314, HoldHead = 55, HoldTail = 55, Bodies = 0 },
+            new() { Name = "Chart_0002_Hard", Bpm = 155, Header = 414, Synthesized = 5, Tap = 309, HoldHead = 55, HoldTail = 55, Bodies = 0 },
+            new() { Name = "Chart_0003_Easy", Bpm = 160, Header = 343, Synthesized = 2, Tap = 157, HoldHead = 94, HoldTail = 94, Bodies = 0 },
+            new() { Name = "Chart_0003_Normal", Bpm = 160, Header = 641, Synthesized = 2, Tap = 241, HoldHead = 201, HoldTail = 201, Bodies = 0 },
         };
 
         private static string KindCounts(int tap, int head, int tail, int bodies)

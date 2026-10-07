@@ -140,7 +140,8 @@ namespace SCOdyssey.Game
 
         /// <summary>
         /// 판정이 끝난 노트 하나를 뷰에 반영한다. 화면에 있던 노트면 true와 스폰 자리(월드)를 돌려준다
-        /// (스폰 전이거나 이미 반영했으면 false). 탭·꼬리 뷰는 이때 풀로 돌아가고, 홀드 머리는 홀드바가 다 지나갈 때까지 남는다.
+        /// (스폰 전이거나 이미 반영했으면 false). 탭·꼬리 뷰는 히트 연출이 끝나면 풀로 돌아가고(miss는 바로),
+        /// 홀드 머리는 홀드바가 다 지나갈 때까지 남는다.
         /// </summary>
         public bool ApplyDecided(int noteId, NoteKind kind, int pairId, bool missed, out Vector3 spawnWorld)
         {
@@ -156,6 +157,9 @@ namespace SCOdyssey.Game
             }
             else
             {
+                // 히트 연출은 뷰가 풀로 돌아가기 전에 재생된다. Ghost/Hidden 색이면 어둡거나 안 보이므로 원색으로 올린다.
+                // 홀드 머리는 마디 시작에 판정선을 붙이며 Active가 되므로 여기서 올리지 않는다(Hidden 머리가 지금 판정선을 따라가면 안 된다)
+                if (view != null && kind != NoteKind.HoldHead) view.SetState(NoteState.Active);
                 view?.OnHit();
                 if (kind == NoteKind.HoldTail) _holdHeads[noteId] = default;
             }

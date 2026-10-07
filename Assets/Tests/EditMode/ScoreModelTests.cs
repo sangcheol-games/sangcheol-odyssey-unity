@@ -31,13 +31,16 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(model.FinalScore, Is.EqualTo(999_473), "Ideal이 있으면 보정 없음");
         }
 
+        // 작은 값과 출시 채보의 판정 트랙 길이
         [TestCase(3)]
         [TestCase(7)]
         [TestCase(269)]
+        [TestCase(345)]
         [TestCase(372)]
-        [TestCase(424)]
+        [TestCase(419)]
         [TestCase(558)]
         [TestCase(570)]
+        [TestCase(643)]
         public void AllPerfect_ReachesMaxPlusEx(int totalNotes)
         {
             ScoreModel model = Play(totalNotes, (JudgeType.Perfect, totalNotes));
@@ -77,10 +80,12 @@ namespace SCOdyssey.Rhythm.Tests
         [TestCase(3)]
         [TestCase(7)]
         [TestCase(269)]
+        [TestCase(345)]
         [TestCase(372)]
-        [TestCase(424)]
+        [TestCase(419)]
         [TestCase(558)]
         [TestCase(570)]
+        [TestCase(643)]
         public void AllIdeal_LandsExactlyOnFailLine(int totalNotes)
         {
             // 0.7 x n / n 이 699,999.999…로 떨어져도 700,000이어야 한다
@@ -230,6 +235,8 @@ namespace SCOdyssey.Rhythm.Tests
         [TestCase("Chart_0002_Easy", 155)]
         [TestCase("Chart_0002_Normal", 155)]
         [TestCase("Chart_0002_Hard", 155)]
+        [TestCase("Chart_0003_Easy", 160)]
+        [TestCase("Chart_0003_Normal", 160)]
         public void Autoplay_RealCharts_AllPerfectScore(string name, int bpm)
         {
             string text = File.ReadAllText(Path.Combine(Application.dataPath, "Charts", name + ".txt"));

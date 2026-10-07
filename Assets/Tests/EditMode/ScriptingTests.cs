@@ -215,6 +215,8 @@ namespace SCOdyssey.Rhythm.Tests
         [TestCase("Chart_0002_Easy", 155, 1.0 / 60)]
         [TestCase("Chart_0002_Normal", 155, 1.0 / 60)]
         [TestCase("Chart_0002_Hard", 155, 1.0 / 60)]
+        [TestCase("Chart_0003_Easy", 160, 1.0 / 60)]
+        [TestCase("Chart_0003_Normal", 160, 1.0 / 60)]
         [TestCase("Chart_0001_Hard", 195, 0.1)]      // 판정이 프레임과 무관하므로 10fps여도 전부 Perfect
         [TestCase("Chart_0002_Hard", 155, 0.1)]
         public void Autoplay_Perfect_RealCharts_AllPerfect(string name, int bpm, double frameSec)

@@ -3,7 +3,6 @@ using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
-using TMPro;
 using SCOdyssey.App;
 using SCOdyssey.Core;
 using static SCOdyssey.Domain.Service.Constants;
@@ -13,7 +12,12 @@ namespace SCOdyssey.UI
 {
     public class ResultUI : BaseUI
     {
-        MusicSO currentMusic;
+        // 등급 도장 스프라이트. ScoreRank enum 순서(SSS, SS, S, A, B, C, F)와 인덱스가 일치해야 함
+        [Tooltip("등급 도장 스프라이트. 순서는 SSS, SS, S, A, B, C, F (ScoreRank enum 순서와 일치해야 한다)")]
+        [SerializeField] private Sprite[] rankStampSprites;
+
+        // 카운트업 연출 담당 (같은 오브젝트). 수치 조정과 연출 다시 재생은 그쪽 인스펙터에서 한다
+        private ResultCountAnimator countAnimator;
 
         // 텍스트 enum
         private enum Texts
@@ -22,7 +26,6 @@ namespace SCOdyssey.UI
             ArtistText,        // 아티스트
             ScoreText,          // 최종 점수
             TotalNotesText,     // 총 노트 수
-            RankText,           // 클리어 등급
             GaugeText,          // 게이지 퍼센트
             MaxComboText,       // 최대 콤보
             PerfectCountText,   // Perfect 개수
@@ -41,12 +44,9 @@ namespace SCOdyssey.UI
 
         private enum Images
         {
-            AlbumArt      // 앨범 아트
-        }
-
-        private enum GameObjects
-        {
-            Perfect
+            AlbumArt,     // 앨범 아트
+            RankStamp,    // 클리어 등급 도장
+            NewRecordStamp // 신기록 도장 (점수가 이전 최고점수보다 높을 때만)
         }
 
         protected override void Awake()
@@ -56,16 +56,20 @@ namespace SCOdyssey.UI
             BindText(typeof(Texts));
             BindButton(typeof(Buttons));
             BindImage(typeof(Images));
-            BindObject(typeof(GameObjects));
 
             // 버튼 클릭 이벤트 연결
             GetButton((int)Buttons.RetryButton).onClick.AddListener(OnClickRetryButton);
             GetButton((int)Buttons.SubmitButton).onClick.AddListener(OnClickSubmitButton);
 
-            currentMusic = ServiceLocator.Get<IMusicManager>().GetCurrentMusic();
+            countAnimator = GetComponent<ResultCountAnimator>();
+            if (countAnimator == null)
+            {
+                Debug.LogWarning("[ResultUI] 프리팹에 ResultCountAnimator가 없어 기본값으로 추가합니다. 연출 수치를 조정하려면 ResultUI 프리팹 루트에 컴포넌트를 붙이세요.");
+                countAnimator = gameObject.AddComponent<ResultCountAnimator>();
+            }
         }
 
-        // 결과 화면 초기화
+        // 결과 화면 초기화. 등급(scoreRank)은 ScoreModel이 정한 값을 그대로 받고 여기서 다시 계산하지 않는다
         public void Init(
             int finalScore,
             ClearType result,
@@ -73,67 +77,78 @@ namespace SCOdyssey.UI
             int maxCombo,
             int totalNotes,
             Dictionary<JudgeType, int> judgeCounts,
-            float gaugePercent)
+            float gaugePercent,
+            bool isNewBestScore)
         {
-            // 곡 정보 표시
-            GetImage((int)Images.AlbumArt).sprite = currentMusic.albumArt;
-            GetText((int)Texts.MusicTitleText).text = currentMusic.title.GetLocalizedString();
-            GetText((int)Texts.ArtistText).text = currentMusic.producer.GetLocalizedString();
+            // 곡 정보 표시. UI 인스턴스는 씬을 넘어 재사용되므로 현재 곡은 매번 여기서 읽는다
+            MusicSO currentMusic = ServiceLocator.Get<IMusicManager>().GetCurrentMusic();
+            if (currentMusic != null)
+            {
+                GetImage((int)Images.AlbumArt).sprite = currentMusic.albumArt;
+                GetText((int)Texts.MusicTitleText).text = currentMusic.title.GetLocalizedString();
+                GetText((int)Texts.ArtistText).text = currentMusic.producer.GetLocalizedString();
+            }
 
-            // 점수 표시 (7자리 포맷)
-            GetText((int)Texts.ScoreText).text = finalScore.ToString("N0");
-
-            // 등급 표시 (색상 포함)
-            TMP_Text rankText = GetText((int)Texts.RankText);
-            rankText.text = scoreRank.ToString().ToUpper();
-            rankText.color = GetRankColor(scoreRank);
-
-            // 게이지 퍼센트 표시
-            GetText((int)Texts.GaugeText).text = $"{gaugePercent:F2}%";
-
-            // 최대 콤보 표시
-            GetText((int)Texts.MaxComboText).text = maxCombo.ToString();
-
-            // 판정 통계 표시
+            // 판정 통계 표시 (총 노트 수는 카운트 없이 즉시 표시)
             GetText((int)Texts.TotalNotesText).text = totalNotes.ToString();
 
-            // OverMillion 판정, perfect 비표시
-            if (ServiceLocator.TryGet<ISettingsManager>(out var settingsManager) &&
-                (settingsManager.Current.showPerfect || result == ClearType.OverMillion || result == ClearType.AllPerfect))
+            // 등급 도장 표시: 스프라이트만 여기서 정하고, 찍는 연출은 countAnimator가 마지막에 한다
+            Image stamp = GetImage((int)Images.RankStamp);
+            bool hasRankSprite = rankStampSprites != null && (uint)scoreRank < (uint)rankStampSprites.Length
+                && rankStampSprites[(int)scoreRank] != null;
+            if (hasRankSprite)
             {
-                GetText((int)Texts.PerfectCountText).text = judgeCounts[JudgeType.Perfect].ToString();
+                stamp.sprite = rankStampSprites[(int)scoreRank];
             }
             else
-                DisablePerfect();
-
-            GetText((int)Texts.MasterCountText).text = judgeCounts[JudgeType.Master].ToString();
-            GetText((int)Texts.IdealCountText).text = judgeCounts[JudgeType.Ideal].ToString();
-            GetText((int)Texts.KindCountText).text = judgeCounts[JudgeType.Kind].ToString();
-            GetText((int)Texts.UmmCountText).text = judgeCounts[JudgeType.Umm].ToString();
-        }
-
-        // 등급별 색상 반환
-        private Color GetRankColor(ScoreRank rank)
-        {
-            return rank switch
             {
-                ScoreRank.SSS => new Color(1f, 0.84f, 0f), // gold
-                ScoreRank.SS  => new Color(1f, 0.84f, 0f), // gold
-                ScoreRank.S   => new Color(1f, 0.84f, 0f), // gold
-                ScoreRank.A   => Color.red,
-                ScoreRank.B   => Color.yellow,
-                ScoreRank.C   => Color.green,
-                ScoreRank.F   => Color.cyan,
-                _             => Color.white
+                Debug.LogWarning($"[ResultUI] rankStampSprites에 {scoreRank} 등급 스프라이트가 없습니다. 등급 도장을 건너뜁니다.");
+            }
+
+            // 카운트업 줄 목록. 배열 순서 = 연출 순서(위 → 아래). 판정 그룹(Perfect~Umm)과 ScorePanel 그룹(Rate~Score) 사이에 텀을 둔다
+            var rows = new ResultCountAnimator.Row[]
+            {
+                // Perfect는 ClearType과 무관하게 항상 표시
+                new ResultCountAnimator.Row(GetText((int)Texts.PerfectCountText), judgeCounts[JudgeType.Perfect], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.MasterCountText), judgeCounts[JudgeType.Master], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.IdealCountText), judgeCounts[JudgeType.Ideal], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.KindCountText), judgeCounts[JudgeType.Kind], FormatCount),
+                new ResultCountAnimator.Row(GetText((int)Texts.UmmCountText), judgeCounts[JudgeType.Umm], FormatCount),
+
+                // 게이지 퍼센트 표시 (ScorePanel 맨 위 Rate. 여기서 새 그룹 시작)
+                new ResultCountAnimator.Row(GetText((int)Texts.GaugeText), gaugePercent, FormatGauge, startsGroup: true),
+
+                // 최대 콤보 표시
+                new ResultCountAnimator.Row(GetText((int)Texts.MaxComboText), maxCombo, FormatCount),
+
+                // 점수 표시 (7자리 포맷)
+                new ResultCountAnimator.Row(GetText((int)Texts.ScoreText), finalScore, FormatScore, isFinale: true)
             };
+
+            // 도장 목록. 동시에 찍힌다. 등급 도장은 스프라이트가 있을 때, NEW RECORD는 점수 신기록일 때만 찍는다
+            var stamps = new ResultCountAnimator.Stamp[]
+            {
+                new ResultCountAnimator.Stamp(stamp, hasRankSprite),
+                new ResultCountAnimator.Stamp(GetImage((int)Images.NewRecordStamp), isNewBestScore)
+            };
+
+            countAnimator.Play(rows, stamps);
         }
 
-        private void DisablePerfect()
+        private static string FormatCount(float v)
         {
-            // 필요 시 ui / 로직 수정
-            GetObject((int)GameObjects.Perfect).SetActive(false);
+            return Mathf.FloorToInt(v).ToString();
         }
 
+        private static string FormatScore(float v)
+        {
+            return Mathf.FloorToInt(v).ToString("N0");
+        }
+
+        private static string FormatGauge(float v)
+        {
+            return $"{v:F2}%";
+        }
 
         // 다시하기 버튼 클릭
         private void OnClickRetryButton()

@@ -23,6 +23,10 @@ MonoBehaviour:
     m_Key: MUSIC_TITLE_0002
     m_Metadata:
       m_Items: []
+  - m_Id: 81219185859272704
+    m_Key: MUSIC_TITLE_0003
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
