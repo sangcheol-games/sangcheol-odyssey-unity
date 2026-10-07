@@ -178,8 +178,8 @@ MonoBehaviour:
   illustrator: Zzul
   animator: FRIYAY
   bpm: 180
-  audioFilePath: "\u30B5\u30D0\uFF01\u30B5\u30DE\u30FC\uFF01\u30B5\u30F3\u30D0\uFF01.ogg"
-  previewAudioFilePath: "\u30B5\u30D0\uFF01\u30B5\u30DE\u30FC\uFF01\u30B5\u30F3\u30D0\uFF01_preview.ogg"
+  audioFilePath: "\u30AB\u30CB\u30AB\u30FC\u30CB\u30D0\u30EB!.ogg"
+  previewAudioFilePath: "\u30AB\u30CB\u30AB\u30FC\u30CB\u30D0\u30EB!.ogg"
   videoFileName: BGA_0001.mp4
   backgroundArt: {fileID: -9076618529365219326, guid: 5143ea3efe33474449170e708376d630, type: 3}
   albumArt: {fileID: 2690450654785119229, guid: 4847a1ddfc26859468ca91884019a27a, type: 3}
