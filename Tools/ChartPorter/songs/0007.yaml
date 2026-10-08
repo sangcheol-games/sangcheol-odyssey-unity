@@ -1,0 +1,12 @@
+# 7번 JUST HAVE FUN (170 BPM) — 신규 곡: 음원만으로 이지부터 생성 (align → gen 이지 → gen 노멀 → port 하드, 단계마다 사용자 수정·설치)
+id: 7
+title: JUST HAVE FUN
+role: target
+levels: {Easy: 3, Normal: 5, Hard: 9}      # MusicSO_0007 레벨과 같게 (헤더 #LEVEL 용, 게임은 MusicSO 를 씀)
+downbeat_ok: true      # 2026-10-08 사용자 결정: align 판정(A05 여유 1.10)대로 진행, 이지 미리듣기 때 첫 박 함께 확인
+region: {last_bar: 70} # 사용자 결정 (소리 기준 제안 68, 음원 70마디 끝까지)
+# 복사 규칙 없음 (사용자 결정): 음원상 같음·반주 같음 반복이 없고 멜로디만 비슷한 구간(17–23≈1–7, 42–53≈14–25, 61–68≈17–24)
+# 16분 소리가 강한 곡 (align A02b: 16분 엇박 ×1.29) — 노멀·하드에서 16분 패턴 확인
+notes: >
+  MusicSO_0007 은 6번을 복사한 상태로 보임: id 6(6번과 겹침), chartFile 슬롯 Chart_0006_*, 제목·아티스트·보컬 로컬라이즈 키와
+  BGA 도 6번 것 — Inspector 에서 정리 필요. 아티스트는 아직 모름(헤더 #ARTIST 비움).

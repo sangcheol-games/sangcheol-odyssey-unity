@@ -1,0 +1,743 @@
+{
+ "version": 1,
+ "primary": "2",
+ "songs": {
+  "2": {
+   "song": 2,
+   "title": "Una Alarm",
+   "bars_used": 47,
+   "bars_excluded_as_copies": [
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63
+   ],
+   "excluded_odd16_notes": 22,
+   "density": {
+    "normal_onsets": 219,
+    "hard_onsets": 236,
+    "onset_ratio": 1.078,
+    "note_ratio": 1.197,
+    "ratio_by_normal_subdivision": {
+     "4": 1.391,
+     "8": 1.042,
+     "12": 1.0
+    }
+   },
+   "bar_classes": {
+    "unchanged": 15,
+    "add_only": 5,
+    "moved": 15,
+    "recharted": 11,
+    "type_only": 1
+   },
+   "normal_fate": {
+    "counts": {
+     "kept": 153,
+     "relane_cross": 19,
+     "relane_same": 16,
+     "deleted": 9,
+     "type_change": 8
+    },
+    "share": {
+     "kept": 0.746,
+     "relane_cross": 0.093,
+     "relane_same": 0.078,
+     "deleted": 0.044,
+     "type_change": 0.039
+    }
+   },
+   "added": {
+    "count": 40,
+    "class_share": {
+     "gapfill": 0.725,
+     "extend": 0.275
+    },
+    "grid_share": {
+     "8th": 0.55,
+     "beat": 0.45
+    },
+    "distance_to_normal_16ths": {
+     "2": 34,
+     "8": 3,
+     "6": 1,
+     "4": 2
+    },
+    "lane_relation": {
+     "first_in_group": 8,
+     "alternate": 17,
+     "same": 15
+    }
+   },
+   "gimmick": {
+    "bars": [
+     4,
+     5,
+     8,
+     10,
+     11,
+     12,
+     13,
+     14,
+     15,
+     25,
+     26,
+     27,
+     28,
+     30,
+     31,
+     32,
+     48,
+     53,
+     64,
+     65
+    ],
+    "bar_rate": 0.426,
+    "extra_dir": {
+     "own": 7,
+     "flipped": 13
+    },
+    "main_reversed_bars": [],
+    "main_dropped_bars": [],
+    "both_group_chord_bars": [],
+    "extra_notes_per_bar": {
+     "1": 11,
+     "2": 6,
+     "3": 2,
+     "4": 1
+    },
+    "extra_note_positions": {
+     "1/2": 15,
+     "5/8": 7,
+     "3/4": 6,
+     "3/8": 2,
+     "1/4": 1,
+     "7/8": 1
+    },
+    "added_per_bar": {
+     "gimmick": 1.55,
+     "other": 0.33
+    },
+    "normal_onsets_per_bar": {
+     "gimmick": 4.7,
+     "other": 4.63
+    },
+    "top_templates": [
+     {
+      "bar_parity": "even",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "1/2",
+        2,
+        "1"
+       ]
+      ],
+      "count": 6
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "1/2",
+        4,
+        "1"
+       ],
+       [
+        "5/8",
+        3,
+        "1"
+       ]
+      ],
+      "count": 3
+     },
+     {
+      "bar_parity": "even",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "3/4",
+        2,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "3/4",
+        3,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "even",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "1/2",
+        2,
+        "2"
+       ],
+       [
+        "5/8",
+        2,
+        "4"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "3/8",
+        3,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "1/2",
+        4,
+        "1"
+       ],
+       [
+        "1/4",
+        3,
+        "1"
+       ],
+       [
+        "3/4",
+        4,
+        "2"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "even",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "1/2",
+        2,
+        "1"
+       ],
+       [
+        "3/4",
+        2,
+        "1"
+       ]
+      ],
+      "count": 1
+     }
+    ]
+   },
+   "holds": {
+    "changes": {
+     "end_closed_78": 7,
+     "kept": 15,
+     "end_changed": 2,
+     "removed": 6,
+     "new": 11,
+     "to_tap": 5
+    },
+    "open_normal_holds": 13,
+    "open_closed_at_7_8": 7,
+    "open_hold_fate": [
+     {
+      "bar": 3,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 7,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 15,
+      "lane": 1,
+      "start": "7/8",
+      "fate": "to_tap"
+     },
+     {
+      "bar": 19,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 23,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 25,
+      "lane": 1,
+      "start": "0",
+      "fate": "kept"
+     },
+     {
+      "bar": 25,
+      "lane": 2,
+      "start": "0",
+      "fate": "kept"
+     },
+     {
+      "bar": 29,
+      "lane": 2,
+      "start": "3/4",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 41,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "removed"
+     },
+     {
+      "bar": 50,
+      "lane": 3,
+      "start": "0",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 54,
+      "lane": 4,
+      "start": "1/2",
+      "fate": "removed"
+     },
+     {
+      "bar": 55,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "end_closed_78"
+     },
+     {
+      "bar": 64,
+      "lane": 4,
+      "start": "3/4",
+      "fate": "to_tap"
+     }
+    ],
+    "short_normal_holds": 12,
+    "short_to_tap": 4,
+    "short_kept": 7
+   },
+   "spacing": {
+    "same_lane_min_gap_ms": 194,
+    "same_lane_gaps_below_8th": 0,
+    "same_lane_gaps_total": 250
+   }
+  },
+  "3": {
+   "song": 3,
+   "title": "Lazy Dance",
+   "bars_used": 67,
+   "bars_excluded_as_copies": [
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    62,
+    64,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104
+   ],
+   "excluded_odd16_notes": 17,
+   "density": {
+    "normal_onsets": 277,
+    "hard_onsets": 343,
+    "onset_ratio": 1.238,
+    "note_ratio": 1.103,
+    "ratio_by_normal_subdivision": {
+     "4": 1.182,
+     "8": 1.271,
+     "16": 1.0
+    }
+   },
+   "bar_classes": {
+    "moved": 26,
+    "recharted": 33,
+    "unchanged": 6,
+    "type_only": 2
+   },
+   "normal_fate": {
+    "counts": {
+     "kept": 90,
+     "relane_cross": 42,
+     "relane_same": 69,
+     "type_change": 40,
+     "deleted": 30
+    },
+    "share": {
+     "kept": 0.332,
+     "relane_same": 0.255,
+     "relane_cross": 0.155,
+     "type_change": 0.148,
+     "deleted": 0.111
+    }
+   },
+   "added": {
+    "count": 102,
+    "class_share": {
+     "gapfill": 0.647,
+     "extend": 0.275,
+     "same_time": 0.078
+    },
+    "grid_share": {
+     "8th": 0.853,
+     "beat": 0.147
+    },
+    "distance_to_normal_16ths": {
+     "2": 87,
+     "0": 8,
+     "4": 7
+    },
+    "lane_relation": {
+     "same": 22,
+     "first_in_group": 21,
+     "alternate": 59
+    }
+   },
+   "gimmick": {
+    "bars": [
+     1,
+     3,
+     7,
+     8,
+     11,
+     14,
+     15,
+     16,
+     18,
+     19,
+     34,
+     35,
+     37,
+     38,
+     39,
+     40,
+     41,
+     45,
+     46,
+     47,
+     72,
+     105
+    ],
+    "bar_rate": 0.328,
+    "extra_dir": {
+     "own": 16,
+     "flipped": 6
+    },
+    "main_reversed_bars": [
+     15,
+     28,
+     29,
+     38,
+     39,
+     46,
+     72,
+     73
+    ],
+    "main_dropped_bars": [
+     40
+    ],
+    "both_group_chord_bars": [
+     37,
+     45
+    ],
+    "extra_notes_per_bar": {
+     "2": 7,
+     "3": 7,
+     "1": 2,
+     "4": 4,
+     "5": 1,
+     "6": 1
+    },
+    "extra_note_positions": {
+     "1/2": 12,
+     "3/4": 12,
+     "5/8": 10,
+     "3/8": 7,
+     "0": 6,
+     "7/8": 5,
+     "1/4": 5,
+     "1/8": 5
+    },
+    "added_per_bar": {
+     "gimmick": 2,
+     "other": 1.29
+    },
+    "normal_onsets_per_bar": {
+     "gimmick": 4.41,
+     "other": 4
+    },
+    "top_templates": [
+     {
+      "bar_parity": "odd",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "1/2",
+        3,
+        "1"
+       ],
+       [
+        "3/4",
+        4,
+        "1"
+       ],
+       [
+        "5/8",
+        3,
+        "1"
+       ]
+      ],
+      "count": 2
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "1/2",
+        3,
+        "1"
+       ],
+       [
+        "5/8",
+        3,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "3/4",
+        4,
+        "1"
+       ],
+       [
+        "7/8",
+        3,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "3/4",
+        3,
+        "1"
+       ],
+       [
+        "5/8",
+        3,
+        "1"
+       ],
+       [
+        "7/8",
+        4,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "even",
+      "extra_dir": "flipped",
+      "cells": [
+       [
+        "5/8",
+        2,
+        "1"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "1/2",
+        3,
+        "2"
+       ],
+       [
+        "3/4",
+        4,
+        "1"
+       ],
+       [
+        "5/8",
+        3,
+        "4"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "even",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "1/4",
+        1,
+        "2"
+       ],
+       [
+        "3/4",
+        2,
+        "2"
+       ],
+       [
+        "3/8",
+        1,
+        "4"
+       ],
+       [
+        "7/8",
+        2,
+        "4"
+       ]
+      ],
+      "count": 1
+     },
+     {
+      "bar_parity": "odd",
+      "extra_dir": "own",
+      "cells": [
+       [
+        "3/4",
+        4,
+        "1"
+       ],
+       [
+        "3/8",
+        4,
+        "1"
+       ],
+       [
+        "5/8",
+        3,
+        "1"
+       ],
+       [
+        "7/8",
+        3,
+        "1"
+       ]
+      ],
+      "count": 1
+     }
+    ]
+   },
+   "holds": {
+    "changes": {
+     "removed": 46,
+     "to_tap": 24,
+     "relaned": 26,
+     "new": 37,
+     "kept": 27,
+     "end_changed": 3
+    },
+    "open_normal_holds": 2,
+    "open_closed_at_7_8": 0,
+    "open_hold_fate": [
+     {
+      "bar": 91,
+      "lane": 2,
+      "start": "1/2",
+      "fate": "kept"
+     },
+     {
+      "bar": 95,
+      "lane": 1,
+      "start": "1/2",
+      "fate": "relaned"
+     }
+    ],
+    "short_normal_holds": 74,
+    "short_to_tap": 20,
+    "short_kept": 23
+   },
+   "spacing": {
+    "same_lane_min_gap_ms": 94,
+    "same_lane_gaps_below_8th": 4,
+    "same_lane_gaps_total": 343
+   }
+  }
+ }
+}

@@ -1,0 +1,16 @@
+# 1번 サバ！サマー！サンバ！ (195 BPM) — 노멀은 사용자, 하드는 사용자가 찍다 만 상태
+id: 1
+title: サバ！サマー！サンバ！
+role: target
+mode: finish                 # 손으로 찍은 하드 마디는 유지하고 나머지만 생성 (M7)
+base: Assets/Charts/Chart_0001_Normal.txt
+target: Assets/Charts/Chart_0001_Hard.txt
+# 손작업 하드 원본: 노멀 리타이밍(-1/8 마디, 커밋 1886759) 전 타이밍 그대로인 하드 → 같은 규칙으로 -1/8 이동 후 사용
+finish_source: "git:1886759:Assets/Charts/Chart_0001_Hard.txt"
+finish_retime: "-1/8"
+finish_normal_source: "git:1886759^:Assets/Charts/Chart_0001_Normal.txt"   # 리타이밍 전 노멀 (직접 고친 칸 찾기용)
+frozen_bars: "3-5,7-13"      # 손작업 하드 마디 (옛 노멀과 다른 마디)
+notes: >
+  리타이밍 규칙(-1/8, 앞 마디로 넘어간 노트는 다른 그룹 같은 높이 레인, 0 에서 시작하는 홀드는 그대로)은
+  옛 노멀에 적용하면 지금 노멀 554노트 중 546개를 재현함. 나머지 8개는 사용자가 직접 고친 것.
+  MusicSO_0001 은 Normal 슬롯=Chart_0001_Normal(레벨 7), Extreme 슬롯=Chart_0001_Hard(레벨 15).

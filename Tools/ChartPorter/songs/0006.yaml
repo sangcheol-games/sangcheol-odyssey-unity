@@ -1,0 +1,9 @@
+# 6번 カニカーニバル! (180 BPM) — 이지·노말 팀원 (M9)
+id: 6
+title: カニカーニバル!
+role: target
+notes: >
+  이지·노말 모두 102–103마디 줄이 없어 게임이 멈춤(F01). 노말 헤더가 Easy, 이지 060마디 레인4 짝 없는 4.
+  MusicSO_0006 슬롯: Normal=Chart_0006_Easy, Extreme=Chart_0006_Normal. 음원은 커밋 0be0f35 로 추가됨.
+sections:                    # 사용자 확인 (2026-10-08): 아웃트로 = 인트로만 복사
+  - {bars: "94-99", copy_of: "4-9", transform: same}

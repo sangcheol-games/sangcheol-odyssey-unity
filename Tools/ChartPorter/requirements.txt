@@ -1,0 +1,7 @@
+# ChartPorter 파이썬 의존성 (setup_env.ps1로 .venv에 설치)
+numpy>=2.0
+scipy>=1.13
+soundfile>=0.12
+librosa>=0.11
+pyyaml>=6.0
+pytest>=8.0

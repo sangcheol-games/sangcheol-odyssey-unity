@@ -1,0 +1,12 @@
+# 5번 이해만은 하지 말아줘 (142 BPM) — 이지·노말 팀원. audit 결정 후 포팅 (M8)
+id: 5
+title: 이해만은 하지 말아줘
+role: target
+listen_bars: "17,19,21,23,33,35,37,39,49,75,77,79"   # 24분할 셋잇단 마디: 셋잇단 칸에 소리 없음
+notes: RTL 줄을 뒤집지 않고 읽은 쪽이 음원에 더 맞음(41 vs 25) → 실제로 들어 보고 확인 필요.
+rtl_suspect: true            # 하드 리포트에서 짝수 마디 기믹에 '방향 확인' 표시 (사용자 결정 2026-10-08: 5번도 다시 생성)
+sections:                    # 사용자 확인 (2026-10-08): 음원·노멀 모두 확실한 반복만 복사
+  - {bars: "58-60", copy_of: "26-28", transform: mirror}
+  - {bars: "62-63", copy_of: "30-31", transform: mirror}
+  - {bars: "77-78", copy_of: "37-38", transform: same}
+  - {bars: "81-84", copy_of: "9-12", transform: same}

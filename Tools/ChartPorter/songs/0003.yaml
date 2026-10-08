@@ -1,0 +1,22 @@
+# 3번 Lazy Dance (160 BPM) — 이지·노말은 팀원, 하드는 사용자 (참고용 기준)
+id: 3
+title: Lazy Dance
+role: reference
+base: Assets/Charts/Chart_0003_Normal.txt
+target: Assets/Charts/Chart_0003_Hard.txt
+keep_normal_bars: "21,33,48,49"   # 사용자가 일부러 노멀과 같게 둔 마디
+listen_bars: "18-19,23,46,67,71,86"  # 16분 홀수 칸 노트 일부 (전체 목록은 checklist 로)
+sections:                    # 사용자와 확인한 구간 맵 (1·2절 복사 규칙)
+  - {bars: "50-57", copy_of: "2-9", transform: same}
+  - {bars: "98-104", copy_of: "2-8", transform: mirror}
+  - {bars: "62", copy_of: "14", transform: mirror}
+  - {bars: "64", copy_of: "16", transform: same}
+  - {bars: "66", copy_of: "18", transform: mirror}
+  - {bars: "67", copy_of: "19", transform: same}
+  - {bars: "68", copy_of: "20", transform: mirror}
+  - {bars: "70-71", copy_of: "22-23", transform: mirror}
+  - {bars: "74-81", copy_of: "34-41", transform: mirror}
+  - {bars: "82-85", copy_of: "42-45", transform: same}
+  - {bars: "86-88", copy_of: "46-48", transform: mirror}
+  - {bars: "69", copy_of: "41", transform: same, drop: [{lane: 2, pos: "14/16"}]}
+notes: 073·089·090·094 는 복사 후 사용자가 직접 다시 찍음 (복사 규칙에서 제외).

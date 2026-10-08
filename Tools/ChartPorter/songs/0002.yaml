@@ -1,0 +1,12 @@
+# 2번 Una Alarm (155 BPM) — 이지·노말·하드 모두 사용자. 하드 기조의 주 기준
+id: 2
+title: Una Alarm
+role: reference
+base: Assets/Charts/Chart_0002_Normal.txt
+target: Assets/Charts/Chart_0002_Hard.txt
+listen_bars: "41,50-53"      # 16분 홀수 칸 노트(22개)가 타격음에서 16분 어긋남 → 확인 목록, 학습에서 제외
+notes: 하드 헤더가 '#DIFFICULTY Easy / #LEVEL 1' 로 잘못 적혀 있음 (게임은 MusicSO 레벨을 씀).
+sections:                    # 사용자 하드에서 확인된 1·2·3절 복사 (Phase 1 분석: 모두 그대로 복사)
+  - {bars: "34-40", copy_of: "2-8", transform: same}
+  - {bars: "58-63", copy_of: "2-7", transform: same}
+  - {bars: "42-47", copy_of: "18-23", transform: same}
