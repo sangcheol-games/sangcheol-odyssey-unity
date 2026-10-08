@@ -30,6 +30,10 @@ MonoBehaviour:
     m_Localized: Leo
     m_Metadata:
       m_Items: []
+  - m_Id: 83602586822156288
+    m_Localized: Semanti-symptom
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

@@ -27,6 +27,10 @@ MonoBehaviour:
     m_Key: ARTIST_Leo
     m_Metadata:
       m_Items: []
+  - m_Id: 83602586822156288
+    m_Key: ARTIST_Semanti-symptom
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
