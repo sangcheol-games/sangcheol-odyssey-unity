@@ -191,8 +191,8 @@ MonoBehaviour:
   illustrator: Leo
   animator: Leo
   bpm: 184
-  audioFilePath: "\uC77C\uBCF8\uC5B4 \uBABB\uD569\uB2C8\uB2E4.ogg"
-  previewAudioFilePath: "\uC77C\uBCF8\uC5B4 \uBABB\uD569\uB2C8\uB2E4.ogg"
+  audioFilePath: Music_0004.ogg
+  previewAudioFilePath: Music_0004_preview.ogg
   videoFileName: BGA_0004.mp4
   backgroundArt: {fileID: -5688015261729859151, guid: a98f8bdd7754b9f49bebc15ea9c3ee53, type: 3}
   albumArt: {fileID: 8677130772124960080, guid: ab78152d563229549991d9429e257a68, type: 3}

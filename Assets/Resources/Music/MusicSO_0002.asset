@@ -191,8 +191,8 @@ MonoBehaviour:
   illustrator: Vaco
   animator: Seowol
   bpm: 155
-  audioFilePath: Una Alarm.ogg
-  previewAudioFilePath: Una Alarm_preview.wav
+  audioFilePath: Music_0002.ogg
+  previewAudioFilePath: Music_0002_preview.wav
   videoFileName: BGA_0002.mp4
   backgroundArt: {fileID: 6223663959160995927, guid: 9188cd0ecc7482e4483e9f1212f98aaa, type: 3}
   albumArt: {fileID: -5167633534449725708, guid: e97b32ae96a475e43991174807318429, type: 3}
