@@ -6,16 +6,18 @@ using UnityEngine;
 
 namespace SCOdyssey.Audio.Playback
 {
-    // 타격음 원샷. 파일명으로 멱등 등록하고, 재생은 playSound 한 번뿐이다(할당·로그·채널별 설정 없음).
+    // 원샷(타격음·UI 효과음 공용, 버스마다 인스턴스 하나). 파일명으로 멱등 등록하고, 재생은 playSound 한 번뿐이다(할당·로그·채널별 설정 없음).
     // CREATESAMPLE로 전체를 메모리에 디코드해 두므로 재생 시점에 디스크 I/O와 디코드가 없다.
     // 재구성 뒤에는 같은 슬롯에 다시 로드하므로 게임이 받아 둔 OneShotId가 그대로 유효하다.
-    internal sealed class OneShotBank : IOneShotPlayer
+    internal sealed class OneShotBank : ISfxPlayer
     {
         public const int Capacity = 64;
-        private const int HitSoundPriority = 64;
+        public const int HitSoundPriority = 64;
+        public const int SfxPriority = 128;     // 채널이 모자라면 타격음이 이긴다(숫자가 클수록 낮은 우선순위)
         private const FMOD.MODE LoadMode = FMOD.MODE.CREATESAMPLE | FMOD.MODE._2D | FMOD.MODE.LOOP_OFF | FMOD.MODE.IGNORETAGS | FMOD.MODE.LOWMEM;
 
         private readonly string _folder;
+        private readonly int _priority;
         private readonly string[] _names = new string[Capacity + 1];            // 슬롯 1부터 쓴다(0은 None)
         private readonly FMOD.Sound[] _sounds = new FMOD.Sound[Capacity + 1];
         private readonly Dictionary<string, int> _slots = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -24,9 +26,10 @@ namespace SCOdyssey.Audio.Playback
         private FMOD.System _system;
         private FMOD.ChannelGroup _group;
 
-        public OneShotBank(string folder)
+        public OneShotBank(string folder, int priority)
         {
             _folder = folder;
+            _priority = priority;
         }
 
         public int Count
@@ -114,9 +117,9 @@ namespace SCOdyssey.Audio.Playback
             FMOD.RESULT result = _system.createSound(path, LoadMode, out FMOD.Sound sound);
             if (result != FMOD.RESULT.OK) return result.ToString();
 
-            // 우선순위는 로드 때 기본값으로 둔다(재생 때 채널별 호출을 하지 않기 위해). 곡·음악 0, 타격음 64.
+            // 우선순위는 로드 때 기본값으로 둔다(재생 때 채널별 호출을 하지 않기 위해). 곡·음악 0, 타격음 64, 효과음 128.
             sound.getDefaults(out float frequency, out _);
-            sound.setDefaults(frequency, HitSoundPriority);
+            sound.setDefaults(frequency, _priority);
             _sounds[slot] = sound;
             return null;
         }

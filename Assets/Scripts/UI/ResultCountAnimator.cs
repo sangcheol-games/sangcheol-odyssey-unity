@@ -85,11 +85,13 @@ namespace SCOdyssey.UI
         [Tooltip("도장이 내려앉는 속도 곡선. InQuad = 점점 빨라지며 착지해 찍히는 느낌")]
         [SerializeField] private Ease stampEase = Ease.InQuad;
 
-        [Header("카운트 효과음")]
-        [Tooltip("숫자가 바뀔 때 재생할 틱 효과음 파일명. 타격음(hit_perfect.wav 등)과 같은 StreamingAssets 폴더에 둔다. 파일이 없으면 소리 없이 연출된다")]
-        [SerializeField] private string tickSoundFile = "result_tick.wav";  // 타격음과 같은 StreamingAssets 원샷 폴더
+        [Header("효과음")]
+        [Tooltip("숫자가 바뀔 때 재생할 틱 효과음 파일명. StreamingAssets/Sfx 폴더에 둔다. 파일이 없으면 소리 없이 연출된다")]
+        [SerializeField] private string tickSoundFile = "result_tick.wav";  // StreamingAssets/Sfx/ 기준, 효과음 볼륨을 따른다
         [Tooltip("틱 효과음 사이의 최소 간격(초). 여러 줄이 겹쳐 올라가도 이 간격보다 자주 울리지 않는다. 작을수록 촘촘한 '띠리리릭'")]
         [SerializeField] private float tickMinInterval = 0.03f;             // 줄이 겹쳐도 틱이 뭉개지지 않게 전역 쓰로틀
+        [Tooltip("도장이 착지할 때 재생할 효과음 파일명. StreamingAssets/Sfx 폴더에 둔다. 도장 여러 개가 동시에 찍혀도 한 번만 울린다. 파일이 없으면 소리 없이 연출된다")]
+        [SerializeField] private string stampSoundFile = "result_stamp.wav";
 
         private Sequence sequence;
 
@@ -97,16 +99,18 @@ namespace SCOdyssey.UI
         private readonly Dictionary<RectTransform, Vector3> textRestScales = new Dictionary<RectTransform, Vector3>();
         private readonly Dictionary<Image, StampRest> stampRests = new Dictionary<Image, StampRest>();
 
-        private IOneShotPlayer oneShots;
+        private ISfxPlayer oneShots;
         private OneShotId tickSound;
+        private OneShotId stampSound;
         private float lastTickTime = float.NegativeInfinity;
 
         private void Awake()
         {
             // 파일이 없으면 Register가 경고만 하고 None을 돌려주며, Play는 None을 무시한다
-            if (ServiceLocator.TryGet<IOneShotPlayer>(out oneShots))
+            if (ServiceLocator.TryGet<ISfxPlayer>(out oneShots))
             {
                 tickSound = oneShots.Register(tickSoundFile);
+                stampSound = oneShots.Register(stampSoundFile);
             }
         }
 
@@ -166,6 +170,7 @@ namespace SCOdyssey.UI
             // 도장 표시: 크게 나타났다가 원래 크기로 내리꽂힌다. 페이드는 절반 시간에 끝내 착지 전에 또렷하게 보이게 한다
             // Show인 도장은 모두 같은 시각에 동시에 찍는다
             float stampAt = lastEnd + stampDelay;
+            bool anyStamp = false;
             for (int i = 0; i < stamps.Count; i++)
             {
                 if (!stamps[i].Show) continue;
@@ -174,7 +179,12 @@ namespace SCOdyssey.UI
                 StampRest rest = stampRests[image];
                 sequence.Insert(stampAt, image.rectTransform.DOScale(rest.Scale, stampDuration).SetEase(stampEase));
                 sequence.Insert(stampAt, image.DOFade(rest.Color.a, stampDuration * 0.5f));
+                anyStamp = true;
             }
+
+            // 도장 효과음은 내리꽂혀 착지하는 순간('쾅')에 한 번. 시퀀스 안에 넣어 도중에 Kill되면 울리지 않게 한다
+            if (anyStamp)
+                sequence.InsertCallback(stampAt + stampDuration, PlayStamp);
         }
 
         // 한 줄의 카운트업과 완료 펀치를 시퀀스에 넣고, 그 줄이 끝나는 시각을 반환한다
@@ -222,6 +232,13 @@ namespace SCOdyssey.UI
 
             lastTickTime = now;
             oneShots.Play(tickSound);
+        }
+
+        private void PlayStamp()
+        {
+            if (oneShots == null) return;
+
+            oneShots.Play(stampSound);
         }
 
         private void KillSequence()

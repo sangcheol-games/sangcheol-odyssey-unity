@@ -107,11 +107,12 @@ namespace SCOdyssey.Audio
     public interface IAudioMixer { IMixBus Master { get; } IMixBus Music { get; } IMixBus HitSound { get; } IMixBus Sfx { get; } }
     public interface IMixBus { float Volume { get; set; } }   // 선형 0~1
 
-    public interface IOneShotPlayer
+    public interface IOneShotPlayer             // 타격음(StreamingAssets/HitSound → SCO.HitSound)
     {
         OneShotId Register(string fileName);   // 멱등. 실패하면 OneShotId.None
         void Play(OneShotId id);               // 할당 없음. 잘못된 id는 무시
     }
+    public interface ISfxPlayer : IOneShotPlayer { }   // UI 효과음(StreamingAssets/Sfx → SCO.Sfx). 뱅크끼리 id를 섞지 않는다
 
     public interface IMusicPlayers { IMusicPlayer Lobby { get; } IMusicPlayer Preview { get; } }
     public interface IMusicPlayer
@@ -289,7 +290,7 @@ System Master      ← 곡 시계 기준 클록. pause·mute·pitch·volume을 �
 ```
 - 모든 그룹은 DSP 클록을 전파하도록 연결한다. 어떤 그룹도 pause하지 않는다.
 - 채널 우선순위: 곡과 음악 0, 타격음 64, 효과음 128. `setSoftwareChannels(64)`, `init(256)`으로 에디터와 빌드를 같게 둔다.
-- 원샷: `CREATESAMPLE | _2D | LOOP_OFF | IGNORETAGS | LOWMEM`로 동기 로드하고, 파일명으로 멱등 등록한다. 재생은 버스 그룹에 `playSound(paused: false)` 한 번이며, 할당, 로그, 채널별 볼륨 설정이 없다. 재구성 뒤에는 같은 id로 다시 로드한다.
+- 원샷: `OneShotBank` 인스턴스 두 개를 버스마다 붙인다. 타격음 뱅크(`IOneShotPlayer`, 우선순위 64)는 SCO.HitSound, 효과음 뱅크(`ISfxPlayer`, 우선순위 128)는 SCO.Sfx. `CREATESAMPLE | _2D | LOOP_OFF | IGNORETAGS | LOWMEM`로 동기 로드하고, 파일명으로 멱등 등록한다. 재생은 버스 그룹에 `playSound(paused: false)` 한 번이며, 할당, 로그, 채널별 볼륨 설정이 없다. 재구성 뒤에는 같은 id로 다시 로드한다.
 
 ## 7. 곡 재생과 곡 시계
 
@@ -442,7 +443,7 @@ public int    dspBufferCount  = 4;          // UI에 노출하지 않음. ASIO�
 - 버퍼는 프리셋 하나(`64, 128, 256, 512, 1024`)의 샘플 수만 보여 준다(블록 ms는 실제 출력 지연으로 오해하기 쉬워 표시하지 않는다). 장치를 골라 타입이 바뀌어도 길이는 그대로 두고, UI에 없는 개수만 타입 기본값(WASAPI 4, ASIO 2)으로 둔다. ASIO는 실제 버퍼를 드라이버 제어판 값으로 정한다.
 - Save: 볼륨·백그라운드 재생은 바로 저장하고, 출력은 ApplyAsync 결과를 본 뒤 저장한다. 적용 중에는 Save를 막는다(`_applying`).
 - 부팅 폴백은 MainUI가 처음 표시될 때 한 번 경고 로그로 남긴다(공용 알림 UI가 생기면 화면에 띄운다). 새 문자열은 `App/AudioUiText`에 모은다.
-- 빌드 검증기(`Editor/AudioBuildValidator`): MusicSO 곡·프리뷰, MainUI 로비 BGM, ChartManager 타격음 파일이 StreamingAssets에 있는지 확인하고 없으면 빌드를 멈춘다. Force Single Instance가 꺼져 있으면 경고한다.
+- 빌드 검증기(`Editor/AudioBuildValidator`): MusicSO 곡·프리뷰, MainUI 로비 BGM, ChartManager 타격음 파일이 StreamingAssets에 있는지 확인하고 없으면 빌드를 멈춘다. AdventureUI 효과음(StreamingAssets/Sfx)은 없으면 경고만 한다. Force Single Instance가 꺼져 있으면 경고한다.
 - 에디터에서 ASIO를 시험하려면 메뉴 SCOdyssey → Audio → 에디터에서 ASIO 허용을 켠다(`AsioPolicy`, EditorPrefs).
 
 ## 10. 스레드 규칙

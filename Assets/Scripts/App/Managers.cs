@@ -74,6 +74,7 @@ namespace SCOdyssey.App
                 var options = new AudioModuleOptions();
                 options.Output = AudioSettingsMapper.ToBootRequest(settings.Current);
                 options.HitSoundFolder = Path.Combine(Application.streamingAssetsPath, "HitSound");
+                options.SfxFolder = Path.Combine(Application.streamingAssetsPath, "Sfx");
                 options.MusicFolder = Path.Combine(Application.streamingAssetsPath, "Music");
                 options.PlayInBackground = () => settings.Current.playInBackground;
                 // 게임 경로에서 FMOD for Unity의 Studio 시스템이 초기화되면 System이 두 개가 되므로 오류로 알린다(ChartEditor는 예외).

@@ -28,6 +28,7 @@ namespace SCOdyssey.Audio.Hosting
         private readonly FmodMixer _mixer = new FmodMixer();
         private readonly ClockSampler _sampler;
         private readonly OneShotBank _oneShots;
+        private readonly OneShotBank _sfx;
         private readonly MusicPlayers _music;
         private readonly SongPlayer _songPlayer;
         private readonly SongMetronome _metronome;
@@ -44,7 +45,8 @@ namespace SCOdyssey.Audio.Hosting
         {
             _options = options;
             _sampler = new ClockSampler(_engine, _mixer);
-            _oneShots = new OneShotBank(options.HitSoundFolder);
+            _oneShots = new OneShotBank(options.HitSoundFolder, OneShotBank.HitSoundPriority);
+            _sfx = new OneShotBank(options.SfxFolder, OneShotBank.SfxPriority);
             var lobby = new FmodMusicPlayer(_engine, _mixer, options.MusicFolder, 0, _cts.Token);
             var preview = new FmodMusicPlayer(_engine, _mixer, options.MusicFolder, MusicPlayers.PreviewDebounceSeconds, _cts.Token);
             _music = new MusicPlayers(lobby, preview);
@@ -68,6 +70,11 @@ namespace SCOdyssey.Audio.Hosting
         public IOneShotPlayer OneShots
         {
             get { return _oneShots; }
+        }
+
+        public ISfxPlayer Sfx
+        {
+            get { return _sfx; }
         }
 
         public IMusicPlayers Music
@@ -147,6 +154,7 @@ namespace SCOdyssey.Audio.Hosting
             _music.OnEngineClosing();
             _metronome.Release();
             _oneShots.Release();
+            _sfx.Release();
             _mixer.Release();
 
             int index = _engine.Reinitialize(attempts, reason);
@@ -168,13 +176,14 @@ namespace SCOdyssey.Audio.Hosting
             return "곡 진행 중(" + state + ")";
         }
 
-        // 믹서를 먼저 만들고, 곡 시계 원천을 리셋한 뒤, 원샷을 타격음 버스에 붙인다.
+        // 믹서를 먼저 만들고, 곡 시계 원천을 리셋한 뒤, 원샷을 타격음·효과음 버스에 붙인다.
         private void BuildResources()
         {
             string error = _mixer.Build(_engine);
             if (error != null) Debug.LogError("[Audio] 믹서 구성 실패: " + error);
             _sampler.Reset();
             _oneShots.Bind(_engine, _mixer.HitSoundGroup);
+            _sfx.Bind(_engine, _mixer.SfxGroup);
         }
 
         // 매 프레임 Update(-1010): FMOD update → 곡 시계 샘플 → 곡 세션(프레임 스냅샷, 커밋, 상태 전이) → 진단 메트로놈.
@@ -277,12 +286,14 @@ namespace SCOdyssey.Audio.Hosting
             _songPlayer.Shutdown();
             _music.Shutdown();
             _oneShots.Release();
+            _sfx.Release();
             _mixer.Release();
             _engine.Shutdown();
 
             RemoveService<IAudioEngine>(_engine);
             RemoveService<IAudioMixer>(_mixer);
             RemoveService<IOneShotPlayer>(_oneShots);
+            RemoveService<ISfxPlayer>(_sfx);
             RemoveService<IMusicPlayers>(_music);
             RemoveService<ISongPlayer>(_songPlayer);
             RemoveService<IAudioOutputService>(_output);
@@ -295,6 +306,7 @@ namespace SCOdyssey.Audio.Hosting
             ServiceLocator.Register<IAudioEngine>(_engine);
             ServiceLocator.Register<IAudioMixer>(_mixer);
             ServiceLocator.Register<IOneShotPlayer>(_oneShots);
+            ServiceLocator.Register<ISfxPlayer>(_sfx);
             ServiceLocator.Register<IMusicPlayers>(_music);
             ServiceLocator.Register<ISongPlayer>(_songPlayer);
             ServiceLocator.Register<IAudioOutputService>(_output);

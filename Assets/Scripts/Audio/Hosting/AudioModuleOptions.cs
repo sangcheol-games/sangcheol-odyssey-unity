@@ -13,6 +13,9 @@ namespace SCOdyssey.Audio.Hosting
         // 타격음 파일 폴더(전체 경로).
         public string HitSoundFolder { get; set; } = "";
 
+        // UI 효과음 파일 폴더(전체 경로).
+        public string SfxFolder { get; set; } = "";
+
         // 곡·로비 BGM·프리뷰 음원 폴더(전체 경로).
         public string MusicFolder { get; set; } = "";
 

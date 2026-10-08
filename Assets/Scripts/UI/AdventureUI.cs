@@ -24,10 +24,10 @@ namespace SCOdyssey.UI
         private const float MAX_WHEEL_OFFSET = WHEEL_BUFFER;    // 연타 시 밀려 있을 수 있는 최대 칸 수. 버퍼 칸 수를 넘으면 끝에 빈칸이 보인다
         private const int DIFFICULTY_COUNT = 4;                 // Difficulty enum 개수(Easy~Extreme). 난이도 버튼 수
 
-        // 바퀴 회전 틱 효과음. 지금 원샷 뱅크가 타격음용이라 StreamingAssets/HitSound/ 기준이고 HitSound 버스로 나간다.
+        // 효과음. StreamingAssets/Sfx/ 기준이고 Sfx 버스(효과음 볼륨)로 나간다.
         // 파일이 없으면 Register가 경고 후 None을 돌려주고 Play는 무시한다(애니메이션만 동작).
-        // TODO: UI SFX 전용 원샷/버스가 생기면 옮긴다.
-        private const string WHEEL_TICK_SOUND_FILE = "ui_wheel_tick.wav";
+        private const string WHEEL_TICK_SOUND_FILE = "ui_wheel_tick.wav";               // 곡 변경(바퀴 한 칸)
+        private const string DIFFICULTY_CHANGE_SOUND_FILE = "ui_difficulty_change.wav"; // 난이도 변경
 
         [Header("곡 리스트 바퀴")]
         [SerializeField] private float wheelRadius = 800f;          // 바퀴 반지름. 중심은 리스트 오른쪽
@@ -52,8 +52,9 @@ namespace SCOdyssey.UI
         private float wheelOffset;
         private Tween wheelTween;
 
-        private IOneShotPlayer _oneShots;
+        private ISfxPlayer _sfx;
         private OneShotId _wheelTickSound;
+        private OneShotId _difficultyChangeSound;
 
         private RectTransform lpRect;
         private float lpAngle; // 시계방향 누적 각도(양수, 0~360)
@@ -205,9 +206,12 @@ namespace SCOdyssey.UI
                 slotCanvasGroups[i] = canvasGroup;
             }
 
-            // 바퀴 틱 효과음 id 확보. Register는 파일명 기준 멱등이다.
-            if (ServiceLocator.TryGet<IOneShotPlayer>(out _oneShots))
-                _wheelTickSound = _oneShots.Register(WHEEL_TICK_SOUND_FILE);
+            // 효과음 id 확보. Register는 파일명 기준 멱등이다.
+            if (ServiceLocator.TryGet<ISfxPlayer>(out _sfx))
+            {
+                _wheelTickSound = _sfx.Register(WHEEL_TICK_SOUND_FILE);
+                _difficultyChangeSound = _sfx.Register(DIFFICULTY_CHANGE_SOUND_FILE);
+            }
 
             selectedIndex = 0;
             wheelOffset = 0f;
@@ -454,8 +458,8 @@ namespace SCOdyssey.UI
                 .SetEase(Ease.OutBack, wheelOvershoot)
                 .SetLink(gameObject);
 
-            if (_oneShots != null)
-                _oneShots.Play(_wheelTickSound);
+            if (_sfx != null)
+                _sfx.Play(_wheelTickSound);
         }
 
         private void SetWheelOffset(float value)
@@ -561,6 +565,8 @@ namespace SCOdyssey.UI
                 selectedDifficulty = ResolveDifficulty(selectedMusic, preferredDifficulty);
 
             // 좌우: 난이도 선택 (level -1인 난이도는 스킵). 직접 고른 값은 다음 곡에서도 기억한다
+            // 곡 이동에 따른 자동 보정은 효과음 대상이 아니므로 비교 기준을 여기서 잡는다
+            Difficulty difficultyBefore = selectedDifficulty;
             if (direction.x > 0)
             {
                 for (Difficulty d = selectedDifficulty + 1; d <= Difficulty.Extreme; d++)
@@ -571,6 +577,10 @@ namespace SCOdyssey.UI
                 for (Difficulty d = selectedDifficulty - 1; d >= Difficulty.Easy; d--)
                     if (IsAvailable(selectedMusic, d)) { selectedDifficulty = d; preferredDifficulty = d; break; }
             }
+
+            // 끝이라 더 못 가면(선택이 그대로면) 소리 없음
+            if (selectedDifficulty != difficultyBefore && _sfx != null)
+                _sfx.Play(_difficultyChangeSound);
 
             RefreshList(true);
 

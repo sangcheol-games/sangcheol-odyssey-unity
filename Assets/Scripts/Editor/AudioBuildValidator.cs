@@ -14,6 +14,7 @@ namespace SCOdyssey.EditorTools
     //   - MusicSO의 곡·프리뷰 음원(StreamingAssets/Music)
     //   - MainUI 프리팹의 로비 BGM(StreamingAssets/Music)
     //   - ChartManager의 타격음(StreamingAssets/HitSound)
+    //   - AdventureUI의 효과음(StreamingAssets/Sfx) — 없어도 소리만 빠지므로 경고만 한다
     // 빠진 파일이 있으면 빌드를 멈춘다. Force Single Instance가 꺼져 있으면 경고만 한다(두 번 실행하면 오디오 장치를 서로 잡는다).
     public sealed class AudioBuildValidator : IPreprocessBuildWithReport
     {
@@ -33,6 +34,7 @@ namespace SCOdyssey.EditorTools
             CheckMusicAssets(music, missing);
             CheckLobbyBgm(music, missing);
             CheckHitSounds(hitSound, missing);
+            CheckUiSfx(Path.Combine(Application.streamingAssetsPath, "Sfx"));
 
             if (!PlayerSettings.forceSingleInstance)
             {
@@ -90,6 +92,25 @@ namespace SCOdyssey.EditorTools
                 return;
             }
             for (int i = 0; i < files.Length; i++) CheckFile(folder, files[i], "타격음", missing, true);
+        }
+
+        // AdventureUI의 효과음 파일명 상수를 리플렉션으로 읽는다. 빠져도 빌드는 멈추지 않는다.
+        private static void CheckUiSfx(string folder)
+        {
+            string[] constants = { "WHEEL_TICK_SOUND_FILE", "DIFFICULTY_CHANGE_SOUND_FILE" };
+            for (int i = 0; i < constants.Length; i++)
+            {
+                FieldInfo field = typeof(SCOdyssey.UI.AdventureUI).GetField(constants[i], BindingFlags.NonPublic | BindingFlags.Static);
+                string fileName = null;
+                if (field != null) fileName = field.GetValue(null) as string;
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    Debug.LogWarning("[AudioBuildValidator] AdventureUI." + constants[i] + "를 찾지 못해 효과음을 확인하지 않았습니다.");
+                    continue;
+                }
+                string path = Path.Combine(folder, fileName);
+                if (!File.Exists(path)) Debug.LogWarning("[AudioBuildValidator] 효과음 파일이 없습니다(소리 없이 동작): " + path);
+            }
         }
 
         private static void CheckFile(string folder, string fileName, string owner, List<string> missing, bool required)
