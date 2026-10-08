@@ -193,7 +193,7 @@ MonoBehaviour:
   bpm: 160
   audioFilePath: Lazy Dance.ogg
   previewAudioFilePath: Lazy Dance.mp4
-  videoFileName: Lazy Dance.mp4
+  videoFileName: BGA_0003.mp4
   backgroundArt: {fileID: -6898227814294223165, guid: b7b320d740720e242b80625c6bad1538, type: 3}
   albumArt: {fileID: -9216041662464849085, guid: d8ac049e0fa42b64c9670205b4c88134, type: 3}
   references:
