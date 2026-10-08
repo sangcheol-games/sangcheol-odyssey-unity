@@ -93,9 +93,9 @@
 
 | 상황 | 타격음 | `Result` | 캐릭터 |
 |---|---|---|---|
-| 칠 노트가 아예 없음 | Umm | `NoTarget` | `Miss` |
-| 오차가 Umm 윈도우를 넘음 | Umm | `NoTarget` | `Miss` |
-| 큐 맨 앞이 홀드 본체 (홀드 재그립) | Umm | `HoldBody` | **아무 연출도 안 함** |
+| 칠 노트가 아예 없음 | 없음 | `NoTarget` | `Miss` |
+| 오차가 Umm 윈도우를 넘음 | 없음 | `NoTarget` | `Miss` |
+| 큐 맨 앞이 홀드 본체 (홀드 재그립) | 없음 | `HoldBody` | **아무 연출도 안 함** |
 | 오차가 Kind~Umm 사이 | Umm | `HitTarget` | `Hit_umm` |
 
 넷째 줄 때문에 **"타격음이 Umm이다"로 헛침을 판별하면 안 된다.**
@@ -515,5 +515,5 @@ void Play(CharacterState state, CharacterState follow);
 | 마디 전환 직전 선입력 | 이동과 애니메이션이 1회만. `Miss`가 뜨지 않음 |
 | 홀드 중 판정선이 화면 밖으로 → 재등장 | 새 판정선이 `Run`, Y = -120. **이전 원샷이 이어 재생되지 않을 것** |
 | 홀드 중 일시정지 | `Run`으로 전이. `Hold`에 얼어붙지 않을 것 |
-| 헛침 타격음 | 헛침 시 Umm 타격음이 그대로 날 것 |
+| 헛침 타격음 | 헛침 시 타격음이 나지 않을 것 (캐릭터 `Miss`는 그대로) |
 | R키 재시작 | 콘솔에 MissingReference 0건 |

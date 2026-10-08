@@ -698,7 +698,9 @@ namespace SCOdyssey.Game
                 // 타격음을 가장 먼저 재생한다. 판정·이펙트보다 앞에 둬서 지연을 최소화
                 // (ApplyJudgment는 이펙트 풀이 비면 Instantiate까지 하므로 그 뒤에 내면 스파이크만큼 밀린다)
                 (JudgeType sound, PressResult result) prediction = PredictInput(listIndex, judgeTime);
-                PlayHitSound(prediction.sound);
+                // 노트를 실제로 칠 때만 타격음. 헛침(NoTarget)·홀드 재그립(HoldBody)은 소리 없음
+                if (prediction.result == PressResult.HitTarget)
+                    PlayHitSound(prediction.sound);
 
                 LaneInputResult inputResult = new LaneInputResult(
                     GetNotePosition(listIndex),
@@ -746,7 +748,7 @@ namespace SCOdyssey.Game
         /// 판정·점수는 전혀 건드리지 않는다.
         ///
         /// 반환값이 둘로 나뉘는 이유:
-        ///  - sound는 낼 타격음 등급이다. 헛침이든 홀드 본체든 전부 Umm이라 기존 동작과 같다.
+        ///  - sound는 낼 타격음 등급이다. HitTarget일 때만 재생하며, 헛침·홀드 본체는 Umm이 실리지만 소리는 내지 않는다.
         ///  - result는 캐릭터가 무엇을 연출할지 정하는 분류다. 셋을 구분해야 한다.
         ///    NoTarget  = 칠 노트가 없음 → Miss
         ///    HoldBody  = 큐 맨 앞이 홀드 본체(홀드 재그립) → 아무 연출도 하지 않음
