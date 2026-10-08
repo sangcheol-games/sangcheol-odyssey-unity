@@ -609,8 +609,10 @@ namespace SCOdyssey.Game
 
                     if (isConflict && currentTimeline != null)
                     {
-                        // 같은 레인 충돌: 노트가 현재 타임라인의 endpoint에 위치하는지 확인
-                        // endpoint 노트는 판정선이 절대 지나칠 수 없어 Hidden 유지 시 Active로 직행하므로 즉시 Ghost 표시
+                        // 같은 그룹 충돌: 노트가 현재 타임라인의 endpoint에 위치하는지 확인
+                        // endpoint 노트 = 유턴 패턴에서 다음 마디 첫 비트(같은 방향 연속이면 endpoint에 놓이지 않음).
+                        // 판정선이 절대 지나칠 수 없어 Hidden으로는 드러나지 않고, 유턴 직후 바로 쳐야 하므로 이전 마디 동안 Active 색으로 표시
+                        // (표시만 Active. 판정 큐는 여전히 ghostNotes → StartCurrentBar에서 activeNotes로 승격)
                         float noteX = spawnPos.x;
                         bool atEndpoint = currentIsLTR
                             ? Mathf.Approximately(noteX, rightEndpoint.anchoredPosition.x)  // LTR: rightEndpoint
@@ -624,8 +626,8 @@ namespace SCOdyssey.Game
                         }
                         else
                         {
-                            // endpoint에 위치: 즉시 Ghost로 표시
-                            noteController.SetState(NoteState.Ghost);
+                            // endpoint에 위치(유턴 첫 비트): 즉시 Active 색으로 표시
+                            noteController.SetState(NoteState.Active);
                         }
                     }
                     else
