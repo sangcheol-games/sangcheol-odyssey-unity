@@ -123,3 +123,7 @@ fmod_editor.log
 
 # macOS Finder
 .DS_Store
+
+# BGA 영상: 용량이 커서(최대 약 200MB) git 밖에서 전달. 폴더 메타(BGA.meta)와 .gitkeep 만 추적
+/[Aa]ssets/[Ss]treamingAssets/BGA/*
+!/[Aa]ssets/[Ss]treamingAssets/BGA/.gitkeep
