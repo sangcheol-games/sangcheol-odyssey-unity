@@ -52,7 +52,7 @@ namespace SCOdyssey.UI
         private void OnSubmitInternal()          { if (IsTopUI()) HandleSubmit(); }
         private void OnCancelInternal()          { if (IsTopUI()) HandleCancel(); }
 
-        private bool IsTopUI()
+        protected bool IsTopUI()
         {
             return ServiceLocator.TryGet(out IUIManager m) && m.PeekUI() == this;
         }

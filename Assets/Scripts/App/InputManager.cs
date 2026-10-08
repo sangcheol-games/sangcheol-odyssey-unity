@@ -20,6 +20,9 @@ namespace SCOdyssey.App
 
         public bool IsInputActive { get; private set; } = true;
 
+        // Select는 값이 바뀔 때만 performed가 오므로, 누르고 있는 동안의 처리는 이 값을 폴링한다
+        public Vector2 SelectValue => IsInputActive ? inputActions.UI.Select.ReadValue<Vector2>() : Vector2.zero;
+
         public InputManager()
         {
             inputActions = new InputSystem_Actions();

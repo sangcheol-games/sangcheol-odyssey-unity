@@ -37,6 +37,16 @@ namespace SCOdyssey.UI
         [SerializeField] private float wheelTickDuration = 0.16f;   // 한 칸 회전 시간(초)
         [SerializeField] private float wheelOvershoot = 2f;         // 한 칸을 넘어갔다 걸리는 정도(OutBack overshoot)
 
+        [Header("곡 리스트 홀드 반복")]
+        [Tooltip("위/아래를 누른 뒤 연속 이동이 시작되기까지의 시간(초)")]
+        [SerializeField] private float holdRepeatDelay = 0.35f;
+        [Tooltip("연속 이동 첫 간격(초). 누르고 있을수록 '최소 간격'까지 줄어든다")]
+        [SerializeField] private float holdRepeatStartInterval = 0.12f;
+        [Tooltip("가속이 끝난 뒤의 연속 이동 간격(초)")]
+        [SerializeField] private float holdRepeatMinInterval = 0.04f;
+        [Tooltip("연속 이동이 시작된 뒤 '최소 간격'까지 빨라지는 데 걸리는 시간(초)")]
+        [SerializeField] private float holdRepeatAccelTime = 1.5f;
+
         [Header("난이도 버튼")]
         [SerializeField] private float selectedDifficultyRaise = 20f;       // 선택된 난이도 버튼이 올라가는 높이
         [SerializeField] private float difficultyRaiseDuration = 0.12f;     // 올라가고 내려오는 시간(초)
@@ -51,6 +61,12 @@ namespace SCOdyssey.UI
         // 시각 오프셋(칸 단위). 데이터는 즉시 바꾸고 이 값을 ±1에서 0으로 트윈해 바퀴가 도는 것처럼 보이게 한다.
         private float wheelOffset;
         private Tween wheelTween;
+
+        // 방향키 홀드 상태. Select 액션은 값이 바뀔 때만 이벤트가 오므로 누르고 있는 동안은 Update에서 폴링한다
+        private int holdDirX;           // 눌려 있는 좌우 방향(-1/0/1). 이미 눌린 축이 다른 키 때문에 다시 이벤트로 와도 무시하기 위함
+        private int holdDirY;           // 반복 중인 상하 방향(-1/0/1)
+        private float holdElapsed;      // 상하를 누른 뒤 경과 시간(초)
+        private float nextRepeatAt;     // 다음 연속 이동 시각(holdElapsed 기준)
 
         private ISfxPlayer _sfx;
         private OneShotId _wheelTickSound;
@@ -127,6 +143,8 @@ namespace SCOdyssey.UI
 
         private void Update()
         {
+            UpdateHoldRepeat();
+
             if (lpRect == null) return;
 
             // 시계방향 = 음수 Z (UI 좌표계 기준)
@@ -156,6 +174,9 @@ namespace SCOdyssey.UI
             // 회전 도중 화면을 떠나도 돌아왔을 때 정지 상태로 보이게 한다(UI 스택 재사용)
             StopWheel();
             RefreshDifficulty(false); // 난이도 버튼 트윈도 같은 이유로 끊고 최종 위치로 스냅
+
+            holdDirX = 0;
+            holdDirY = 0;
         }
 
         private void Init()
@@ -553,11 +574,84 @@ namespace SCOdyssey.UI
         {
             if (musicList == null || musicList.Count == 0) return;
 
+            int x = Sign(direction.x);
+            int y = Sign(direction.y);
+
+            // 위를 누른 채 좌우를 누르는 등 다른 키 때문에 값이 바뀌어 다시 온 이벤트에서는, 이미 눌려 있던 축을 또 움직이지 않는다
+            int newX = x == holdDirX ? 0 : x;
+            int newY = y == holdDirY ? 0 : y;
+
+            holdDirX = x;
+            holdDirY = y;
+            if (newY != 0)
+            {
+                holdElapsed = 0f;
+                nextRepeatAt = holdRepeatDelay;
+            }
+
+            if (newX != 0 || newY != 0)
+                MoveSelection(newX, newY);
+        }
+
+        /// <summary>
+        /// 위/아래를 누르고 있으면 holdRepeatDelay 뒤부터 연속으로 곡을 넘긴다. 간격은 holdRepeatAccelTime에 걸쳐 최소 간격까지 줄어든다.
+        /// 첫 이동은 이벤트(HandleSelect)가 맡고, 여기서는 그 뒤 반복만 한다.
+        /// </summary>
+        private void UpdateHoldRepeat()
+        {
+            if (musicList == null || musicList.Count == 0 || inputManager == null) return;
+
+            // 위에 다른 UI가 떠 있으면 눌려 있지 않은 것으로 본다
+            Vector2 value = IsTopUI() ? inputManager.SelectValue : Vector2.zero;
+            holdDirX = Sign(value.x);
+
+            // 뗐거나 반대 방향으로 바뀌면 반복을 멈춘다(새로 누른 방향은 이벤트가 처리한다)
+            if (Sign(value.y) != holdDirY)
+            {
+                holdDirY = 0;
+                return;
+            }
+            if (holdDirY == 0) return;
+
+            holdElapsed += Time.unscaledDeltaTime;
+
+            // 프레임이 끊겨도 한 번에 몰아서 넘기지 않도록 프레임당 최대 2칸
+            const int MAX_STEPS_PER_FRAME = 2;
+            int steps = 0;
+            while (holdElapsed >= nextRepeatAt)
+            {
+                MoveSelection(0, holdDirY);
+
+                float accel = holdRepeatAccelTime > 0f ? Mathf.Clamp01((nextRepeatAt - holdRepeatDelay) / holdRepeatAccelTime) : 1f;
+                float interval = Mathf.Max(0.01f, Mathf.Lerp(holdRepeatStartInterval, holdRepeatMinInterval, accel));
+                nextRepeatAt += interval;
+
+                if (++steps >= MAX_STEPS_PER_FRAME)
+                {
+                    if (holdElapsed >= nextRepeatAt)
+                        nextRepeatAt = holdElapsed + interval;
+                    break;
+                }
+            }
+        }
+
+        private static int Sign(float value)
+        {
+            if (value > 0f) return 1;
+            if (value < 0f) return -1;
+            return 0;
+        }
+
+        /// <summary>
+        /// 곡(y)·난이도(x)를 한 칸 옮긴다. y = +1 위(이전 곡), -1 아래(다음 곡) / x = +1 오른쪽(어려운 쪽), -1 왼쪽
+        /// </summary>
+        private void MoveSelection(int x, int y)
+        {
             // 상하: 곡 선택 이동 (원형 큐)
-            var isMusicChanged = direction.y != 0;
-            if (direction.y > 0)
+            var isMusicChanged = y != 0;
+            if (y > 0)
                 selectedIndex = WrapIndex(selectedIndex - 1);
-            else if (direction.y < 0)
+            else if (y < 0)
                 selectedIndex = WrapIndex(selectedIndex + 1);
 
             // 고른 난이도가 새 곡에 없으면 가까운 난이도로 옮기고, 있는 곡으로 돌아오면 원래 난이도로 되돌린다
@@ -567,12 +661,12 @@ namespace SCOdyssey.UI
             // 좌우: 난이도 선택 (level -1인 난이도는 스킵). 직접 고른 값은 다음 곡에서도 기억한다
             // 곡 이동에 따른 자동 보정은 효과음 대상이 아니므로 비교 기준을 여기서 잡는다
             Difficulty difficultyBefore = selectedDifficulty;
-            if (direction.x > 0)
+            if (x > 0)
             {
                 for (Difficulty d = selectedDifficulty + 1; d <= Difficulty.Extreme; d++)
                     if (IsAvailable(selectedMusic, d)) { selectedDifficulty = d; preferredDifficulty = d; break; }
             }
-            else if (direction.x < 0)
+            else if (x < 0)
             {
                 for (Difficulty d = selectedDifficulty - 1; d >= Difficulty.Easy; d--)
                     if (IsAvailable(selectedMusic, d)) { selectedDifficulty = d; preferredDifficulty = d; break; }
@@ -585,9 +679,9 @@ namespace SCOdyssey.UI
             RefreshList(true);
 
             // 상하 이동은 바퀴를 한 칸 돌린다(아래 = 다음 곡 = 리스트가 위로)
-            if (direction.y > 0)
+            if (y > 0)
                 StartWheelTick(-1);
-            else if (direction.y < 0)
+            else if (y < 0)
                 StartWheelTick(1);
 
             if(isMusicChanged)
