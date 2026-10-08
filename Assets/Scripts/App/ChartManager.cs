@@ -86,6 +86,7 @@ namespace SCOdyssey.Game
         private int currentBarNumber = 0;      // 현재 마디 인덱스(0부터). StartCurrentBar 승격 시 ++
         private double currentBarEndTime = 0f; // 현재 마디의 종료 시간. SyncTime에서 currentTime이 이 값을 넘으면 다음 마디로 전환
         private double barDuration = 0f; // 마디별 진행시간 = 악보상의 박자표(4/4) * 4 * 60 / BPM
+        private double nextBarRevealTime = double.MaxValue; // 다음 마디 노트를 Active 색으로 표시할 곡 시각(= 판정선이 화면 가장자리에 들어오는 시각)
 
         public Image[] countdownImages = new Image[LANE_COUNT];
 
@@ -202,6 +203,9 @@ namespace SCOdyssey.Game
                 CheckGameClear();
             }
 
+            // 다음 마디 판정선이 화면에 들어왔으면 다음 마디 노트를 미리 Active 색으로 표시(판정 큐는 그대로)
+            if (currentTime >= nextBarRevealTime) RevealNextBarNotes();
+
             for (int i = 0; i < LANE_COUNT; i++)
             {
                 CheckMissedNotes(i, judgeTime);                          // 판정 윈도우를 지나친 노트 miss 처리
@@ -259,12 +263,39 @@ namespace SCOdyssey.Game
                 remainingChart.Dequeue();
             }
 
+            nextBarRevealTime = double.MaxValue;
+
             if (nextBarLanes.Count > 0)
             {
                 PreloadTimelines();  // 이 마디에 필요한 판정선 생성/재활용 준비
                 SpawnNextNotes();    // 노트 오브젝트를 Ghost/Hidden으로 미리 스폰
+                nextBarRevealTime = CalcNextBarRevealTime();
             }
 
+        }
+
+        /// <summary>
+        /// 다음 마디 판정선이 화면 가장자리를 넘어 들어오는 곡 시각.
+        /// 판정선은 endpoint 바깥(진행도 &lt; 0)부터 시간에 선형으로 이동하므로 위치 대신 시간으로 계산한다.
+        /// 마디 첫 비트 노트(endpoint)가 판정 순간에야 Active로 바뀌는 문제를 피하려고, 이 시각에 미리 Active 색으로 표시한다.
+        /// 방향이 섞이면 늦게 들어오는 쪽(바깥 여백이 작은 쪽)에 맞춘다. 화면 끝이 endpoint 안쪽이면 리드 0(마디 시작과 동일).
+        /// </summary>
+        private double CalcNextBarRevealTime()
+        {
+            float half = ((RectTransform)leftEndpoint.parent).rect.width * 0.5f;   // 캔버스 단위 화면 가장자리
+            float left = leftEndpoint.anchoredPosition.x;
+            float right = rightEndpoint.anchoredPosition.x;
+            float laneWidth = right - left;
+
+            float margin = float.MaxValue;
+            foreach (var lane in nextBarLanes)
+            {
+                float m = lane.isLTR ? left + half : half - right;
+                if (m < margin) margin = m;
+            }
+
+            double lead = laneWidth > 0f ? barDuration * Mathf.Max(0f, margin) / laneWidth : 0d;
+            return currentBarNumber * barDuration - lead;   // PreloadTimelines의 nextStartTime 기준
         }
 
         /// <summary>
@@ -637,6 +668,25 @@ namespace SCOdyssey.Game
                     }
 
                     _lanes[lane.line - 1].ghostNotes.Enqueue(noteController);   // 판정 대상 아님. StartCurrentBar에서 Active로 승격
+                }
+            }
+        }
+
+        /// <summary>
+        /// 다음 마디 판정선이 화면에 들어온 뒤 매 프레임 호출. ghostNotes 중 Ghost 상태인 노트만 Active 색으로 바꾼다(표시만).
+        /// 판정 큐 승격은 여전히 StartCurrentBar → ActivateGhostNotes에서 한다.
+        /// Hidden은 건드리지 않는다: 현재 판정선이 아직 지나가지 않은 노트라 드러내면 현재 마디 노트와 겹치고,
+        /// Hidden HoldStart는 이전 마디 판정선을 추적 중이라 Active가 되면 홀드바가 잘못 깎인다.
+        /// 판정선이 지나가 Ghost로 드러나면 다음 프레임에 이 루프가 바로 Active로 올린다.
+        /// </summary>
+        private void RevealNextBarNotes()
+        {
+            for (int i = 0; i < LANE_COUNT; i++)
+            {
+                foreach (NoteController note in _lanes[i].ghostNotes)
+                {
+                    if (note.State == NoteState.Ghost)
+                        note.SetState(NoteState.Active);
                 }
             }
         }

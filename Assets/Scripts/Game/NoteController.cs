@@ -31,6 +31,7 @@ namespace SCOdyssey.Game
         protected bool isJudged = false;
         protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
+        public NoteState State => currentState;           // ChartManager가 Ghost 노트만 골라 Active 표시로 올릴 때 읽음
         protected TimelineController trackingTimeline;    // 감시할 타임라인(Hidden→Ghost 전환 판단용)
         protected RectTransform rectTransform;
 
