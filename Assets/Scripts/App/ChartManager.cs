@@ -644,8 +644,7 @@ namespace SCOdyssey.Game
                     {
                         // 같은 그룹 충돌: 노트가 현재 타임라인의 endpoint에 위치하는지 확인
                         // endpoint 노트 = 유턴 패턴에서 다음 마디 첫 비트(같은 방향 연속이면 endpoint에 놓이지 않음).
-                        // 판정선이 절대 지나칠 수 없어 Waiting이 풀리지 않고, 유턴 직후 바로 쳐야 하므로 이전 마디 동안 Active 색으로 표시
-                        // (표시만 Active, HoldStart는 헤드만. 판정 큐는 여전히 ghostNotes → StartCurrentBar에서 activeNotes로 승격)
+                        // 판정선이 절대 지나칠 수 없어 Waiting으로 두면 마디 시작까지 풀리지 않으므로 Ghost로 둔다(다른 노트처럼 RevealNextBarNotes에서 Active)
                         float noteX = spawnPos.x;
                         bool atEndpoint = currentIsLTR
                             ? Mathf.Approximately(noteX, rightEndpoint.anchoredPosition.x)  // LTR: rightEndpoint
@@ -659,12 +658,12 @@ namespace SCOdyssey.Game
                         }
                         else
                         {
-                            // endpoint에 위치(유턴 첫 비트): 즉시 Active 색으로 표시
-                            noteController.SetState(NoteState.Active);
+                            // endpoint에 위치(유턴 첫 비트): 다른 노트처럼 Ghost로 노출
+                            noteController.SetState(NoteState.Ghost);
 
-                            // 홀드바는 아직 판정 전인 현재 마디 노트 위로 겹치므로 Ghost 유지(마디 시작 시 ActivateGhostNotes가 Active로 올림)
+                            // 홀드바는 endpoint에서 판정선 쪽으로 뻗어 아직 판정 전인 현재 마디 노트와 겹치므로 마디 시작까지 Ghost 유지
                             if (noteData.noteType == NoteType.HoldStart)
-                                ((HoldStartNote)noteController).SetHoldBarState(NoteState.Ghost);
+                                ((HoldStartNote)noteController).KeepHoldBarGhost = true;
                         }
                     }
                     else
@@ -691,8 +690,13 @@ namespace SCOdyssey.Game
             {
                 foreach (NoteController note in _lanes[i].ghostNotes)
                 {
-                    if (note.State == NoteState.Ghost)
-                        note.SetState(NoteState.Active);
+                    if (note.State != NoteState.Ghost) continue;
+
+                    note.SetState(NoteState.Active);
+
+                    // 유턴 첫 비트 HoldStart: 헤드만 Active, 홀드바는 마디 시작(ActivateGhostNotes)까지 Ghost
+                    if (note is HoldStartNote holdStart && holdStart.KeepHoldBarGhost)
+                        holdStart.SetHoldBarState(NoteState.Ghost);
                 }
             }
         }

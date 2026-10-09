@@ -28,6 +28,10 @@ namespace SCOdyssey.Game
         private float rectScale;                    // 프리팹 localScale.x — 2배 제작 에셋 보정값
         private float remainingWidth;               // 남은 홀드바 폭(화면 단위). 기존 fillAmount 대체
 
+        // 유턴 첫 비트: 홀드바가 아직 판정 전인 현재 마디 노트와 겹치므로 헤드가 먼저 Active가 돼도 홀드바는 마디 시작까지 Ghost.
+        // ChartManager가 스폰 시 지정하고 RevealNextBarNotes에서 읽는다.
+        public bool KeepHoldBarGhost { get; set; }
+
         // 홀드바 Fill 원색. 풀링된 홀드바는 이전 노트의 tint가 남아 있어 매번 읽을 수 없으므로,
         // 처음 보는(아직 tint되지 않은) 홀드바에서 한 번만 캐시한다. 모든 홀드바는 같은 프리팹이라 색이 같다.
         private static Color? s_holdBaseColor;
@@ -85,6 +89,7 @@ namespace SCOdyssey.Game
         protected override void SetVisual()
         {
             noteImage.enabled = true;
+            KeepHoldBarGhost = false;   // 풀 재사용 시 이전 노트의 값 제거
 
             // SetHoldBar 없이 들어오는 경로(ChartEditor 프리뷰)에서는 헤드만 표시하고 빠진다
             if (holdBarTransform == null) return;
