@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using SCOdyssey.Core;
 using SCOdyssey.App;
 using UnityEngine;
@@ -13,9 +14,9 @@ namespace SCOdyssey.Game
     //
     //  스폰: ChartManager.SpawnNextNotes가 풀에서 꺼내 Init(데이터·위치·방향·반환콜백)으로 초기화한다.
     //
-    //  상태: SetState(Hidden/Ghost/Active)로 표시를 바꾼다. 고난이도 충돌 시 Hidden으로 숨겼다가,
+    //  상태: SetState(Waiting/Ghost/Active)로 표시를 바꾼다. 같은 그룹 연속 마디(충돌)는 Waiting으로 두었다가,
     //        Update()에서 감시 중인 판정선이 지나가면(CheckGhostState) 스스로 Ghost로 전환한다.
-    //        마디가 시작될 때 ChartManager가 Active로 올린다.
+    //        ChartManager가 다음 마디 판정선이 화면에 들어올 때 Ghost를 Active 색으로, 마디가 시작될 때 판정 대상으로 올린다.
     //
     //  판정/소멸: 판정되면 ChartManager가 OnHit(), 놓치면 OnMiss()를 호출한다.
     //        결국 DeleteNote() -> onReturn 콜백으로 풀에 반환된다(HoldStart는 홀드바도 함께).
@@ -32,7 +33,7 @@ namespace SCOdyssey.Game
         protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
         public NoteState State => currentState;           // ChartManager가 Ghost 노트만 골라 Active 표시로 올릴 때 읽음
-        protected TimelineController trackingTimeline;    // 감시할 타임라인(Hidden→Ghost 전환 판단용)
+        protected TimelineController trackingTimeline;    // 감시할 타임라인(Waiting→Ghost 전환 판단용)
         protected RectTransform rectTransform;
 
         // 히트 프레임 재생기(NoteImage 자식에 부착). Miss는 아트가 없어 애니메이션 없이 즉시 소멸.
@@ -43,6 +44,12 @@ namespace SCOdyssey.Game
         private Sprite _idleSprite;         // 풀 재사용 시 복원할 기본 비주얼
         private Color _initialColor;
         private Vector3 _initialScale;
+        private bool _isHeadShrunk = false; // Active 전(Waiting/Ghost)이라 헤드가 작게 표시 중
+
+        private const float INACTIVE_SCALE = 0.7f;          // Active 전(Waiting/Ghost) 헤드 크기(원래 크기 대비)
+        private const float REVEAL_OVERSHOOT_SCALE = 1.1f;  // Active가 될 때 잠깐 커지는 크기
+        private const float REVEAL_GROW_DURATION = 0.08f;   // INACTIVE_SCALE → REVEAL_OVERSHOOT_SCALE
+        private const float REVEAL_SETTLE_DURATION = 0.07f; // REVEAL_OVERSHOOT_SCALE → 원래 크기
 
         protected virtual void Awake()
         {
@@ -90,18 +97,46 @@ namespace SCOdyssey.Game
             if (hitAnim != null)
                 hitAnim.StopAndReset();
 
+            ResetHeadScale();
+
             if (noteImage != null)
             {
                 noteImage.sprite = _idleSprite;
                 noteImage.color = _initialColor;
-                noteImage.rectTransform.localScale = _initialScale;
             }
+        }
+
+        // 작아졌던 헤드가 Active가 될 때 INACTIVE_SCALE → REVEAL_OVERSHOOT_SCALE → 원래 크기로 키운다
+        private void PlayRevealGrow()
+        {
+            if (noteImage == null) return;
+
+            _isHeadShrunk = false;
+            RectTransform head = noteImage.rectTransform;
+            head.DOKill();
+            DOTween.Sequence()
+                .Append(head.DOScale(_initialScale * REVEAL_OVERSHOOT_SCALE, REVEAL_GROW_DURATION))
+                .Append(head.DOScale(_initialScale, REVEAL_SETTLE_DURATION))
+                .SetTarget(head)    // head.DOKill()로 시퀀스째 멈출 수 있도록
+                .SetLink(gameObject);
+        }
+
+        // 진행 중인 크기 연출을 멈추고 헤드를 원래 크기로 되돌린다
+        private void ResetHeadScale()
+        {
+            if (noteImage == null) return;
+
+            _isHeadShrunk = false;
+            noteImage.rectTransform.DOKill();
+            noteImage.rectTransform.localScale = _initialScale;
         }
 
         // 히트 프레임을 재생하고 끝난 뒤 onFinished를 호출한다.
         // 재생기나 프레임이 없으면(아트 미적용 상태) 즉시 onFinished를 불러 판정 흐름이 끊기지 않게 한다.
         protected void PlayHitAnim(Action onFinished)
         {
+            ResetHeadScale();  // 히트 프레임은 원래 크기로 재생
+
             if (hitAnim == null || !hitAnim.HasFrames)
             {
                 onFinished?.Invoke();
@@ -111,7 +146,7 @@ namespace SCOdyssey.Game
             hitAnim.Play(onFinished);
         }
 
-        // 노트 표시 상태 전환(ChartManager가 호출). Hidden=투명, Ghost=불투명·어둡게(설정값), Active=원색(판정 대상)
+        // 노트 표시 상태 전환(ChartManager가 호출). Waiting/Ghost=불투명·어둡게(설정값)·작게, Active=원색·원래 크기(판정 대상)
         // Ghost를 알파로 낮추면 uGUI가 요소별로 블렌딩해 반투명 헤드 뒤로 홀드바가 비친다 → 알파 대신 RGB를 곱해 어둡게 한다.
         public void SetState(NoteState state)
         {
@@ -119,9 +154,21 @@ namespace SCOdyssey.Game
             GetStateTint(state, out float brightness, out float alpha);
             noteImage.color = Tint(_initialColor, brightness, alpha);
             ApplyTint(brightness, alpha);
+
+            // Active 전(Waiting/Ghost)에는 작게 보여주고, Active가 되는 순간 커지는 연출로 원래 크기로
+            if (state != NoteState.Active && !_isHeadShrunk)
+            {
+                ResetHeadScale();
+                noteImage.rectTransform.localScale = _initialScale * INACTIVE_SCALE;
+                _isHeadShrunk = true;
+            }
+            else if (state == NoteState.Active && _isHeadShrunk)
+            {
+                PlayRevealGrow();
+            }
         }
 
-        // 상태별 밝기/알파. Hidden=투명, Ghost=어둡게(설정값), Active=원색
+        // 상태별 밝기/알파. Waiting/Ghost=어둡게(설정값), Active=원색
         protected static void GetStateTint(NoteState state, out float brightness, out float alpha)
         {
             brightness = 1f;
@@ -129,9 +176,7 @@ namespace SCOdyssey.Game
 
             switch (state)
             {
-                case NoteState.Hidden:
-                    alpha = 0f;
-                    break;
+                case NoteState.Waiting:
                 case NoteState.Ghost:
                     brightness = 0.1f;
                     if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
@@ -152,7 +197,7 @@ namespace SCOdyssey.Game
 
         protected abstract void SetVisual();
 
-        // 감시할 판정선 지정. Hidden 노트가 이 판정선이 지나갔는지 스스로 확인하는 데 사용
+        // 감시할 판정선 지정. Waiting 노트가 이 판정선이 지나갔는지 스스로 확인하는 데 사용
         public void TrackTimeline(TimelineController timeline)
         {
             trackingTimeline = timeline;
@@ -162,15 +207,15 @@ namespace SCOdyssey.Game
         {
             if (isJudged) return;
 
-            // 고난이도 충돌 케이스: Hidden으로 숨겨둔 노트는 감시 중인 판정선이 지나가면 스스로 Ghost로 전환
-            if (currentState == NoteState.Hidden && trackingTimeline != null && trackingTimeline.gameObject.activeSelf)
+            // 같은 그룹 연속 마디: Waiting 노트는 감시 중인 판정선이 지나가면 스스로 Ghost로 전환
+            if (currentState == NoteState.Waiting && trackingTimeline != null && trackingTimeline.gameObject.activeSelf)
             {
                 CheckGhostState();
             }
 
         }
 
-        // 감시 중인 판정선이 이 노트를 (방향에 맞게) 지나쳤으면 Hidden→Ghost 전환하고 감시 종료
+        // 감시 중인 판정선이 이 노트를 (방향에 맞게) 지나쳤으면 Waiting→Ghost 전환하고 감시 종료
         protected void CheckGhostState()
         {
             float noteX = rectTransform.anchoredPosition.x;
@@ -215,6 +260,7 @@ namespace SCOdyssey.Game
             if (_isReturned) return;
             _isReturned = true;
 
+            ResetHeadScale();
             isJudged = true;
             gameObject.SetActive(false);
             onReturn?.Invoke(this);

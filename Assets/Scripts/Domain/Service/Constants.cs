@@ -22,10 +22,11 @@ namespace SCOdyssey.Domain.Service
             Extreme
         }
 
-        // 노트 표시/상호작용 상태. Hidden=숨김·판정X, Ghost=반투명·판정X(다음 마디 예고), Active=불투명·판정O
+        // 노트 표시/상호작용 상태. Ghost=어둡고 작게·판정X(다음 마디 예고, Active가 될 때 원래 크기로), Active=원색·판정O
+        // Waiting=Ghost와 같은 표시지만 현재 판정선이 지나가기 전까지 Active로 올리지 않음(같은 그룹 연속 마디)
         public enum NoteState
         {
-            Hidden,
+            Waiting,
             Ghost,
             Active
         }
