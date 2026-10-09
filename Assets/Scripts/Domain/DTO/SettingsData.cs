@@ -10,8 +10,8 @@ namespace SCOdyssey.Domain.Dto
         public int judgmentOffset = 0;      // 판정 타이밍 오프셋 -20 ~ 20 (1단위 = 3ms)
         public string languageCode = "ko-KR";       // BCP 47 (ko-KR / ja-JP / en-US)
         public string displayLanguageCode = "origin";  // 곡 제목 표시 언어 (origin / ko-KR / ja-JP / en-US)
-        public float bgaOpacity = 0.4f;               // BGA 투명도 0 ~ 1
-        public float noteOpacity = 0.3f;              // 고스트 노트 밝기 0 ~ 0.5
+        public float bgaOpacity = 0.15f;              // BGA 투명도 0 ~ 1
+        public float noteOpacity = 0.1f;              // 고스트 노트 밝기 0 ~ 0.5 (UI 표시값 = 저장값 / 0.5)
 
         // Graphic
         public int displayMode = 0;         // 0=전체 화면 / 1=창 모드 / 2=전체 창 모드
