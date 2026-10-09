@@ -47,7 +47,7 @@ namespace SCOdyssey.Game
         private bool _isHeadShrunk = false; // Active 전(Waiting/Ghost)이라 헤드가 작게 표시 중
         private Transform _headLayer;       // Waiting 동안 holdLayer로 옮긴 헤드를 되돌릴 원래 부모(headLayer). 옮기지 않았으면 null
 
-        protected const float INACTIVE_SCALE = 0.3f;          // Active 전(Waiting/Ghost) 헤드 크기(원래 크기 대비)
+        protected const float INACTIVE_SCALE = 0.5f;          // Active 전(Waiting/Ghost) 헤드 크기(원래 크기 대비)
         protected const float REVEAL_OVERSHOOT_SCALE = 1.1f;  // Active가 될 때 잠깐 커지는 크기
         protected const float REVEAL_GROW_DURATION = 0.08f;   // INACTIVE_SCALE → REVEAL_OVERSHOOT_SCALE
         protected const float REVEAL_SETTLE_DURATION = 0.07f; // REVEAL_OVERSHOOT_SCALE → 원래 크기
@@ -148,8 +148,8 @@ namespace SCOdyssey.Game
             hitAnim.Play(onFinished);
         }
 
-        // 노트 표시 상태 전환(ChartManager가 호출). Waiting/Ghost=불투명·어둡게(설정값)·작게, Active=원색·원래 크기(판정 대상)
-        // Ghost를 알파로 낮추면 uGUI가 요소별로 블렌딩해 반투명 헤드 뒤로 홀드바가 비친다 → 알파 대신 RGB를 곱해 어둡게 한다.
+        // 노트 표시 상태 전환(ChartManager가 호출). Waiting/Ghost=반투명(설정값)·작게, Active=원색·원래 크기(판정 대상)
+        // 반투명이면 uGUI가 요소별로 블렌딩해 HoldStart 헤드 아래 홀드바가 비친다(RGB를 곱해 어둡게 하면 비침은 없지만 검게 보임).
         public void SetState(NoteState state)
         {
             // Waiting이 끝나면 헤드를 원래 레이어(headLayer)로 되돌린다
@@ -180,7 +180,7 @@ namespace SCOdyssey.Game
             ApplyBodyScale(state);
         }
 
-        // 상태별 밝기/알파. Waiting/Ghost=어둡게(설정값), Active=원색
+        // 상태별 밝기/알파. Waiting/Ghost=반투명(설정값), Active=원색
         protected static void GetStateTint(NoteState state, out float brightness, out float alpha)
         {
             brightness = 1f;
@@ -190,9 +190,9 @@ namespace SCOdyssey.Game
             {
                 case NoteState.Waiting:
                 case NoteState.Ghost:
-                    brightness = 0.1f;
+                    alpha = 0.15f;
                     if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
-                        brightness = sm.Current.noteOpacity;
+                        alpha = sm.Current.noteOpacity;
                     break;
                 case NoteState.Active:
                     break;
