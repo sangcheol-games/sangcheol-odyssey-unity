@@ -14,9 +14,9 @@ namespace SCOdyssey.Game
     //
     //  스폰: ChartManager.SpawnNextNotes가 풀에서 꺼내 Init(데이터·위치·방향·반환콜백)으로 초기화한다.
     //
-    //  상태: SetState(Waiting/Ghost/Active)로 표시를 바꾼다. 같은 그룹 연속 마디(충돌)는 Waiting으로 두었다가,
-    //        Update()에서 감시 중인 판정선이 지나가면(CheckGhostState) 스스로 Ghost로 전환한다.
-    //        ChartManager가 다음 마디 판정선이 화면에 들어올 때 Ghost를 Active 색으로, 마디가 시작될 때 판정 대상으로 올린다.
+    //  상태: SetState(Ghost/Active)로 표시를 바꾼다. 다음 마디 노트는 Ghost(반투명·작게)로 스폰되고,
+    //        ChartManager가 다음 마디 판정선이 화면에 들어올 때 Active 색으로, 마디가 시작될 때 판정 대상으로 올린다.
+    //        같은 그룹 연속 마디 노트는 Active 전까지 현재 마디 홀드바 아래에 그린다(DrawBelowHoldBars).
     //
     //  판정/소멸: 판정되면 ChartManager가 OnHit(), 놓치면 OnMiss()를 호출한다.
     //        결국 DeleteNote() -> onReturn 콜백으로 풀에 반환된다(HoldStart는 홀드바도 함께).
@@ -32,8 +32,7 @@ namespace SCOdyssey.Game
         protected bool isJudged = false;
         protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
-        public NoteState State => currentState;           // ChartManager가 Ghost 노트만 골라 Active 표시로 올릴 때 읽음
-        protected TimelineController trackingTimeline;    // 감시할 타임라인(Waiting→Ghost 전환 판단 / HoldStart 홀드바 fill)
+        protected TimelineController trackingTimeline;    // 추적할 타임라인(HoldStart 홀드바 fill 계산용)
         protected RectTransform rectTransform;
 
         // 히트 프레임 재생기(NoteImage 자식에 부착). Miss는 아트가 없어 애니메이션 없이 즉시 소멸.
@@ -44,10 +43,10 @@ namespace SCOdyssey.Game
         private Sprite _idleSprite;         // 풀 재사용 시 복원할 기본 비주얼
         private Color _initialColor;
         private Vector3 _initialScale;
-        private bool _isHeadShrunk = false; // Active 전(Waiting/Ghost)이라 헤드가 작게 표시 중
-        private Transform _headLayer;       // Waiting 동안 holdLayer로 옮긴 헤드를 되돌릴 원래 부모(headLayer). 옮기지 않았으면 null
+        private bool _isHeadShrunk = false; // Active 전(Ghost)이라 헤드가 작게 표시 중
+        private Transform _headLayer;       // Active 전까지 holdLayer로 옮긴 헤드를 되돌릴 원래 부모(headLayer). 옮기지 않았으면 null
 
-        protected const float INACTIVE_SCALE = 0.5f;          // Active 전(Waiting/Ghost) 헤드 크기(원래 크기 대비)
+        protected const float INACTIVE_SCALE = 0.5f;          // Active 전(Ghost) 헤드 크기(원래 크기 대비)
         protected const float REVEAL_OVERSHOOT_SCALE = 1.1f;  // Active가 될 때 잠깐 커지는 크기
         protected const float REVEAL_GROW_DURATION = 0.08f;   // INACTIVE_SCALE → REVEAL_OVERSHOOT_SCALE
         protected const float REVEAL_SETTLE_DURATION = 0.07f; // REVEAL_OVERSHOOT_SCALE → 원래 크기
@@ -148,12 +147,12 @@ namespace SCOdyssey.Game
             hitAnim.Play(onFinished);
         }
 
-        // 노트 표시 상태 전환(ChartManager가 호출). Waiting/Ghost=반투명(설정값)·작게, Active=원색·원래 크기(판정 대상)
+        // 노트 표시 상태 전환(ChartManager가 호출). Ghost=반투명(설정값)·작게, Active=원색·원래 크기(판정 대상)
         // 반투명이면 uGUI가 요소별로 블렌딩해 HoldStart 헤드 아래 홀드바가 비친다(RGB를 곱해 어둡게 하면 비침은 없지만 검게 보임).
         public void SetState(NoteState state)
         {
-            // Waiting이 끝나면 헤드를 원래 레이어(headLayer)로 되돌린다
-            if (state != NoteState.Waiting && _headLayer != null)
+            // Active가 되면 holdLayer로 옮겨 뒀던 헤드를 원래 레이어(headLayer)로 되돌린다
+            if (state == NoteState.Active && _headLayer != null)
             {
                 transform.SetParent(_headLayer, false);
                 rectTransform.SetAsFirstSibling();
@@ -165,7 +164,7 @@ namespace SCOdyssey.Game
             noteImage.color = Tint(_initialColor, brightness, alpha);
             ApplyTint(brightness, alpha);
 
-            // Active 전(Waiting/Ghost)에는 작게 보여주고, Active가 되는 순간 커지는 연출로 원래 크기로
+            // Active 전(Ghost)에는 작게 보여주고, Active가 되는 순간 커지는 연출로 원래 크기로
             if (state != NoteState.Active && !_isHeadShrunk)
             {
                 ResetHeadScale();
@@ -180,7 +179,7 @@ namespace SCOdyssey.Game
             ApplyBodyScale(state);
         }
 
-        // 상태별 밝기/알파. Waiting/Ghost=반투명(설정값), Active=원색
+        // 상태별 밝기/알파. Ghost=반투명(설정값), Active=원색
         protected static void GetStateTint(NoteState state, out float brightness, out float alpha)
         {
             brightness = 1f;
@@ -188,7 +187,6 @@ namespace SCOdyssey.Game
 
             switch (state)
             {
-                case NoteState.Waiting:
                 case NoteState.Ghost:
                     alpha = 0.15f;
                     if (ServiceLocator.TryGet<ISettingsManager>(out var sm))
@@ -212,66 +210,25 @@ namespace SCOdyssey.Game
 
         protected abstract void SetVisual();
 
-        // 감시할 판정선 지정. HoldStart가 홀드바 fill 계산에 사용(Waiting 감시는 WaitForTimelinePass)
+        // 추적할 판정선 지정. HoldStart가 홀드바 fill 계산에 사용(마디 시작 시 ChartManager가 지정)
         public void TrackTimeline(TimelineController timeline)
         {
             trackingTimeline = timeline;
         }
 
-        // 같은 그룹 연속 마디: 판정선 timeline이 이 노트를 지나갈 때까지 Waiting으로 둔다.
-        // HeadLayer가 HoldLayer보다 위라 그대로 두면 현재 마디 홀드바 위로 올라오므로, 그동안 헤드를 holdLayer로 옮겨 홀드바 아래에 그린다.
-        // holdLayer와 headLayer는 같은 좌표계라 위치는 그대로 유지된다.
-        public void WaitForTimelinePass(TimelineController timeline, RectTransform holdLayer)
+        // 같은 그룹 연속 마디 노트: Active가 될 때까지 헤드를 holdLayer로 옮겨 현재 마디 홀드바 아래에 그린다.
+        // HeadLayer가 HoldLayer보다 위라 그대로 두면 현재 마디 홀드바 위로 올라온다. holdLayer와 headLayer는 같은 좌표계라 위치는 그대로 유지된다.
+        public void DrawBelowHoldBars(RectTransform holdLayer)
         {
-            trackingTimeline = timeline;
             _headLayer = transform.parent;
             transform.SetParent(holdLayer, false);
             PlaceInHoldLayer();
-            SetState(NoteState.Waiting);
         }
 
-        // holdLayer 안에서 Waiting 헤드의 그리기 순서. 기본은 맨 뒤(모든 홀드바 아래)
+        // holdLayer 안에서 헤드의 그리기 순서. 기본은 맨 뒤(모든 홀드바 아래)
         protected virtual void PlaceInHoldLayer()
         {
             rectTransform.SetAsFirstSibling();
-        }
-
-        protected virtual void Update()
-        {
-            if (isJudged) return;
-
-            // 같은 그룹 연속 마디: Waiting 노트는 감시 중인 판정선이 지나가면 스스로 Ghost로 전환
-            if (currentState == NoteState.Waiting && trackingTimeline != null && trackingTimeline.gameObject.activeSelf)
-            {
-                CheckGhostState();
-            }
-
-        }
-
-        // 감시 중인 판정선이 이 노트를 (방향에 맞게) 지나쳤으면 Waiting→Ghost 전환하고 감시 종료
-        protected void CheckGhostState()
-        {
-            float noteX = rectTransform.anchoredPosition.x;
-            float timelineX = trackingTimeline.rectTransform.anchoredPosition.x;
-
-            bool isPassed = false;
-
-            const float TIMELINE_OFFSET = 20f; // 판정선이 충분히 지나간 후 ghost로 전환하도록 여유 공간 설정
-
-            if (trackingTimeline.isLTR)
-            {
-                if (timelineX > noteX + TIMELINE_OFFSET) isPassed = true;
-            }
-            else
-            {
-                if (timelineX < noteX - TIMELINE_OFFSET) isPassed = true;
-            }
-
-            if (isPassed)
-            {
-                SetState(NoteState.Ghost); // 판정선이 지나갔으니 고스트로 전환
-                trackingTimeline = null; // 더 이상 감시 안 함
-            }
         }
 
         public virtual void OnMiss()

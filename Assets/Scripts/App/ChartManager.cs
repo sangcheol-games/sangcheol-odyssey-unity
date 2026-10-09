@@ -99,7 +99,7 @@ namespace SCOdyssey.Game
         private class LaneState
         {
             public readonly Queue<NoteController> activeNotes = new Queue<NoteController>();  // 판정 대기 노트 FIFO(가장 앞 = 다음 판정 대상)
-            public readonly Queue<NoteController> ghostNotes = new Queue<NoteController>();   // 스폰됐지만 아직 활성화 전인 노트 버퍼(Waiting/Ghost)
+            public readonly Queue<NoteController> ghostNotes = new Queue<NoteController>();   // 스폰됐지만 아직 활성화 전인 노트 버퍼(Ghost)
             public bool isHolding;             // 현재 이 레인 키를 누르고 있는지
             public double? bufferedInput;      // 마디 전환 직전 선입력 시각(노트 활성화 후 FlushBufferedInput에서 재판정)
             public double countdownTargetTime; // 카운트다운이 0이 되는 목표 시각(다음 마디 시작 시각)
@@ -246,7 +246,7 @@ namespace SCOdyssey.Game
         /// <summary>
         /// 다음 마디를 "준비만" 한다(아직 현재 마디로 만들지 않음).
         /// remainingChart에서 다음 마디에 해당하는 LaneData를 모두 nextBarLanes로 옮긴 뒤
-        /// 판정선을 프리로드하고 노트를 Waiting/Ghost 상태로 미리 스폰한다.
+        /// 판정선을 프리로드하고 노트를 Ghost 상태로 미리 스폰한다.
         /// </summary>
         private void PrepareNextBar()
         {
@@ -268,7 +268,7 @@ namespace SCOdyssey.Game
             if (nextBarLanes.Count > 0)
             {
                 PreloadTimelines();  // 이 마디에 필요한 판정선 생성/재활용 준비
-                SpawnNextNotes();    // 노트 오브젝트를 Waiting/Ghost로 미리 스폰
+                SpawnNextNotes();    // 노트 오브젝트를 Ghost로 미리 스폰
                 nextBarRevealTime = CalcNextBarRevealTime();
             }
 
@@ -557,7 +557,7 @@ namespace SCOdyssey.Game
 
         #region Note
         /// <summary>
-        /// nextBarLanes의 각 노트를 풀에서 꺼내 위치를 계산해 배치하고, 초기 상태(Waiting/Ghost)를 결정한 뒤
+        /// nextBarLanes의 각 노트를 풀에서 꺼내 위치를 계산해 배치하고, Ghost로 표시한 뒤
         /// 레인별 ghostNotes 큐에 적재한다. (아직 판정 대상 아님 → StartCurrentBar에서 Active 승격)
         /// </summary>
         private void SpawnNextNotes()
@@ -576,16 +576,13 @@ namespace SCOdyssey.Game
                 int groupID = GetTrackGroupID(lane.line - 1);
 
                 // 충돌 = 현재 이동 중인 판정선과 같은 그룹을 다음 마디에서도 사용하는 경우(고난이도).
-                // 다음 마디 노트가 현재 판정선 앞쪽에 함께 보이므로, 어둡고 작게(Waiting) 미리 보여주되 판정선이 지나간 뒤에만 Active로 올린다.
-                // (판정선 앞의 밝은 노트 = 이번에 칠 노트 규칙 유지)
-                TimelineController currentTimeline = null;
-                bool isConflict = false;    // 현재 마디와 다음마디가 동일 그룹으 사용할 경우
+                // 다음 마디 노트가 현재 마디 노트와 같은 트랙에 함께 보이므로, Active 전까지 현재 마디 홀드바 아래에 그린다.
+                bool isConflict = false;    // 현재 마디와 다음마디가 동일 그룹을 사용할 경우
                 bool currentIsLTR = true;
 
-                if (activeTimelines != null && activeTimelines.TryGetValue(groupID, out TimelineController timeline))
+                if (activeTimelines.TryGetValue(groupID, out TimelineController currentTimeline))
                 {
                     isConflict = true;
-                    currentTimeline = timeline;
                     currentIsLTR = currentTimeline.isLTR;
                 }
 
@@ -640,35 +637,22 @@ namespace SCOdyssey.Game
                         );
                     }
 
-                    if (isConflict && currentTimeline != null)
+                    // 다음 마디 노트는 모두 Ghost(반투명·작게)로 노출하고, 다음 마디 판정선이 화면에 들어올 때(RevealNextBarNotes) 한꺼번에 Active로 올린다
+                    noteController.SetState(NoteState.Ghost);
+
+                    if (isConflict)
                     {
-                        // 같은 그룹 충돌: 노트가 현재 타임라인의 endpoint에 위치하는지 확인
+                        noteController.DrawBelowHoldBars(holdLayer);
+
                         // endpoint 노트 = 유턴 패턴에서 다음 마디 첫 비트(같은 방향 연속이면 endpoint에 놓이지 않음).
-                        // 판정선이 절대 지나칠 수 없어 Waiting으로 두면 마디 시작까지 풀리지 않으므로 Ghost로 둔다(다른 노트처럼 RevealNextBarNotes에서 Active)
+                        // 이 HoldStart의 홀드바는 endpoint에서 판정선 쪽으로 뻗어 아직 판정 전인 현재 마디 노트와 겹치므로 마디 시작까지 Ghost 유지
                         float noteX = spawnPos.x;
                         bool atEndpoint = currentIsLTR
                             ? Mathf.Approximately(noteX, rightEndpoint.anchoredPosition.x)  // LTR: rightEndpoint
                             : Mathf.Approximately(noteX, leftEndpoint.anchoredPosition.x);  // RTL: leftEndpoint
 
-                        if (!atEndpoint)
-                        {
-                            // endpoint가 아님: 어둡고 작게 보이다가, 판정선이 지나가면 Ghost로 전환(이후 RevealNextBarNotes가 Active로 올리며 원래 크기로)
-                            noteController.WaitForTimelinePass(currentTimeline, holdLayer);
-                        }
-                        else
-                        {
-                            // endpoint에 위치(유턴 첫 비트): 다른 노트처럼 Ghost로 노출
-                            noteController.SetState(NoteState.Ghost);
-
-                            // 홀드바는 endpoint에서 판정선 쪽으로 뻗어 아직 판정 전인 현재 마디 노트와 겹치므로 마디 시작까지 Ghost 유지
-                            if (noteData.noteType == NoteType.HoldStart)
-                                ((HoldStartNote)noteController).KeepHoldBarGhost = true;
-                        }
-                    }
-                    else
-                    {
-                        // 충돌 없음: 바로 Ghost(어둡고 작게)로 노출
-                        noteController.SetState(NoteState.Ghost);
+                        if (atEndpoint && noteData.noteType == NoteType.HoldStart)
+                            ((HoldStartNote)noteController).KeepHoldBarGhost = true;
                     }
 
                     _lanes[lane.line - 1].ghostNotes.Enqueue(noteController);   // 판정 대상 아님. StartCurrentBar에서 Active로 승격
@@ -677,11 +661,8 @@ namespace SCOdyssey.Game
         }
 
         /// <summary>
-        /// 다음 마디 판정선이 화면에 들어온 뒤 매 프레임 호출. ghostNotes 중 Ghost 상태인 노트만 Active 색으로 바꾼다(표시만).
+        /// 다음 마디 판정선이 화면에 들어올 때 한 번 호출. ghostNotes를 모두 Active 색으로 바꾼다(표시만).
         /// 판정 큐 승격은 여전히 StartCurrentBar → ActivateGhostNotes에서 한다.
-        /// Waiting은 건드리지 않는다: 현재 판정선이 아직 지나가지 않은 노트라 밝히면 현재 마디 노트와 구분되지 않고,
-        /// Waiting HoldStart는 이전 마디 판정선을 추적 중이라 Active가 되면 홀드바가 잘못 깎인다.
-        /// 판정선이 지나가 Ghost로 바뀌면 다음 프레임에 이 루프가 바로 Active로 올린다.
         /// </summary>
         private void RevealNextBarNotes()
         {
@@ -689,8 +670,6 @@ namespace SCOdyssey.Game
             {
                 foreach (NoteController note in _lanes[i].ghostNotes)
                 {
-                    if (note.State != NoteState.Ghost) continue;
-
                     note.SetState(NoteState.Active);
 
                     // 유턴 첫 비트 HoldStart: 헤드만 Active, 홀드바는 마디 시작(ActivateGhostNotes)까지 Ghost
@@ -698,6 +677,8 @@ namespace SCOdyssey.Game
                         holdStart.SetHoldBarState(NoteState.Ghost);
                 }
             }
+
+            nextBarRevealTime = double.MaxValue;    // 한 번만 전환(PrepareNextBar가 다음 마디 시각으로 다시 설정)
         }
 
         /// <summary>

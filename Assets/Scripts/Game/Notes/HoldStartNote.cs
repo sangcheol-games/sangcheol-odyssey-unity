@@ -28,7 +28,7 @@ namespace SCOdyssey.Game
         private float barHeight;                    // 프리팹 rect 높이(스프라이트 자연 높이와 동일)
         private float rectScale;                    // 프리팹 localScale.x — 2배 제작 에셋 보정값
         private float remainingWidth;               // 남은 홀드바 폭(화면 단위). 기존 fillAmount 대체
-        private bool isBarThin = false;             // Active 전(Waiting/Ghost)이라 홀드바가 얇게 표시 중
+        private bool isBarThin = false;             // Active 전(Ghost)이라 홀드바가 얇게 표시 중
 
         // 유턴 첫 비트: 홀드바가 아직 판정 전인 현재 마디 노트와 겹치므로 헤드가 먼저 Active가 돼도 홀드바는 마디 시작까지 Ghost.
         // ChartManager가 스폰 시 지정하고 RevealNextBarNotes에서 읽는다.
@@ -44,7 +44,7 @@ namespace SCOdyssey.Game
             holdImage.color = Tint(s_holdBaseColor ?? Color.white, brightness, alpha);
         }
 
-        // Waiting 헤드는 자기 홀드바 바로 위에 둔다(자기 홀드바에 가려지지 않고, 먼저 스폰된 현재 마디 홀드바보다는 아래)
+        // holdLayer로 옮긴 헤드는 자기 홀드바 바로 위에 둔다(자기 홀드바에 가려지지 않고, 먼저 스폰된 현재 마디 홀드바보다는 아래)
         protected override void PlaceInHoldLayer()
         {
             if (holdBarTransform == null)
@@ -198,10 +198,8 @@ namespace SCOdyssey.Game
             isHoldRemaining = true;     // miss여도 홀드바는 판정선이 지나갈 때까지 유지
         }
 
-        protected override void Update()
+        private void Update()
         {
-            base.Update();
-
             // Active 상태에서도 타임라인이 지나가는 동안 홀드바를 미리 깎아둔다
             // (판정/miss 전부터 타임라인 위치에 맞춰 홀드바가 실시간으로 줄어들어야 함)
             if (!isHoldRemaining && currentState == NoteState.Active && trackingTimeline != null && trackingTimeline.gameObject.activeSelf)
