@@ -1,7 +1,7 @@
 #TITLE Lazy Dance
 #ARTIST Maro Note
 #DIFFICULTY Easy
-#LEVEL 2
+#LEVEL 3
 #BPM 160
 #NOTES 343
 

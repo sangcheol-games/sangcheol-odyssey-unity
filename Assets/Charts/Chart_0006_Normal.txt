@@ -1,7 +1,7 @@
 #TITLE カニカーニバル!
 #ARTIST MendoZID
 #DIFFICULTY Normal
-#LEVEL 1
+#LEVEL 6
 #BPM 180
 #NOTES 470
 

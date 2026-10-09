@@ -1,7 +1,7 @@
 #TITLE 이해만은 하지 말아줘
 #ARTIST Leo
 #DIFFICULTY Easy
-#LEVEL 1
+#LEVEL 2
 #BPM 142
 #NOTES 236
 

@@ -1,7 +1,7 @@
 #TITLE 고등어써머쌈바
 #ARTIST MendoZID
 #DIFFICULTY Easy
-#LEVEL 1
+#LEVEL 5
 #BPM 195
 #NOTES 316
 

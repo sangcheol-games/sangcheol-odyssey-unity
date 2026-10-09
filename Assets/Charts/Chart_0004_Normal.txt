@@ -1,7 +1,7 @@
 #TITLE 일본어 못합니다
 #ARTIST Leo
 #DIFFICULTY Normal
-#LEVEL 1
+#LEVEL 7
 #BPM 184
 #NOTES 568
 

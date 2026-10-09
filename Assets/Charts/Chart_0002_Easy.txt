@@ -1,7 +1,7 @@
 #TITLE Una Alarm
 #ARTIST Maro Note
 #DIFFICULTY Easy
-#LEVEL 3
+#LEVEL 5
 #BPM 155
 #NOTES 252
 
