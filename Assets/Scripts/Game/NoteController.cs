@@ -33,7 +33,7 @@ namespace SCOdyssey.Game
         protected bool isHoldRemaining = false;  // 판정 후 홀드바가 남아있는 상태
         protected NoteState currentState;
         public NoteState State => currentState;           // ChartManager가 Ghost 노트만 골라 Active 표시로 올릴 때 읽음
-        protected TimelineController trackingTimeline;    // 감시할 타임라인(Waiting→Ghost 전환 판단용)
+        protected TimelineController trackingTimeline;    // 감시할 타임라인(Waiting→Ghost 전환 판단 / HoldStart 홀드바 fill)
         protected RectTransform rectTransform;
 
         // 히트 프레임 재생기(NoteImage 자식에 부착). Miss는 아트가 없어 애니메이션 없이 즉시 소멸.
@@ -45,11 +45,12 @@ namespace SCOdyssey.Game
         private Color _initialColor;
         private Vector3 _initialScale;
         private bool _isHeadShrunk = false; // Active 전(Waiting/Ghost)이라 헤드가 작게 표시 중
+        private Transform _headLayer;       // Waiting 동안 holdLayer로 옮긴 헤드를 되돌릴 원래 부모(headLayer). 옮기지 않았으면 null
 
-        private const float INACTIVE_SCALE = 0.7f;          // Active 전(Waiting/Ghost) 헤드 크기(원래 크기 대비)
-        private const float REVEAL_OVERSHOOT_SCALE = 1.1f;  // Active가 될 때 잠깐 커지는 크기
-        private const float REVEAL_GROW_DURATION = 0.08f;   // INACTIVE_SCALE → REVEAL_OVERSHOOT_SCALE
-        private const float REVEAL_SETTLE_DURATION = 0.07f; // REVEAL_OVERSHOOT_SCALE → 원래 크기
+        protected const float INACTIVE_SCALE = 0.3f;          // Active 전(Waiting/Ghost) 헤드 크기(원래 크기 대비)
+        protected const float REVEAL_OVERSHOOT_SCALE = 1.1f;  // Active가 될 때 잠깐 커지는 크기
+        protected const float REVEAL_GROW_DURATION = 0.08f;   // INACTIVE_SCALE → REVEAL_OVERSHOOT_SCALE
+        protected const float REVEAL_SETTLE_DURATION = 0.07f; // REVEAL_OVERSHOOT_SCALE → 원래 크기
 
         protected virtual void Awake()
         {
@@ -81,6 +82,7 @@ namespace SCOdyssey.Game
             this.holdWidth = holdWidth;
 
             trackingTimeline = null;
+            _headLayer = null;
 
             SetVisual();
 
@@ -150,6 +152,14 @@ namespace SCOdyssey.Game
         // Ghost를 알파로 낮추면 uGUI가 요소별로 블렌딩해 반투명 헤드 뒤로 홀드바가 비친다 → 알파 대신 RGB를 곱해 어둡게 한다.
         public void SetState(NoteState state)
         {
+            // Waiting이 끝나면 헤드를 원래 레이어(headLayer)로 되돌린다
+            if (state != NoteState.Waiting && _headLayer != null)
+            {
+                transform.SetParent(_headLayer, false);
+                rectTransform.SetAsFirstSibling();
+                _headLayer = null;
+            }
+
             currentState = state;
             GetStateTint(state, out float brightness, out float alpha);
             noteImage.color = Tint(_initialColor, brightness, alpha);
@@ -166,6 +176,8 @@ namespace SCOdyssey.Game
             {
                 PlayRevealGrow();
             }
+
+            ApplyBodyScale(state);
         }
 
         // 상태별 밝기/알파. Waiting/Ghost=어둡게(설정값), Active=원색
@@ -195,12 +207,33 @@ namespace SCOdyssey.Game
 
         protected virtual void ApplyTint(float brightness, float alpha) { }
 
+        // 헤드 외 비주얼(HoldStart 홀드바)의 크기를 상태에 맞출 때 파생 클래스가 재정의
+        protected virtual void ApplyBodyScale(NoteState state) { }
+
         protected abstract void SetVisual();
 
-        // 감시할 판정선 지정. Waiting 노트가 이 판정선이 지나갔는지 스스로 확인하는 데 사용
+        // 감시할 판정선 지정. HoldStart가 홀드바 fill 계산에 사용(Waiting 감시는 WaitForTimelinePass)
         public void TrackTimeline(TimelineController timeline)
         {
             trackingTimeline = timeline;
+        }
+
+        // 같은 그룹 연속 마디: 판정선 timeline이 이 노트를 지나갈 때까지 Waiting으로 둔다.
+        // HeadLayer가 HoldLayer보다 위라 그대로 두면 현재 마디 홀드바 위로 올라오므로, 그동안 헤드를 holdLayer로 옮겨 홀드바 아래에 그린다.
+        // holdLayer와 headLayer는 같은 좌표계라 위치는 그대로 유지된다.
+        public void WaitForTimelinePass(TimelineController timeline, RectTransform holdLayer)
+        {
+            trackingTimeline = timeline;
+            _headLayer = transform.parent;
+            transform.SetParent(holdLayer, false);
+            PlaceInHoldLayer();
+            SetState(NoteState.Waiting);
+        }
+
+        // holdLayer 안에서 Waiting 헤드의 그리기 순서. 기본은 맨 뒤(모든 홀드바 아래)
+        protected virtual void PlaceInHoldLayer()
+        {
+            rectTransform.SetAsFirstSibling();
         }
 
         protected virtual void Update()

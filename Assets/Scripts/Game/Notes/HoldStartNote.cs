@@ -1,3 +1,4 @@
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 using static SCOdyssey.Domain.Service.Constants;
@@ -27,6 +28,7 @@ namespace SCOdyssey.Game
         private float barHeight;                    // 프리팹 rect 높이(스프라이트 자연 높이와 동일)
         private float rectScale;                    // 프리팹 localScale.x — 2배 제작 에셋 보정값
         private float remainingWidth;               // 남은 홀드바 폭(화면 단위). 기존 fillAmount 대체
+        private bool isBarThin = false;             // Active 전(Waiting/Ghost)이라 홀드바가 얇게 표시 중
 
         // 유턴 첫 비트: 홀드바가 아직 판정 전인 현재 마디 노트와 겹치므로 헤드가 먼저 Active가 돼도 홀드바는 마디 시작까지 Ghost.
         // ChartManager가 스폰 시 지정하고 RevealNextBarNotes에서 읽는다.
@@ -42,11 +44,52 @@ namespace SCOdyssey.Game
             holdImage.color = Tint(s_holdBaseColor ?? Color.white, brightness, alpha);
         }
 
-        // 홀드바만 지정 상태의 색으로 덮어쓴다(헤드 색·State는 유지). 이후 SetState가 호출되면 헤드와 같은 색으로 돌아간다.
+        // Waiting 헤드는 자기 홀드바 바로 위에 둔다(자기 홀드바에 가려지지 않고, 먼저 스폰된 현재 마디 홀드바보다는 아래)
+        protected override void PlaceInHoldLayer()
+        {
+            if (holdBarTransform == null)
+            {
+                base.PlaceInHoldLayer();
+                return;
+            }
+
+            rectTransform.SetSiblingIndex(holdBarTransform.GetSiblingIndex() + 1);
+        }
+
+        // 홀드바만 지정 상태의 색·굵기로 덮어쓴다(헤드·State는 유지). 이후 SetState가 호출되면 헤드와 같은 상태로 돌아간다.
         public void SetHoldBarState(NoteState state)
         {
             GetStateTint(state, out float brightness, out float alpha);
             ApplyTint(brightness, alpha);
+            ApplyBodyScale(state);
+        }
+
+        // 홀드바 굵기: Active 전에는 헤드처럼 얇게, Active가 되면 원래 굵기로 키운다.
+        // 루트(RectMask2D)가 원래 굵기를 넘는 부분을 잘라내므로 헤드와 달리 오버슈트 없이 원래 굵기까지만 키운다.
+        protected override void ApplyBodyScale(NoteState state)
+        {
+            if (holdBarTransform == null) return;
+
+            if (state != NoteState.Active && !isBarThin)
+            {
+                holdFillTransform.DOKill();
+                SetFillThickness(INACTIVE_SCALE);
+                isBarThin = true;
+            }
+            else if (state == NoteState.Active && isBarThin)
+            {
+                isBarThin = false;
+                holdFillTransform.DOKill();
+                holdFillTransform
+                    .DOScaleY(1f, REVEAL_GROW_DURATION + REVEAL_SETTLE_DURATION)
+                    .SetLink(gameObject);
+            }
+        }
+
+        // Fill은 무스케일 아트(2배 제작 보정은 루트 localScale)라 세로 스케일만 바꿔 굵기를 조절한다
+        private void SetFillThickness(float scaleY)
+        {
+            holdFillTransform.localScale = new Vector3(1f, scaleY, 1f);
         }
 
         /// <summary>
@@ -130,6 +173,11 @@ namespace SCOdyssey.Game
             holdBarTransform.sizeDelta = new Vector2(rectWidth, barHeight);
 
             ApplyTint(1f, 1f);  // 풀 재사용 시 이전 노트의 tint 잔재 제거
+
+            // 풀 재사용 시 이전 노트의 굵기 연출 잔재 제거
+            holdFillTransform.DOKill();
+            SetFillThickness(1f);
+            isBarThin = false;
         }
 
         // 판정 or Miss 시 시스템에서는 제거되지만, 홀드바 시각효과는 링거링으로 유지.

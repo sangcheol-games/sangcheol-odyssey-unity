@@ -653,8 +653,7 @@ namespace SCOdyssey.Game
                         if (!atEndpoint)
                         {
                             // endpoint가 아님: 어둡고 작게 보이다가, 판정선이 지나가면 Ghost로 전환(이후 RevealNextBarNotes가 Active로 올리며 원래 크기로)
-                            noteController.TrackTimeline(currentTimeline);
-                            noteController.SetState(NoteState.Waiting);
+                            noteController.WaitForTimelinePass(currentTimeline, holdLayer);
                         }
                         else
                         {
