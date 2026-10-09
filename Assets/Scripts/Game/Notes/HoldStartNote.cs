@@ -38,6 +38,13 @@ namespace SCOdyssey.Game
             holdImage.color = Tint(s_holdBaseColor ?? Color.white, brightness, alpha);
         }
 
+        // 홀드바만 지정 상태의 색으로 덮어쓴다(헤드 색·State는 유지). 이후 SetState가 호출되면 헤드와 같은 색으로 돌아간다.
+        public void SetHoldBarState(NoteState state)
+        {
+            GetStateTint(state, out float brightness, out float alpha);
+            ApplyTint(brightness, alpha);
+        }
+
         /// <summary>
         /// ChartManager에서 Init() 호출 전에 holdBar 오브젝트를 전달.
         /// </summary>

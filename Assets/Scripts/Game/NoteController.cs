@@ -116,8 +116,16 @@ namespace SCOdyssey.Game
         public void SetState(NoteState state)
         {
             currentState = state;
-            float brightness = 1f;
-            float alpha = 1f;
+            GetStateTint(state, out float brightness, out float alpha);
+            noteImage.color = Tint(_initialColor, brightness, alpha);
+            ApplyTint(brightness, alpha);
+        }
+
+        // 상태별 밝기/알파. Hidden=투명, Ghost=어둡게(설정값), Active=원색
+        protected static void GetStateTint(NoteState state, out float brightness, out float alpha)
+        {
+            brightness = 1f;
+            alpha = 1f;
 
             switch (state)
             {
@@ -132,8 +140,6 @@ namespace SCOdyssey.Game
                 case NoteState.Active:
                     break;
             }
-            noteImage.color = Tint(_initialColor, brightness, alpha);
-            ApplyTint(brightness, alpha);
         }
 
         // 기준색의 RGB에 brightness를 곱하고 알파를 지정한 색
