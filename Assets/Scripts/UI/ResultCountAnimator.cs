@@ -118,6 +118,7 @@ namespace SCOdyssey.UI
         {
             // 연출 도중 화면을 나가면 정리한다. 다음 Play가 전부 초기화하므로 완료 처리는 필요 없다
             KillSequence();
+            StopTick();
         }
 
         /// <summary>
@@ -134,6 +135,7 @@ namespace SCOdyssey.UI
 
             // 이전 연출의 잔상을 지우고 정지 포즈로 되돌린다
             KillSequence();
+            StopTick();
             ResetToRest();
             CaptureRest(rows, stamps);
 
@@ -166,6 +168,9 @@ namespace SCOdyssey.UI
                 lastEnd = Mathf.Max(lastEnd, AddRow(startTime, rows[i]));
                 indexInGroup++;
             }
+
+            // 틱 효과음은 숫자보다 길게 울리므로, 마지막 줄이 다 올라가는 순간 남은 틱을 끊는다
+            sequence.InsertCallback(lastEnd, StopTick);
 
             // 도장 표시: 크게 나타났다가 원래 크기로 내리꽂힌다. 페이드는 절반 시간에 끝내 착지 전에 또렷하게 보이게 한다
             // Show인 도장은 모두 같은 시각에 동시에 찍는다
@@ -232,6 +237,13 @@ namespace SCOdyssey.UI
 
             lastTickTime = now;
             oneShots.Play(tickSound);
+        }
+
+        private void StopTick()
+        {
+            if (oneShots == null) return;
+
+            oneShots.Stop(tickSound);
         }
 
         private void PlayStamp()

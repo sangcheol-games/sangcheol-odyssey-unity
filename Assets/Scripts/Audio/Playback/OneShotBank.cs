@@ -99,6 +99,23 @@ namespace SCOdyssey.Audio.Playback
             _system.playSound(sound, _group, false, out _);
         }
 
+        public void Stop(OneShotId id)
+        {
+            int slot = id.Slot;
+            if (slot <= 0 || slot > _count) return;
+            FMOD.Sound sound = _sounds[slot];
+            if (!sound.hasHandle() || !_group.hasHandle()) return;
+            if (_group.getNumChannels(out int channelCount) != FMOD.RESULT.OK) return;
+
+            // stop한 채널은 그룹에서 빠져 인덱스가 당겨지므로 뒤에서부터 돈다
+            for (int i = channelCount - 1; i >= 0; i--)
+            {
+                if (_group.getChannel(i, out FMOD.Channel channel) != FMOD.RESULT.OK) continue;
+                if (channel.getCurrentSound(out FMOD.Sound current) != FMOD.RESULT.OK) continue;
+                if (current.handle == sound.handle) channel.stop();
+            }
+        }
+
         // 재구성·종료 때 부른다. 파일명과 슬롯 번호는 남는다.
         public void Release()
         {

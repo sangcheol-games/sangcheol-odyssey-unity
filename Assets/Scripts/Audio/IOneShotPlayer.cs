@@ -29,5 +29,6 @@ namespace SCOdyssey.Audio
     // ServiceLocator가 타입을 키로 쓰므로 타격음 뱅크와 구분하려고 별도 타입으로 둔다. id는 뱅크끼리 섞어 쓰지 않는다.
     public interface ISfxPlayer : IOneShotPlayer
     {
+        void Stop(OneShotId id);                // 이 소리로 재생 중인 채널을 모두 끊는다. 잘못된 id는 무시
     }
 }
