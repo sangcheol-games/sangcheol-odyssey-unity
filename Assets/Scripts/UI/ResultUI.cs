@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Localization;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using SCOdyssey.App;
@@ -82,8 +81,8 @@ namespace SCOdyssey.UI
             // 곡 정보 표시. UIManager가 인스턴스를 캐싱해 재사용하므로 곡 정보는 표시할 때마다 새로 읽는다
             MusicSO currentMusic = ServiceLocator.Get<IMusicManager>().GetCurrentMusic();
             GetImage((int)Images.AlbumArt).sprite = currentMusic.albumArt;
-            GetText((int)Texts.MusicTitleText).text = currentMusic.title.GetLocalizedString();
-            GetText((int)Texts.ArtistText).text = currentMusic.producer.GetLocalizedString();
+            GetText((int)Texts.MusicTitleText).text = LocalizedTextUtil.Get(currentMusic.title, currentMusic.name);
+            GetText((int)Texts.ArtistText).text = LocalizedTextUtil.Get(currentMusic.producer);
 
             // 판정 통계 표시 (총 노트 수는 카운트 없이 즉시 표시)
             GetText((int)Texts.TotalNotesText).text = totalNotes.ToString();

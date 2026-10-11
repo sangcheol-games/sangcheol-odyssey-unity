@@ -10,7 +10,7 @@ namespace SCOdyssey.UI
     /// <summary>
     /// 곡 제목·아티스트처럼 LocalizedString으로 저장된 문구를 설정의 표시 언어(displayLanguageCode)로 꺼낸다.
     /// 게임 UI 언어(현재 선택 locale)와 곡 정보 표시 언어가 따로 설정되기 때문에 GetLocalizedString()만으로는 부족하다.
-    /// AdventureUI·MusicListUI·GameLoadingUI가 같은 규칙을 쓴다.
+    /// AdventureUI·MusicListUI·GameLoadingUI·ResultUI가 같은 규칙을 쓴다.
     /// </summary>
     public static class LocalizedTextUtil
     {
