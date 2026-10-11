@@ -12,8 +12,6 @@ namespace SCOdyssey.UI
 {
     public class ResultUI : BaseUI
     {
-        MusicSO currentMusic;
-
         // 등급 도장 스프라이트. ScoreRank enum 순서(SSS, SS, S, A, B, C, F)와 인덱스가 일치해야 함
         [Tooltip("등급 도장 스프라이트. 순서는 SSS, SS, S, A, B, C, F (ScoreRank enum 순서와 일치해야 한다)")]
         [SerializeField] private Sprite[] rankStampSprites;
@@ -63,8 +61,6 @@ namespace SCOdyssey.UI
             GetButton((int)Buttons.RetryButton).onClick.AddListener(OnClickRetryButton);
             GetButton((int)Buttons.SubmitButton).onClick.AddListener(OnClickSubmitButton);
 
-            currentMusic = ServiceLocator.Get<IMusicManager>().GetCurrentMusic();
-
             countAnimator = GetComponent<ResultCountAnimator>();
             if (countAnimator == null)
             {
@@ -83,7 +79,8 @@ namespace SCOdyssey.UI
             float gaugePercent,
             bool isNewBestScore)
         {
-            // 곡 정보 표시
+            // 곡 정보 표시. UIManager가 인스턴스를 캐싱해 재사용하므로 곡 정보는 표시할 때마다 새로 읽는다
+            MusicSO currentMusic = ServiceLocator.Get<IMusicManager>().GetCurrentMusic();
             GetImage((int)Images.AlbumArt).sprite = currentMusic.albumArt;
             GetText((int)Texts.MusicTitleText).text = currentMusic.title.GetLocalizedString();
             GetText((int)Texts.ArtistText).text = currentMusic.producer.GetLocalizedString();
