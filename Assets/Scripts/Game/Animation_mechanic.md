@@ -90,7 +90,7 @@ CharacterAnimator (Start에서 구독, LaneLayout.GroupOf로 자기 그룹만, i
   ├─ LaneInput 뗌                                  → StopHold
   ├─ NoteJudged Tap/HoldHead 적중, 같은 위치·같은 Time → MarkHit       (헛침 표시를 거두고 등급을 적음)
   ├─ NoteJudged HoldHead 적중                       → + BeginHold   (비트 ↑, PairId = 꼬리 id 기억)
-  ├─ NoteJudged HoldTail, NoteId == 기억한 꼬리 id   → StopHold      (적중이든 miss든)
+  ├─ NoteJudged 꼬리(HoldRelease/HoldEnd), NoteId == 기억한 꼬리 id → StopHold (적중이든 miss든)
   └─ 그 외 (Tap/HoldHead miss, 남의 꼬리)            → 무시
 ```
 
@@ -114,8 +114,8 @@ CharacterAnimator (Start에서 구독, LaneLayout.GroupOf로 자기 그룹만, i
 |---|---|---|---|
 | Tap / HoldHead | false | 버퍼의 같은 위치 누름과 `Time`이 같다 | `MarkHit(Judge)` |
 | HoldHead | false | 위와 같음 | + `BeginHold(PairId)` |
-| HoldTail | 무관 | `NoteId`가 기억한 꼬리 id와 같다 | `StopHold` |
-| HoldTail | 무관 | id가 다르다 | 무시 — 이미 다음 홀드로 넘어갔거나 내 홀드가 아니다 |
+| HoldRelease / HoldEnd | 무관 | `NoteId`가 기억한 꼬리 id와 같다 | `StopHold` |
+| HoldRelease / HoldEnd | 무관 | id가 다르다 | 무시 — 이미 다음 홀드로 넘어갔거나 내 홀드가 아니다 |
 | Tap / HoldHead | true | — | 무시. 그 경로에는 입력이 없다 |
 
 **적중과 누름을 짝짓는 법.** `RhythmSession.Press`는 `LaneInput`을 내보낸 직후 같은 호출 안에서 그 누름의 `NoteJudged`를
@@ -129,20 +129,22 @@ CharacterAnimator (Start에서 구독, LaneLayout.GroupOf로 자기 그룹만, i
 
 둘째 줄 때문에 **"타격음이 Umm이다"로 헛침을 판별하면 안 된다.**
 
-**홀드를 놓쳤다 다시 잡는 경우는 없다.** 꼬리 윈도우 전에 키를 떼면 엔진이 그 자리에서 꼬리를 miss로 끊는다.
+**홀드를 놓쳤다 다시 잡는 경우는 없다.** 너무 일찍 키를 떼면(HoldRelease는 꼬리 윈도우 전, HoldEnd는 Perfect 윈도우 전)
+엔진이 그 자리에서 꼬리를 miss로 끊는다.
 다시 누르면 칠 머리가 없으니 헛침 → `Miss`다. 예전 `PressResult.HoldBody`에 해당하는 분기는 없다.
 
 **옛 꼬리 id와 새 꼬리 id.** 떼지 않은 채 다음 머리를 치면(합성 release 뒤에 가능) 엔진은 새 머리의 적중을 먼저,
 옛 꼬리의 miss를 그 뒤에 낸다. `BeginHold`는 비트가 이미 서 있어도 id를 새 꼬리로 갈아 두므로, 뒤따르는 옛 꼬리 miss는 id가 달라 무시된다.
 이 id 비교가 없으면 그 miss가 새 홀드를 끊는다.
 
-**홀드가 끝나는 원인은 셋이고, 애니메이터는 구분하지 않는다.** 하는 일은 비트를 내리는 것뿐이다.
+**홀드가 끝나는 원인은 넷이고, 애니메이터는 구분하지 않는다.** 하는 일은 비트를 내리는 것뿐이다.
 
 | 원인 | 오는 이벤트 |
 |---|---|
 | 플레이어가 키를 뗌 | `LaneInput`(뗌) — 뒤따르는 꼬리 판정은 id가 이미 비워져 무시된다 |
-| 꼬리 윈도우가 닫히도록 누르고 있음 | `NoteJudged` HoldTail miss (`Advance`) |
-| 머리를 놓쳐 꼬리가 같이 죽음 | `NoteJudged` HoldTail miss — 머리 적중이 없었으니 id가 달라 무시된다 (비트도 서 있지 않다) |
+| HoldEnd 꼬리 시각까지 누르고 있음 | `NoteJudged` HoldEnd Perfect (`Advance`, 키는 계속 눌려 있을 수 있다) |
+| HoldRelease 꼬리 윈도우가 닫히도록 누르고 있음 | `NoteJudged` HoldRelease miss (`Advance`) |
+| 머리를 놓쳐 꼬리가 같이 죽음 | `NoteJudged` 꼬리 miss — 머리 적중이 없었으니 id가 달라 무시된다 (비트도 서 있지 않다) |
 
 **홀드와 무관하게 모든 키 뗌마다도 `StopHold`가 불린다.** 일반 노트를 톡 치고 손을 떼도 온다.
 그래서 비트 1→0 전이일 때만 기록한다. 이 가드가 없으면 모든 탭 직후 `Run`이 히트 원샷을 잘라먹는다.
@@ -400,8 +402,8 @@ void Play(CharacterState state, CharacterState follow);
 **입력이 멈춰도 아래로 내려오지 않는다.** 상태 목록에 하강 모션이 없다.
 위에서 친 뒤 입력이 없으면 그 높이에 머문 채 `Run`을 재생한다.
 
-**홀드가 끝나면 키를 안 떼도 `Run`으로 돌아간다.** 꼬리 윈도우가 닫히는 순간 엔진이 꼬리를 miss로 확정하고(§3-2)
-비트가 내려간다. Y는 그 자리에 머문다. 완주 자체에 전용 연출은 없다. 붙이고 싶어지면 상태를 하나 추가해야 한다.
+**홀드가 끝나면 키를 안 떼도 `Run`으로 돌아간다.** HoldEnd는 꼬리 시각에 엔진이 꼬리를 Perfect로,
+HoldRelease는 꼬리 윈도우가 닫히는 순간 miss로 확정하고(§3-2) 비트가 내려간다. Y는 그 자리에 머문다. 완주 자체에 전용 연출은 없다. 붙이고 싶어지면 상태를 하나 추가해야 한다.
 
 **릴리즈 판정 등급은 캐릭터에 표현되지 않는다.** 소리와 판정 이펙트로만 나간다.
 뗀 자리에 머문 채 `Run`으로 돌아간다.
@@ -522,10 +524,10 @@ void Play(CharacterState state, CharacterState follow);
 | **상하 동시 홀드 진입 (둘 다 HoldStart)** | `Up_hold`/`Down_hold`(이동 시) 또는 `Hold`(제자리). `hit_while_hold`가 나오면 안 됨 |
 | 아래 홀드 중 위쪽 헛침 | 아무 변화 없음. `Hold`가 재시작하지 않을 것 |
 | 홀드 중 잠깐 놓았다 다시 잡기 | 놓는 순간 `Run`, 다시 누르면 `Miss` (§7). `Hit_umm`은 뜨지 않을 것 |
-| **홀드를 끝까지 유지하고 키를 계속 누르고 있기** | 꼬리 윈도우가 닫히는 시점에 `Run`으로 복귀. Y는 그 자리 유지 |
+| **끝점(4) 홀드를 끝까지 유지하고 키를 계속 누르고 있기** | 꼬리 시각(Perfect 판정)에 `Run`으로 복귀. Y는 그 자리 유지 |
 | **그 상태에서 반대쪽 노트 타격** | 축이 정상 이동 |
 | **한쪽 홀드 종료와 동시에 반대쪽 홀드 시작, 키는 안 뗌** | Middle을 거치지 않고 반대쪽으로. `Up_hold`/`Down_hold` |
-| **릴리즈 타이밍을 놓치고 키를 계속 누르고 있기** | 꼬리가 miss 처리되는 시점에 `Run`으로 복귀 |
+| **릴리즈(5) 타이밍을 놓치고 키를 계속 누르고 있기** | 꼬리 윈도우가 닫혀 miss 처리되는 시점에 `Run`으로 복귀 |
 | **연속 홀드에서 손을 계속 누르고 있기** | 입력 없이 `Hold`로 되돌아오는 깜빡임이 없을 것. 두 번째 홀드는 미스 |
 | 연속 홀드에서 키를 떼고 다시 누르기 | 두 번째 홀드가 정상 판정되고 `Hold`로 진입 |
 | 홀드 놓기 | `Run`, Y 유지 |

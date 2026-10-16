@@ -56,10 +56,10 @@ namespace SCOdyssey.Rhythm.Tests
         }
 
         [Test]
-        public void Release_JudgesHoldTail()
+        public void Release_JudgesHoldRelease()
         {
             RhythmSession session = Create(
-                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) },
                 out BusLog log, out _);
 
             session.Press(Lane.L1, 1.0);
@@ -74,7 +74,7 @@ namespace SCOdyssey.Rhythm.Tests
         public void Release_BeforeTailWindow_MissesTailAtReleaseTime()
         {
             RhythmSession session = Create(
-                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) },
                 out BusLog log, out _);
 
             session.Press(Lane.L1, 1.0);
@@ -117,7 +117,7 @@ namespace SCOdyssey.Rhythm.Tests
         public void Press_OnHoldHead_ReturnsTheHeadHit()
         {
             RhythmSession session = Create(
-                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) },
                 out _, out _);
 
             PressOutcome outcome = session.Press(Lane.L1, 1.0);
@@ -133,8 +133,8 @@ namespace SCOdyssey.Rhythm.Tests
             RhythmSession session = Create(
                 new[]
                 {
-                    N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0),
-                    N(2.1, Lane.L1, NoteKind.HoldHead, 3), N(3.0, Lane.L1, NoteKind.HoldTail, 2),
+                    N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0),
+                    N(2.1, Lane.L1, NoteKind.HoldHead, 3), N(3.0, Lane.L1, NoteKind.HoldRelease, 2),
                 },
                 out BusLog log, out _);
 
@@ -175,7 +175,7 @@ namespace SCOdyssey.Rhythm.Tests
         public void ReleaseUnjudged_PublishesOnlyTheInput_AndKeepsTheTailInProgress()
         {
             RhythmSession session = Create(
-                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) },
                 out BusLog log, out _);
 
             session.Press(Lane.L1, 1.0);
@@ -189,7 +189,7 @@ namespace SCOdyssey.Rhythm.Tests
         public void ReleaseUnjudged_WithoutRegrip_TailMissesWhenItsWindowCloses()
         {
             RhythmSession session = Create(
-                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) },
                 out BusLog log, out _);
 
             session.Press(Lane.L1, 1.0);
@@ -206,7 +206,7 @@ namespace SCOdyssey.Rhythm.Tests
         public void ReleaseUnjudged_ThenRegripAndRelease_GradesTheTail()
         {
             RhythmSession session = Create(
-                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) },
+                new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) },
                 out BusLog log, out _);
 
             session.Press(Lane.L1, 1.0);

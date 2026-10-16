@@ -6,9 +6,10 @@ namespace SCOdyssey.Rhythm
 {
     // 판정의 단일 권한. 시간 오름차순 배열 + 상태 배열 + 커서만으로 판정한다. Unity 참조 없음.
     //
-    // 탭·홀드 머리는 누르는 타이밍, 홀드 꼬리는 떼는 타이밍으로 판정한다.
-    // 머리가 판정되면 꼬리는 InProgress(누르는 중)가 되고, 꼬리 윈도우 안에서 떼면 판정, 그 전에 떼면 즉시 Miss(홀드 끊김),
-    // 윈도우가 지나도록 누르고 있으면 Miss. 머리를 놓치면 꼬리도 같이 Miss.
+    // 탭·홀드 머리는 누르는 타이밍으로 판정한다. 머리가 판정되면 꼬리는 InProgress(누르는 중)가 된다.
+    // HoldRelease 꼬리: 꼬리 윈도우 안에서 떼면 판정, 그 전에 떼면 즉시 Miss(홀드 끊김), 윈도우가 지나도록 누르고 있으면 Miss.
+    // HoldEnd 꼬리: 꼬리 시각까지 누르고 있으면 그 시각에 Perfect. Perfect 윈도우 안에서 일찍 뗀 것도 Perfect, 그보다 이르면 Miss.
+    // 머리를 놓치면 꼬리도 같이 Miss.
     //
     // 모든 입력은 먼저 그 시각까지 Advance한 뒤 처리하므로 결과가 프레임 간격과 무관하다.
     // 커서는 "윈도우가 닫힌 지점"만 따라가며 Pending 노트를 Missed로 뱉는다.
@@ -58,8 +59,8 @@ namespace SCOdyssey.Rhythm
                     throw new ArgumentException($"#{i} {note}의 짝 인덱스가 범위 밖이다");
 
                 JudgeNote pair = notes[note.PairId];
-                bool headToTail = note.Kind == NoteKind.HoldHead && pair.Kind == NoteKind.HoldTail && note.PairId > i;
-                bool tailToHead = note.Kind == NoteKind.HoldTail && pair.Kind == NoteKind.HoldHead && note.PairId < i;
+                bool headToTail = note.Kind == NoteKind.HoldHead && pair.Kind.IsTail() && note.PairId > i;
+                bool tailToHead = note.Kind.IsTail() && pair.Kind == NoteKind.HoldHead && note.PairId < i;
                 if (pair.PairId != i || pair.Lane != note.Lane || !(headToTail || tailToHead))
                     throw new ArgumentException($"홀드 짝이 맞지 않는다: #{i} {note} ↔ #{note.PairId} {pair}");
             }
@@ -83,12 +84,21 @@ namespace SCOdyssey.Rhythm
         public int HoldInProgressOf(Lane lane) => _holding[(int)lane];
 
         private double TimeOf(int index) => _notes[index].Time + _settings.OffsetSec;
-        private double WindowOf(int index) => _notes[index].Kind == NoteKind.HoldTail ? _settings.TailWindow : Windows.Umm;
+        private double WindowOf(int index)
+        {
+            switch (_notes[index].Kind)
+            {
+                case NoteKind.HoldRelease: return _settings.TailWindow;
+                case NoteKind.HoldEnd: return 0;
+                default: return Windows.Umm;
+            }
+        }
         private double ClosedAt(int index) => TimeOf(index) + WindowOf(index);   // 이 시각을 넘으면(>) 윈도우가 닫힌 것
 
         /// <summary>
         /// 시각을 time까지 진행한다. 되돌아가지 않는다(Now보다 이른 time은 Now로 본다).
-        /// 누르고 있는 홀드의 꼬리 윈도우가 지났으면 Miss, 윈도우가 닫힌 Pending 노트도 Miss로 확정한다.
+        /// 누르고 있는 HoldEnd 꼬리는 제 시각에 Perfect, HoldRelease 꼬리는 윈도우가 지났으면 Miss,
+        /// 윈도우가 닫힌 Pending 노트도 Miss로 확정한다.
         /// </summary>
         public void Advance(double time, List<JudgeEvent> outEvents)
         {
@@ -100,6 +110,17 @@ namespace SCOdyssey.Rhythm
             {
                 int tail = _holding[lane];
                 if (tail < 0) continue;
+
+                if (_notes[tail].Kind == NoteKind.HoldEnd)
+                {
+                    double endAt = TimeOf(tail);
+                    if (now < endAt) continue;
+
+                    _holding[lane] = -1;
+                    Decide(tail, NoteStatus.Judged, JudgeType.Perfect);
+                    outEvents.Add(JudgeEvent.Hit(tail, _notes[tail], JudgeType.Perfect, 0, endAt));
+                    continue;
+                }
 
                 double closedAt = ClosedAt(tail);
                 if (now <= closedAt) continue;
@@ -169,6 +190,22 @@ namespace SCOdyssey.Rhythm
 
             JudgeNote note = _notes[tail];
             double delta = time - TimeOf(tail);
+            if (note.Kind == NoteKind.HoldEnd)
+            {
+                // 꼬리 시각 이후의 뗌은 위 Advance에서 이미 Perfect로 확정됐다. 여기 오면 delta < 0
+                if (-delta <= Windows.Perfect)
+                {
+                    Decide(tail, NoteStatus.Judged, JudgeType.Perfect);
+                    outEvents.Add(JudgeEvent.Hit(tail, note, JudgeType.Perfect, delta, time));
+                }
+                else
+                {
+                    Decide(tail, NoteStatus.Missed, JudgeType.Umm);
+                    outEvents.Add(JudgeEvent.Miss(tail, note, delta, time));
+                }
+                return true;
+            }
+
             if (Math.Abs(delta) < _settings.TailWindow)
             {
                 JudgeType grade = Windows.Grade(Math.Abs(delta));
@@ -223,7 +260,7 @@ namespace SCOdyssey.Rhythm
                 if (_status[i] != NoteStatus.Pending) continue;
 
                 JudgeNote note = _notes[i];
-                if (note.Lane != lane || note.Kind == NoteKind.HoldTail) continue;
+                if (note.Lane != lane || note.Kind.IsTail()) continue;
                 if (-diff >= Windows.Umm) continue;  // 윈도우를 이미 지남
 
                 if (picked < 0 || Math.Abs(diff) < Math.Abs(pickedDiff))

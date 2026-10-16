@@ -2,28 +2,32 @@ using static SCOdyssey.Domain.Service.Constants;
 
 namespace SCOdyssey.Rhythm
 {
-    // 판정 층의 노트 종류. 홀드 1개 = 머리(누르는 타이밍) + 꼬리(떼는 타이밍) 판정 2개
+    // 판정 층의 노트 종류. 홀드 1개 = 머리(누르는 타이밍) + 꼬리 판정 2개.
+    // 꼬리는 두 가지: HoldRelease는 꼬리 시각에 떼야 하고, HoldEnd는 꼬리 시각까지 누르고 있으면 된다
     public enum NoteKind
     {
         Tap,
         HoldHead,
-        HoldTail,
+        HoldRelease,
+        HoldEnd,
     }
 
     public static class NoteKinds
     {
-        // 채보 문자 1 -> Tap, 2 -> HoldHead, 4/5 -> HoldTail. 3(본체)은 판정 대상이 아니다
+        // 채보 문자 1 -> Tap, 2 -> HoldHead, 4 -> HoldEnd, 5 -> HoldRelease. 3(본체)은 판정 대상이 아니다
         public static bool TryFrom(NoteType type, out NoteKind kind)
         {
             switch (type)
             {
                 case NoteType.Normal: kind = NoteKind.Tap; return true;
                 case NoteType.HoldStart: kind = NoteKind.HoldHead; return true;
-                case NoteType.HoldEnd:
-                case NoteType.HoldRelease: kind = NoteKind.HoldTail; return true;
+                case NoteType.HoldEnd: kind = NoteKind.HoldEnd; return true;
+                case NoteType.HoldRelease: kind = NoteKind.HoldRelease; return true;
                 default: kind = default; return false;
             }
         }
+
+        public static bool IsTail(this NoteKind kind) => kind == NoteKind.HoldRelease || kind == NoteKind.HoldEnd;
     }
 
     /// 판정 전용 노트. 파싱 시점에 값이 확정.

@@ -18,7 +18,11 @@ namespace SCOdyssey.Rhythm.Tests
 
         // 레인1 홀드 하나: 머리 #0, 꼬리 #1
         private static JudgeNote[] Hold(double head, double tail)
-            => new[] { N(head, Lane.L1, NoteKind.HoldHead, 1), N(tail, Lane.L1, NoteKind.HoldTail, 0) };
+            => new[] { N(head, Lane.L1, NoteKind.HoldHead, 1), N(tail, Lane.L1, NoteKind.HoldRelease, 0) };
+
+        // 레인1 끝점 홀드 하나: 머리 #0, HoldEnd 꼬리 #1
+        private static JudgeNote[] HoldToEnd(double head, double tail)
+            => new[] { N(head, Lane.L1, NoteKind.HoldHead, 1), N(tail, Lane.L1, NoteKind.HoldEnd, 0) };
 
         private static JudgeHarness Harness(params JudgeNote[] notes) => new(notes);
 
@@ -87,7 +91,7 @@ namespace SCOdyssey.Rhythm.Tests
 
         [TestCase(NoteKind.Tap, true)]
         [TestCase(NoteKind.HoldHead, true)]
-        [TestCase(NoteKind.HoldTail, false)]
+        [TestCase(NoteKind.HoldRelease, false)]
         public void Press_ClaimsOnlyTapAndHead(NoteKind kind, bool claimed)
         {
             Assert.That(Harness(N(0, Lane.L1, kind)).Press(Lane.L1, 0), Is.EqualTo(claimed));
@@ -95,7 +99,7 @@ namespace SCOdyssey.Rhythm.Tests
 
         [TestCase(NoteKind.Tap)]
         [TestCase(NoteKind.HoldHead)]
-        [TestCase(NoteKind.HoldTail)]
+        [TestCase(NoteKind.HoldRelease)]
         public void Release_WithoutHoldInProgress_DecidesNothing(NoteKind kind)
         {
             JudgeHarness h = Harness(N(0, Lane.L1, kind));
@@ -200,7 +204,7 @@ namespace SCOdyssey.Rhythm.Tests
             Assert.That(h.Engine.HoldInProgressOf(Lane.L1), Is.EqualTo(1));
 
             Assert.That(h.Release(Lane.L1, 0.43), Is.True);
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldTail Master" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldRelease Master" }));
             Assert.That(h.Engine.HoldInProgressOf(Lane.L1), Is.EqualTo(-1));
             Assert.That(h.Engine.IsFinished, Is.True);
         }
@@ -228,7 +232,7 @@ namespace SCOdyssey.Rhythm.Tests
 
             h.Release(Lane.L1, 0.3);
 
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldTail Kind" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldRelease Kind" }));
         }
 
         [Test]
@@ -238,7 +242,7 @@ namespace SCOdyssey.Rhythm.Tests
 
             h.Advance(0.2);
 
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Miss", "#1 HoldTail Miss" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Miss", "#1 HoldRelease Miss" }));
             Assert.That(h.Single(1).Time, Is.EqualTo(U).Within(1e-12));
             Assert.That(h.Engine.IsFinished, Is.True);
         }
@@ -267,22 +271,22 @@ namespace SCOdyssey.Rhythm.Tests
 
             Assert.That(h.Press(Lane.L1, 0.2), Is.False);
             Assert.That(h.Release(Lane.L1, 0.4), Is.False);
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldTail Miss" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldRelease Miss" }));
         }
 
         [Test]
         public void Hold_ConsecutiveHoldsNeedNewPress()
         {
             JudgeHarness h = Harness(
-                N(0.0, Lane.L1, NoteKind.HoldHead, 1), N(0.4, Lane.L1, NoteKind.HoldTail, 0),
-                N(0.8, Lane.L1, NoteKind.HoldHead, 3), N(1.2, Lane.L1, NoteKind.HoldTail, 2));
+                N(0.0, Lane.L1, NoteKind.HoldHead, 1), N(0.4, Lane.L1, NoteKind.HoldRelease, 0),
+                N(0.8, Lane.L1, NoteKind.HoldHead, 3), N(1.2, Lane.L1, NoteKind.HoldRelease, 2));
 
             h.Run(new[] { Press(0.0, Lane.L1) }, Frame60, 1.5);
 
             Assert.That(h.Outcomes(), Is.EqualTo(new[]
             {
-                "#0 HoldHead Perfect", "#1 HoldTail Miss",
-                "#2 HoldHead Miss", "#3 HoldTail Miss",
+                "#0 HoldHead Perfect", "#1 HoldRelease Miss",
+                "#2 HoldHead Miss", "#3 HoldRelease Miss",
             }));
         }
 
@@ -290,8 +294,8 @@ namespace SCOdyssey.Rhythm.Tests
         public void Hold_PressNextHeadWithoutRelease_EndsPreviousHold()
         {
             JudgeHarness h = Harness(
-                N(0.0, Lane.L1, NoteKind.HoldHead, 1), N(0.4, Lane.L1, NoteKind.HoldTail, 0),
-                N(0.45, Lane.L1, NoteKind.HoldHead, 3), N(0.9, Lane.L1, NoteKind.HoldTail, 2));
+                N(0.0, Lane.L1, NoteKind.HoldHead, 1), N(0.4, Lane.L1, NoteKind.HoldRelease, 0),
+                N(0.45, Lane.L1, NoteKind.HoldHead, 3), N(0.9, Lane.L1, NoteKind.HoldRelease, 2));
 
             h.Press(Lane.L1, 0.0);
             h.Press(Lane.L1, 0.45);   // 떼지 않고 다음 머리
@@ -303,13 +307,13 @@ namespace SCOdyssey.Rhythm.Tests
         [Test]
         public void Hold_OrphanTail_IsMissedAtWindowClose()
         {
-            JudgeHarness h = Harness(N(0.4, Lane.L1, NoteKind.HoldTail));
+            JudgeHarness h = Harness(N(0.4, Lane.L1, NoteKind.HoldRelease));
 
             Assert.That(h.Press(Lane.L1, 0.4), Is.False);
             Assert.That(h.Release(Lane.L1, 0.4), Is.False);
             h.Advance(1.0);
 
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldTail Miss" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldRelease Miss" }));
         }
 
         [Test]
@@ -333,7 +337,7 @@ namespace SCOdyssey.Rhythm.Tests
 
             h.Release(Lane.L1, 0.2);   // 200ms 일찍: 기본(126ms)이면 끊김, 2배(252ms)면 떼기 판정. 등급 경계는 그대로
 
-            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldTail Umm" }));
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldRelease Umm" }));
         }
 
         [Test]
@@ -350,7 +354,108 @@ namespace SCOdyssey.Rhythm.Tests
             ScriptedRun.Run(hitched.Engine, script, FrameSchedule.WithHitch(Frame60, 3.0, 0.97, 0.3), hitched.Events);
 
             Assert.That(hitched.Outcomes(), Is.EqualTo(smooth.Outcomes()));
-            Assert.That(smooth.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldTail Perfect" }));
+            Assert.That(smooth.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldRelease Perfect" }));
+        }
+
+        // ───────────── 끝점 홀드: 꼬리 시각까지 누르고 있기 ─────────────
+
+        [Test]
+        public void HoldEnd_KeptHeld_PerfectAtTailTime()
+        {
+            JudgeHarness h = Harness(HoldToEnd(0.0, 0.4));
+            h.Press(Lane.L1, 0.0);
+
+            h.Advance(0.4 - Eps);
+            Assert.That(h.Engine.StatusOf(1), Is.EqualTo(NoteStatus.InProgress));
+
+            h.Advance(0.4);
+            JudgeEvent tail = h.Single(1);
+            Assert.That(tail.IsMiss, Is.False);
+            Assert.That(tail.Judge, Is.EqualTo(JudgeType.Perfect));
+            Assert.That(tail.Time, Is.EqualTo(0.4));
+            Assert.That(tail.DeltaSec, Is.EqualTo(0));
+            Assert.That(h.Engine.HoldInProgressOf(Lane.L1), Is.EqualTo(-1));
+            Assert.That(h.Engine.IsFinished, Is.True);
+        }
+
+        [Test]
+        public void HoldEnd_OneLateAdvance_StillPerfectAtTailTime()
+        {
+            JudgeHarness h = Harness(HoldToEnd(0.0, 0.4));
+            h.Press(Lane.L1, 0.0);
+
+            h.Advance(5.0);
+
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldEnd Perfect" }));
+            Assert.That(h.Single(1).Time, Is.EqualTo(0.4));
+        }
+
+        [Test]
+        public void HoldEnd_ReleaseAfterTail_AddsNothing()
+        {
+            JudgeHarness h = Harness(HoldToEnd(0.0, 0.4));
+            h.Press(Lane.L1, 0.0);
+
+            Assert.That(h.Release(Lane.L1, 0.6), Is.False);
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldEnd Perfect" }));
+        }
+
+        [Test]
+        public void HoldEnd_EarlyReleaseBoundary_IsPerfectWindowInclusive()
+        {
+            double p = JudgeWindows.Default.Perfect;
+
+            JudgeHarness inside = Harness(HoldToEnd(-0.4, 0.0));
+            inside.Press(Lane.L1, -0.4);
+            Assert.That(inside.Release(Lane.L1, -p), Is.True);
+            Assert.That(inside.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldEnd Perfect" }));
+            Assert.That(inside.Single(1).Time, Is.EqualTo(-p));
+
+            JudgeHarness outside = Harness(HoldToEnd(-0.4, 0.0));
+            outside.Press(Lane.L1, -0.4);
+            Assert.That(outside.Release(Lane.L1, -p - Eps), Is.True);
+            Assert.That(outside.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Perfect", "#1 HoldEnd Miss" }));
+        }
+
+        [Test]
+        public void HoldEnd_EarlyRelease_TailMissAtReleaseTime()
+        {
+            JudgeHarness h = Harness(HoldToEnd(0.0, 0.4));
+            h.Press(Lane.L1, 0.0);
+
+            h.Release(Lane.L1, 0.2);
+
+            JudgeEvent tail = h.Single(1);
+            Assert.That(tail.IsMiss, Is.True);
+            Assert.That(tail.Time, Is.EqualTo(0.2));
+            Assert.That(h.Engine.StatusOf(1), Is.EqualTo(NoteStatus.Missed));
+        }
+
+        [Test]
+        public void HoldEnd_HeadMissed_KillsTail()
+        {
+            JudgeHarness h = Harness(HoldToEnd(0.0, 0.4));
+
+            h.Advance(1.0);
+
+            Assert.That(h.Outcomes(), Is.EqualTo(new[] { "#0 HoldHead Miss", "#1 HoldEnd Miss" }));
+            Assert.That(h.Engine.IsFinished, Is.True);
+        }
+
+        [Test]
+        public void HoldEnd_ConsecutiveHoldsKeptHeld_FirstPerfectSecondNeedsNewPress()
+        {
+            JudgeHarness h = Harness(
+                N(0.0, Lane.L1, NoteKind.HoldHead, 1), N(0.4, Lane.L1, NoteKind.HoldEnd, 0),
+                N(0.8, Lane.L1, NoteKind.HoldHead, 3), N(1.2, Lane.L1, NoteKind.HoldEnd, 2));
+
+            h.Run(new[] { Press(0.0, Lane.L1) }, Frame60, 1.5);
+
+            Assert.That(h.Outcomes(), Is.EqualTo(new[]
+            {
+                "#0 HoldHead Perfect", "#1 HoldEnd Perfect",
+                "#2 HoldHead Miss", "#3 HoldEnd Miss",
+            }));
         }
 
         // ───────────── 프레임 간격 무관성 ─────────────
@@ -401,7 +506,7 @@ namespace SCOdyssey.Rhythm.Tests
                 {
                     double end = t + 0.2 + rng.NextDouble() * 0.6;
                     raw.Add((t, lane, NoteKind.HoldHead, holdKey));
-                    raw.Add((end, lane, NoteKind.HoldTail, holdKey));
+                    raw.Add((end, lane, NoteKind.HoldRelease, holdKey));
                     holdKey++;
 
                     double release = rng.NextDouble() < 0.3 ? t + (end - t) * 0.5 : end + (rng.NextDouble() - 0.5) * 0.24;
@@ -432,7 +537,7 @@ namespace SCOdyssey.Rhythm.Tests
                 {
                     headOf[key] = i;
                 }
-                else if (kind == NoteKind.HoldTail)
+                else if (kind == NoteKind.HoldRelease)
                 {
                     int head = headOf[key];
                     track[head] = track[head].WithPair(i);

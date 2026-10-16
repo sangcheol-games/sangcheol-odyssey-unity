@@ -195,7 +195,7 @@ namespace SCOdyssey.Rhythm.Tests
             string[] outcomes = Play(track, Autoplay.Build(track, options));
 
             Assert.That(outcomes.Where(o => o.Contains("HoldHead")), Has.All.EndsWith("Perfect"));
-            Assert.That(outcomes.Where(o => o.Contains("HoldTail")), Has.All.EndsWith("Miss"));
+            Assert.That(outcomes.Where(o => o.Contains("HoldRelease") || o.Contains("HoldEnd")), Has.All.EndsWith("Miss"));
         }
 
         [Test]

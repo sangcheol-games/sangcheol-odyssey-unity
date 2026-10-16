@@ -211,14 +211,15 @@ namespace SCOdyssey.App
                     if (note.noteType == NoteType.Holding) bodyCount++;
             }
 
-            var kindCount = new int[3];
+            var kindCount = new int[(int)NoteKind.HoldEnd + 1];
             foreach (JudgeNote note in judgeNotes) kindCount[(int)note.Kind]++;
 
             Debug.Log(
                 $"[JudgeTrack] {judgeNotes.Length}개 (채보 노트 {viewNoteCount}개 중 본체(3) {bodyCount}개 제외 / 총 노트 {data.totalNotes})\n" +
                 $"  종류: Tap={kindCount[(int)NoteKind.Tap]}, " +
                 $"HoldHead={kindCount[(int)NoteKind.HoldHead]}, " +
-                $"HoldTail={kindCount[(int)NoteKind.HoldTail]}");
+                $"HoldRelease={kindCount[(int)NoteKind.HoldRelease]}, " +
+                $"HoldEnd={kindCount[(int)NoteKind.HoldEnd]}");
         }
 
         public void SetBGAData(string videoFileName, Sprite backgroundArt)

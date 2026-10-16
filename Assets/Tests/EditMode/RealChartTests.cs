@@ -15,26 +15,26 @@ namespace SCOdyssey.Rhythm.Tests
             public int Bpm;
             public int Header;
             public int Synthesized;
-            public int Tap, HoldHead, HoldTail, Bodies;   // HoldTail은 4 + 5 + 합성분. Bodies는 판정에서 빠지는 3
+            public int Tap, HoldHead, HoldRelease, HoldEnd, Bodies;   // HoldRelease는 5, HoldEnd는 4 + 합성분. Bodies는 판정에서 빠지는 3
 
-            public int Track => Tap + HoldHead + HoldTail;
+            public int Track => Tap + HoldHead + HoldRelease + HoldEnd;
             public override string ToString() => Name;
         }
 
         // Bpm은 MusicSO 에셋 값
         private static readonly Case[] Cases =
         {
-            new() { Name = "Chart_0001_Normal", Bpm = 195, Header = 551, Synthesized = 7, Tap = 340, HoldHead = 109, HoldTail = 109, Bodies = 0 },
-            new() { Name = "Chart_0001_Hard", Bpm = 195, Header = 562, Synthesized = 8, Tap = 356, HoldHead = 107, HoldTail = 107, Bodies = 0 },
-            new() { Name = "Chart_0002_Easy", Bpm = 155, Header = 252, Synthesized = 17, Tap = 171, HoldHead = 49, HoldTail = 49, Bodies = 0 },
-            new() { Name = "Chart_0002_Normal", Bpm = 155, Header = 353, Synthesized = 19, Tap = 266, HoldHead = 53, HoldTail = 53, Bodies = 0 },
-            new() { Name = "Chart_0002_Hard", Bpm = 155, Header = 414, Synthesized = 5, Tap = 309, HoldHead = 55, HoldTail = 55, Bodies = 0 },
-            new() { Name = "Chart_0003_Easy", Bpm = 160, Header = 343, Synthesized = 2, Tap = 157, HoldHead = 94, HoldTail = 94, Bodies = 0 },
-            new() { Name = "Chart_0003_Normal", Bpm = 160, Header = 641, Synthesized = 2, Tap = 241, HoldHead = 201, HoldTail = 201, Bodies = 0 },
+            new() { Name = "Chart_0001_Normal", Bpm = 195, Header = 551, Synthesized = 7, Tap = 340, HoldHead = 109, HoldRelease = 16, HoldEnd = 93, Bodies = 0 },
+            new() { Name = "Chart_0001_Hard", Bpm = 195, Header = 562, Synthesized = 8, Tap = 356, HoldHead = 107, HoldRelease = 16, HoldEnd = 91, Bodies = 0 },
+            new() { Name = "Chart_0002_Easy", Bpm = 155, Header = 252, Synthesized = 17, Tap = 171, HoldHead = 49, HoldRelease = 0, HoldEnd = 49, Bodies = 0 },
+            new() { Name = "Chart_0002_Normal", Bpm = 155, Header = 353, Synthesized = 19, Tap = 266, HoldHead = 53, HoldRelease = 5, HoldEnd = 48, Bodies = 0 },
+            new() { Name = "Chart_0002_Hard", Bpm = 155, Header = 414, Synthesized = 5, Tap = 309, HoldHead = 55, HoldRelease = 7, HoldEnd = 48, Bodies = 0 },
+            new() { Name = "Chart_0003_Easy", Bpm = 160, Header = 343, Synthesized = 2, Tap = 157, HoldHead = 94, HoldRelease = 6, HoldEnd = 88, Bodies = 0 },
+            new() { Name = "Chart_0003_Normal", Bpm = 160, Header = 641, Synthesized = 2, Tap = 241, HoldHead = 201, HoldRelease = 5, HoldEnd = 196, Bodies = 0 },
         };
 
-        private static string KindCounts(int tap, int head, int tail, int bodies)
-            => $"Tap={tap} HoldHead={head} HoldTail={tail} Bodies={bodies}";
+        private static string KindCounts(int tap, int head, int release, int end, int bodies)
+            => $"Tap={tap} HoldHead={head} HoldRelease={release} HoldEnd={end} Bodies={bodies}";
 
         [TestCaseSource(nameof(Cases))]
         public void ParseAndBuild_MatchKnownCounts(Case c)
@@ -56,8 +56,8 @@ namespace SCOdyssey.Rhythm.Tests
             int Count(NoteKind kind) => track.Count(n => n.Kind == kind);
             int bodies = chart.GetFullChartList().SelectMany(l => l.Notes).Count(n => n.noteType == NoteType.Holding);
             Assert.That(
-                KindCounts(Count(NoteKind.Tap), Count(NoteKind.HoldHead), Count(NoteKind.HoldTail), bodies),
-                Is.EqualTo(KindCounts(c.Tap, c.HoldHead, c.HoldTail, c.Bodies)));
+                KindCounts(Count(NoteKind.Tap), Count(NoteKind.HoldHead), Count(NoteKind.HoldRelease), Count(NoteKind.HoldEnd), bodies),
+                Is.EqualTo(KindCounts(c.Tap, c.HoldHead, c.HoldRelease, c.HoldEnd, c.Bodies)));
             Assert.That(track.Where(n => n.Kind != NoteKind.Tap).All(n => n.PairId >= 0), Is.True, "모든 머리·꼬리가 짝을 가진다");
 
             TrackAssert.SortedByTimeThenLane(track);

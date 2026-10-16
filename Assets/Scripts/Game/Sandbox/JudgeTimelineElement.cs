@@ -174,7 +174,7 @@ namespace SCOdyssey.Game
             if (x - NoteWidth / 2 < area.xMin || x + NoteWidth / 2 > area.xMax) return;
 
             Rect row = Row(area, (int)note.Lane, rowHeight);
-            float scale = note.Kind == NoteKind.HoldTail ? 0.45f : 0.7f;
+            float scale = note.Kind.IsTail() ? 0.45f : 0.7f;
             Color color = _reader.StatusOf(id) switch
             {
                 NoteStatus.Judged => GradeColor(_reader.GradeOf(id) ?? JudgeType.Umm),

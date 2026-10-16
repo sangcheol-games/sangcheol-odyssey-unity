@@ -29,7 +29,7 @@ namespace SCOdyssey.Domain.Service
             Normal = 1,
             HoldStart = 2,
             Holding = 3,        // 홀드 본체: 판정 대상 아님(다음 마디로 홀드가 이어짐을 표시)
-            HoldEnd = 4,        // 홀드 꼬리: 떼는 타이밍 판정, 헤드 비표시
+            HoldEnd = 4,        // 홀드 꼬리: 꼬리 시각에 누르고 있는지 판정, 헤드 비표시
             HoldRelease = 5     // 홀드 꼬리: 떼는 타이밍 판정, 헤드 표시
         }
 

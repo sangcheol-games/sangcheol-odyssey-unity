@@ -87,7 +87,8 @@ namespace SCOdyssey.Rhythm
                         open[lane] = i;
                         break;
 
-                    case NoteKind.HoldTail:
+                    case NoteKind.HoldRelease:
+                    case NoteKind.HoldEnd:
                         if (open[lane] < 0)
                         {
                             report?.Warnings.Add($"머리 없는 홀드 꼬리: {track[i]} (누를 방법이 없어 Miss가 된다)");

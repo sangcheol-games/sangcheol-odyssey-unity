@@ -62,14 +62,14 @@ namespace SCOdyssey.Rhythm.Tests
         }
 
         [Test]
-        public void BuildJudgeTrack_SkipsBodies_MapsBothEndCharsToTail()
+        public void BuildJudgeTrack_SkipsBodies_MapsEndCharsToTailKinds()
         {
             // 레인1: 머리 2.0, 본체 2.5, 꼬리(4) 3.0 / 레인2: 머리 2.0, 꼬리(5) 3.5
             ChartData chart = Parse("#001:01:2340;", "#001:02:2005;");
 
             JudgeNote[] track = chart.BuildJudgeTrack();
 
-            Assert.That(track.Select(n => $"{n.Lane}:{n.Kind}"), Is.EqualTo(new[] { "L1:HoldHead", "L2:HoldHead", "L1:HoldTail", "L2:HoldTail" }));
+            Assert.That(track.Select(n => $"{n.Lane}:{n.Kind}"), Is.EqualTo(new[] { "L1:HoldHead", "L2:HoldHead", "L1:HoldEnd", "L2:HoldRelease" }));
             NoteData body = chart.GetFullChartList()[0].Notes.Single(n => n.index == 1);
             Assert.That(body.id, Is.EqualTo(-1), "본체는 트랙에 없다");
         }

@@ -70,7 +70,7 @@ namespace SCOdyssey.Rhythm
             {
                 int lane = (int)track[i].Lane;
                 result[i] = next[lane];
-                if (track[i].Kind != NoteKind.HoldTail) next[lane] = track[i].Time;
+                if (!track[i].Kind.IsTail()) next[lane] = track[i].Time;
             }
             return result;
         }

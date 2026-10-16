@@ -153,7 +153,7 @@ namespace SCOdyssey.Game
             if (missed)
             {
                 view?.OnMiss();
-                if (kind == NoteKind.HoldTail) BreakHoldBar(noteId);
+                if (kind.IsTail()) BreakHoldBar(noteId);
             }
             else
             {
@@ -161,7 +161,7 @@ namespace SCOdyssey.Game
                 // 홀드 머리는 마디 시작에 판정선을 붙이며 Active가 되므로 여기서 올리지 않는다(Hidden 머리가 지금 판정선을 따라가면 안 된다)
                 if (view != null && kind != NoteKind.HoldHead) view.SetState(NoteState.Active);
                 view?.OnHit();
-                if (kind == NoteKind.HoldTail) _holdHeads[noteId] = default;
+                if (kind.IsTail()) _holdHeads[noteId] = default;
             }
 
             return view != null;

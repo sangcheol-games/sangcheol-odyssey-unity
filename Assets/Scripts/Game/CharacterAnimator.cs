@@ -296,7 +296,7 @@ namespace SCOdyssey.Game
 
             NotePosition pos = LaneLayout.PositionOf(e.Lane);
 
-            if (e.Kind == NoteKind.HoldTail)
+            if (e.Kind.IsTail())
             {
                 // 꼬리는 적중이든 miss든 홀드의 끝이다. 단, 잡고 있는 그 꼬리일 때만 —
                 // 떼지 않은 채 다음 머리를 치면 새 머리의 적중이 옛 꼬리의 miss보다 먼저 와서 id가 이미 바뀌어 있다.

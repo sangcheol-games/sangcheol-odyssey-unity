@@ -189,7 +189,7 @@ namespace SCOdyssey.Game
             }
 
             // 제 시각 전에 끊긴 꼬리는 앞쪽 꼬리 자리에 이펙트를 띄우지 않는다. 끊김은 흐려진 홀드바로 보인다
-            bool brokenBeforeTail = judged.Kind == NoteKind.HoldTail && judged.Time < _judge.NoteAt(noteId).Time;
+            bool brokenBeforeTail = judged.Kind.IsTail() && judged.Time < _judge.NoteAt(noteId).Time;
             if (!brokenBeforeTail) _effects.Spawn(JudgeType.Umm, at);
         }
     }

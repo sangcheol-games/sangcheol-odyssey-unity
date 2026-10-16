@@ -120,7 +120,7 @@ namespace SCOdyssey.Rhythm.Tests
                 N(2.0, Lane.L1),
                 N(3.0, Lane.L1),
                 N(4.0, Lane.L2, NoteKind.HoldHead, 4),
-                N(4.5, Lane.L2, NoteKind.HoldTail, 3),
+                N(4.5, Lane.L2, NoteKind.HoldRelease, 3),
             }, offset);
             double umm = JudgeWindows.Default.Umm;
 
@@ -165,7 +165,7 @@ namespace SCOdyssey.Rhythm.Tests
         {
             // 꼬리 시간 초과(1.226)는 레인 루프에서, 탭 스윕(1.176)은 커서 루프에서 나온다. 한 번에 진행해도 시각순이어야 한다
             var engine = new JudgeEngine(JudgeSettings.Default);
-            engine.Load(new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 2), N(1.05, Lane.L2), N(1.1, Lane.L1, NoteKind.HoldTail, 0) });
+            engine.Load(new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 2), N(1.05, Lane.L2), N(1.1, Lane.L1, NoteKind.HoldRelease, 0) });
             var events = new System.Collections.Generic.List<JudgeEvent>();
             engine.Press(Lane.L1, 1.0, events);
             events.Clear();
@@ -180,7 +180,7 @@ namespace SCOdyssey.Rhythm.Tests
         public void Advance_SameTimeMisses_KeepHeadBeforeTail()
         {
             var engine = new JudgeEngine(JudgeSettings.Default);
-            engine.Load(new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail, 0) });
+            engine.Load(new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease, 0) });
             var events = new System.Collections.Generic.List<JudgeEvent>();
 
             engine.Advance(3.0, events);
@@ -192,9 +192,9 @@ namespace SCOdyssey.Rhythm.Tests
         private static readonly object[] InvalidTracks =
         {
             new object[] { "시간 역순", new[] { N(2.0, Lane.L1), N(1.0, Lane.L2) } },
-            new object[] { "짝이 서로 안 가리킴", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldTail) } },
-            new object[] { "다른 레인 짝", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L2, NoteKind.HoldTail, 0) } },
-            new object[] { "꼬리가 머리보다 앞", new[] { N(1.0, Lane.L1, NoteKind.HoldTail, 1), N(2.0, Lane.L1, NoteKind.HoldHead, 0) } },
+            new object[] { "짝이 서로 안 가리킴", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L1, NoteKind.HoldRelease) } },
+            new object[] { "다른 레인 짝", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 1), N(2.0, Lane.L2, NoteKind.HoldRelease, 0) } },
+            new object[] { "꼬리가 머리보다 앞", new[] { N(1.0, Lane.L1, NoteKind.HoldRelease, 1), N(2.0, Lane.L1, NoteKind.HoldHead, 0) } },
             new object[] { "탭에 짝", new[] { N(1.0, Lane.L1, NoteKind.Tap, 1), N(2.0, Lane.L1, NoteKind.Tap, 0) } },
             new object[] { "짝 인덱스 범위 밖", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 5) } },
             new object[] { "자기 자신이 짝", new[] { N(1.0, Lane.L1, NoteKind.HoldHead, 0) } },
@@ -214,7 +214,7 @@ namespace SCOdyssey.Rhythm.Tests
             var engine = new JudgeEngine(JudgeSettings.Default);
             JudgeNote[] track =
             {
-                N(1.0, Lane.L1), N(1.0, Lane.L2, NoteKind.HoldHead, 3), N(1.5, Lane.L3, NoteKind.HoldTail), N(2.0, Lane.L2, NoteKind.HoldTail, 1),
+                N(1.0, Lane.L1), N(1.0, Lane.L2, NoteKind.HoldHead, 3), N(1.5, Lane.L3, NoteKind.HoldRelease), N(2.0, Lane.L2, NoteKind.HoldRelease, 1),
             };
 
             Assert.DoesNotThrow(() => engine.Load(track));

@@ -61,7 +61,7 @@ namespace SCOdyssey.Rhythm.Tests
         [Test]
         public void ShouldActivate_KeepsJudgedHoldHead_ForItsHoldBar()
         {
-            NoteLifecycle life = Create(new[] { N(2.0, Lane.L1, NoteKind.HoldHead, 1), N(3.0, Lane.L1, NoteKind.HoldTail, 0) }, out JudgeEngine engine);
+            NoteLifecycle life = Create(new[] { N(2.0, Lane.L1, NoteKind.HoldHead, 1), N(3.0, Lane.L1, NoteKind.HoldRelease, 0) }, out JudgeEngine engine);
 
             Assert.That(life.ShouldActivate(0), Is.True);
             engine.Press(Lane.L1, 1.95, _events);
@@ -74,7 +74,7 @@ namespace SCOdyssey.Rhythm.Tests
         [Test]
         public void MissedHead_DecidesItsTailToo()
         {
-            NoteLifecycle life = Create(new[] { N(2.0, Lane.L1, NoteKind.HoldHead, 1), N(3.0, Lane.L1, NoteKind.HoldTail, 0) }, out JudgeEngine engine);
+            NoteLifecycle life = Create(new[] { N(2.0, Lane.L1, NoteKind.HoldHead, 1), N(3.0, Lane.L1, NoteKind.HoldRelease, 0) }, out JudgeEngine engine);
 
             engine.Advance(2.2, _events);
 

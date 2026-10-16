@@ -1,6 +1,6 @@
 namespace SCOdyssey.Game
 {
-    // 홀드 꼬리 노트(채보 4): 비주얼 없음. 5와 똑같이 떼는 타이밍으로 판정한다
+    // 홀드 꼬리 노트(채보 4): 비주얼 없음. 꼬리 시각까지 누르고 있으면 Perfect(NoteKind.HoldEnd)
     public class HoldEndNote : NoteController
     {
         protected override void SetVisual()
